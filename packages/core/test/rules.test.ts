@@ -29,8 +29,8 @@ describe("registry", () => {
 	it("implements the first-version set", () => {
 		expect(getRule("links/broken")?.implemented).toBe(true);
 		expect(getRule("a11y/axe")?.implemented).toBe(true);
-		expect(getRule("a11y/color-contrast")?.implemented).toBe(false);
-		expect(getRule("ui/overlap")?.implemented).toBe(false);
+		expect(getRule("a11y/focus-visible")?.implemented).toBe(false);
+		expect(getRule("ui/empty-state")?.implemented).toBe(false);
 		expect(getRule("review/ux")?.implemented).toBe(true);
 	});
 });
