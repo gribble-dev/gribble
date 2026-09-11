@@ -1,0 +1,6 @@
+# Rule severities for gribble.dev.
+# Reference: https://gribble.dev/docs/configuration/rules-yaml
+# yaml-language-server: $schema=https://gribble.dev/schema/rules.json
+
+extends:
+  - gribble:recommended

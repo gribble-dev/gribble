@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Gribble">
+	<title>Gribble</title>
+	<rect width="64" height="64" rx="14" fill="#0f766e" />
+	<g stroke="#a7ead9" stroke-width="2.6" stroke-linecap="round" fill="none">
+		<path d="M21 45 L16 52" />
+		<path d="M28 47 L26 55" />
+		<path d="M36 47 L38 55" />
+		<path d="M43 45 L48 52" />
+		<path d="M18 36 L10 39" />
+		<path d="M46 36 L54 39" />
+		<path d="M25 18 C22 12, 18 10, 14 10" />
+		<path d="M39 18 C42 12, 46 10, 50 10" />
+	</g>
+	<ellipse cx="32" cy="33" rx="18" ry="16" fill="#7fd1bd" />
+	<g stroke="#2f7f6d" stroke-width="2" stroke-linecap="round" fill="none">
+		<path d="M16.5 28.5 C24.5 26.2, 39.5 26.2, 47.5 28.5" />
+		<path d="M14.6 35 C23.5 33, 40.5 33, 49.4 35" />
+		<path d="M16.5 41.5 C24.5 39.6, 39.5 39.6, 47.5 41.5" />
+	</g>
+	<path d="M32 16.5 C41.5 16.5, 49 21.8, 50 27 C40.5 23.7, 23.5 23.7, 14 27 C15 21.8, 22.5 16.5, 32 16.5 Z" fill="#52b6a0" />
+	<circle cx="25.5" cy="22.8" r="2.4" fill="#10312b" />
+	<circle cx="38.5" cy="22.8" r="2.4" fill="#10312b" />
+	<circle cx="26.4" cy="22.1" r="0.8" fill="#ffffff" />
+	<circle cx="39.4" cy="22.1" r="0.8" fill="#ffffff" />
+</svg>

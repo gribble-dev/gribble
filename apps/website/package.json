@@ -1,0 +1,39 @@
+{
+	"name": "@gribble/website",
+	"version": "0.1.0",
+	"private": true,
+	"description": "gribble.dev — the Gribble marketing site and documentation.",
+	"license": "MIT",
+	"type": "module",
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"predev": "node --import tsx/esm scripts/generate-schemas.ts",
+		"dev": "vite dev",
+		"prebuild": "node --import tsx/esm scripts/generate-schemas.ts",
+		"build": "vite build",
+		"preview": "vite preview",
+		"deploy": "wrangler deploy",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@gribble/core": "workspace:*",
+		"@sveltejs/adapter-cloudflare": "7.2.9",
+		"@sveltejs/kit": "2.70.3",
+		"@sveltejs/vite-plugin-svelte": "7.3.0",
+		"@types/node": "catalog:",
+		"marked": "18.0.12",
+		"mdsvex": "0.12.8",
+		"svelte": "5.57.0",
+		"svelte-check": "4.7.6",
+		"tsx": "^4.20.0",
+		"typescript": "catalog:",
+		"vite": "8.3.0",
+		"vitest": "catalog:",
+		"wrangler": "4.131.1",
+		"yaml": "catalog:"
+	}
+}

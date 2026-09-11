@@ -1,0 +1,16 @@
+# Gribble audits gribble.dev. Yes, the gribbles eat their own hull.
+# Reference: https://gribble.dev/docs/configuration/gribble-yaml
+# yaml-language-server: $schema=https://gribble.dev/schema/gribble.json
+
+target:
+  # The production build served by `vite preview`, so the audit sees what ships.
+  url: http://localhost:4173
+  start: pnpm preview
+  routes: auto
+
+review:
+  max_comments: 5
+
+# Only the local preview server is in scope; nothing outbound gets crawled.
+allowed_origins:
+  - localhost
