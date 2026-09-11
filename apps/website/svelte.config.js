@@ -15,8 +15,8 @@ const config = {
 		prerender: {
 			// Warn instead of fail: `docs/` is authored separately and a link to a page that has
 			// not landed yet should not break the site build.
-			handleHttpError: "warn",
-			handleMissingId: "warn",
+			handleHttpError: "fail",
+			handleMissingId: "fail",
 		},
 	},
 };

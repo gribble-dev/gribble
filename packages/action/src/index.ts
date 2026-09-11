@@ -43,7 +43,7 @@ async function main(): Promise<void> {
 	}
 
 	// 2. SARIF / JUnit + outputs
-	const formatters = await loadFormatters();
+	const formatters = await loadFormatters(workingDirectory);
 	const files = await writeOutputFiles(loaded, formatters);
 	setActionOutputs({ gate, newFindings, reportPath: files.reportPath, sarifPath: files.sarifPath });
 

@@ -17,7 +17,10 @@ export default defineConfig({
 	sourcemap: false,
 	shims: true,
 	deps: {
-		alwaysBundle: [/.*/],
+		// Inline everything except core, which drags in Playwright/Lighthouse and is
+		// resolved at runtime from the audited repository instead (see src/core.ts).
+		alwaysBundle: [/^(?!@gribble\/core).*/],
+		neverBundle: ["@gribble/core"],
 		onlyBundle: false,
 	},
 	outputOptions: {

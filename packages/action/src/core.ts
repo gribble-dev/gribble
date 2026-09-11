@@ -3,6 +3,9 @@
  * and may not export every formatter yet, so each symbol is looked up at
  * runtime and replaced by a local fallback when missing or throwing.
  */
+import { createRequire } from "node:module";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import * as actionsCore from "@actions/core";
 import {
 	fallbackJUnit,
@@ -23,9 +26,16 @@ export interface Formatters {
 // biome-ignore lint/suspicious/noExplicitAny: generic function shim over untyped core exports
 type AnyFn = (...args: any[]) => any;
 
-async function loadCoreModule(): Promise<Record<string, unknown> | undefined> {
+/**
+ * `@gribble/core` is not bundled into the action (it pulls in Playwright and Lighthouse).
+ * It is resolved from the audited repository, where `gribble` is installed as a devDependency,
+ * walking up from the working directory so monorepo roots work too.
+ */
+async function loadCoreModule(searchDir: string): Promise<Record<string, unknown> | undefined> {
 	try {
-		const mod = (await import("@gribble/core")) as Record<string, unknown>;
+		const require = createRequire(path.join(searchDir, "package.json"));
+		const entry = require.resolve("@gribble/core");
+		const mod = (await import(pathToFileURL(entry).href)) as Record<string, unknown>;
 		return mod;
 	} catch (error) {
 		actionsCore.debug(
@@ -63,13 +73,13 @@ function guarded<T extends AnyFn>(
 
 let cached: Promise<Formatters> | undefined;
 
-export function loadFormatters(): Promise<Formatters> {
-	if (!cached) cached = buildFormatters();
+export function loadFormatters(searchDir: string = process.cwd()): Promise<Formatters> {
+	if (!cached) cached = buildFormatters(searchDir);
 	return cached;
 }
 
-async function buildFormatters(): Promise<Formatters> {
-	const mod = await loadCoreModule();
+async function buildFormatters(searchDir: string): Promise<Formatters> {
+	const mod = await loadCoreModule(searchDir);
 	const md = guarded(
 		"toMarkdownSummary",
 		pick<Formatters["toMarkdownSummary"]>(mod, "toMarkdownSummary"),
