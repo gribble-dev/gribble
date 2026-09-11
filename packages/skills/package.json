@@ -1,0 +1,26 @@
+{
+  "name": "@gribble/skills",
+  "version": "0.1.0",
+  "description": "Skill files that teach coding agents (Claude Code, pi, Cursor) to fix Gribble findings and maintain flows and rules.",
+  "license": "MIT",
+  "type": "module",
+  "repository": { "type": "git", "url": "https://github.com/gribble-dev/gribble", "directory": "packages/skills" },
+  "homepage": "https://gribble.dev/docs/skills",
+  "engines": { "node": ">=22" },
+  "files": ["dist", "skills", "README.md"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

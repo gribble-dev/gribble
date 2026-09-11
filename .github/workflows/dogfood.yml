@@ -1,0 +1,36 @@
+# Dogfooding: Gribble audits its own website on every PR.
+name: Gribble (website)
+
+on:
+  pull_request:
+    paths:
+      - "apps/website/**"
+      - "docs/**"
+      - "packages/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Audit the website
+        uses: ./packages/action
+        with:
+          working-directory: apps/website
+          mode: gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

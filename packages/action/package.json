@@ -1,0 +1,34 @@
+{
+  "name": "@gribble/action",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GitHub Action that runs `gribble audit --ci` and turns the report into checks, annotations and PR comments.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gribble-dev/gribble",
+    "directory": "packages/action"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@gribble/core": "workspace:*",
+    "@actions/core": "3.0.1",
+    "@actions/github": "9.1.1",
+    "@actions/exec": "^2.0.0",
+    "@actions/artifact": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

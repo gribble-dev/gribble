@@ -141,3 +141,15 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Gribble
+.gribble/runs/
+.gribble/sessions/
+.gribble/cache/
+
+# Cloudflare
+.wrangler/
+
+# Playwright
+test-results/
+playwright-report/
