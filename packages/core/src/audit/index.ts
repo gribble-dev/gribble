@@ -1,10 +1,10 @@
-// TODO(phase 2): owned by core-gate. runAudit is a throwing stub until the orchestrator lands.
-
-import type { Report } from "../report/index.js";
-import type { AuditOptions } from "./types.js";
-
+export { type DevServer, type StartDevServerOptions, startDevServer, urlResponds } from "./dev-server.js";
+export {
+	crawlRoutes,
+	type ResolvedRoutes,
+	type ResolveRoutesOptions,
+	resolveRoutes,
+	routePatternRegex,
+} from "./routes.js";
+export { collectGitInfo, runAudit, viewportsToAudit } from "./run-audit.js";
 export type * from "./types.js";
-
-export async function runAudit(_options: AuditOptions): Promise<Report> {
-	throw new Error("runAudit is not implemented yet");
-}

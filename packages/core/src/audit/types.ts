@@ -3,6 +3,7 @@
  */
 import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { AuditMode } from "../config/index.js";
+import type { ModelResolution } from "../models/types.js";
 import type { ProjectContext } from "../project/index.js";
 import type { Finding, Report } from "../report/index.js";
 
@@ -32,6 +33,10 @@ export interface AuditOptions {
 	changedFiles?: string[];
 	env?: NodeJS.ProcessEnv;
 	git?: AuditGitInfo;
+	/** Resolved reviewer model for review/all mode (the CLI resolves it before calling runAudit). */
+	model?: ModelResolution;
+	/** Run the browser headed (debugging). */
+	headless?: boolean;
 }
 
 export type AuditPhase = "prepare" | "server" | "routes" | "gate" | "review" | "baseline" | "report";

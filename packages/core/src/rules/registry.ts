@@ -486,7 +486,7 @@ const defs: RuleDef[] = [
 			defaults: { level: "AA" },
 		},
 		recommended: ["warn", { level: "AA" }],
-		implemented: false,
+		implemented: true,
 		fix: "Darken the text or lighten the background until the ratio passes.",
 	},
 	{
@@ -526,7 +526,7 @@ const defs: RuleDef[] = [
 			defaults: { minPx: 44 },
 		},
 		recommended: ["warn", { minPx: 44 }],
-		implemented: false,
+		implemented: true,
 		fix: "Increase padding or min-height/min-width on the control.",
 	},
 	{
@@ -644,7 +644,7 @@ const defs: RuleDef[] = [
 		description:
 			"Reports <img> elements without `width`/`height` attributes or CSS aspect-ratio; they cause layout shift.",
 		recommended: "warn",
-		implemented: false,
+		implemented: true,
 		fix: "Add width and height attributes (or aspect-ratio in CSS) to every image.",
 	},
 	{
@@ -652,7 +652,7 @@ const defs: RuleDef[] = [
 		summary: "Images should use a modern format.",
 		description: "Reports large JPEG/PNG images that would be smaller as WebP or AVIF.",
 		recommended: "warn",
-		implemented: false,
+		implemented: true,
 		fix: "Serve WebP/AVIF via <picture> or an image CDN.",
 	},
 	{
@@ -661,7 +661,7 @@ const defs: RuleDef[] = [
 		description:
 			"Reports synchronous scripts and stylesheets in <head> that delay first paint. Off by default.",
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: "Add defer/async to scripts, inline critical CSS, preload the rest.",
 	},
 	{
@@ -715,7 +715,7 @@ const defs: RuleDef[] = [
 			defaults: { tokens: "auto" },
 		},
 		recommended: ["warn", { tokens: "auto" }],
-		implemented: false,
+		implemented: true,
 		fix: "Replace the hardcoded color with the closest token.",
 	},
 	{
@@ -723,7 +723,7 @@ const defs: RuleDef[] = [
 		summary: "Font sizes must come from the type scale.",
 		description: "Compares computed font sizes with the sizes defined in the project's tokens.",
 		recommended: "warn",
-		implemented: false,
+		implemented: true,
 		fix: "Use a size from the type scale instead of an arbitrary value.",
 	},
 	{
@@ -747,7 +747,7 @@ const defs: RuleDef[] = [
 			defaults: { px: 12 },
 		},
 		recommended: ["warn", { px: 12 }],
-		implemented: false,
+		implemented: true,
 		fix: "Increase the font size; 12px is the floor for body copy on most platforms.",
 	},
 	{
@@ -756,7 +756,7 @@ const defs: RuleDef[] = [
 		description:
 			"Compares bounding boxes of interactive elements; overlapping pairs that are both visible are reported.",
 		recommended: "error",
-		implemented: false,
+		implemented: true,
 		fix: "Fix the layout so that the elements do not share screen area.",
 	},
 	{
@@ -772,7 +772,7 @@ const defs: RuleDef[] = [
 			defaults: { viewports: ["mobile"] },
 		},
 		recommended: ["error", { viewports: ["mobile"] }],
-		implemented: false,
+		implemented: true,
 		fix: "Constrain the offending element with max-width: 100% or overflow-x: hidden on the container.",
 	},
 	{
@@ -781,7 +781,7 @@ const defs: RuleDef[] = [
 		description:
 			"Reports elements whose scroll size exceeds their client size with overflow hidden and no text-overflow handling.",
 		recommended: "warn",
-		implemented: false,
+		implemented: true,
 		fix: "Let the container grow, wrap the text, or use text-overflow: ellipsis deliberately.",
 	},
 	{
@@ -789,7 +789,7 @@ const defs: RuleDef[] = [
 		summary: "Images must load and have a non-zero natural size.",
 		description: "Reports <img> elements whose `naturalWidth` is 0 after load.",
 		recommended: "error",
-		implemented: false,
+		implemented: true,
 		fix: "Fix the image path or the asset pipeline.",
 	},
 	{
@@ -820,7 +820,7 @@ const defs: RuleDef[] = [
 		summary: "The site needs a favicon.",
 		description: 'Reports a missing or non-loading `<link rel="icon">` (and `/favicon.ico` fallback).',
 		recommended: "warn",
-		implemented: false,
+		implemented: true,
 		fix: "Add a favicon link in the document head and ship the file.",
 	},
 	{
@@ -970,7 +970,7 @@ const defs: RuleDef[] = [
 			"warn",
 			{ require: ["content-security-policy", "x-content-type-options", "strict-transport-security"] },
 		],
-		implemented: false,
+		implemented: true,
 		fix: "Set the headers in the server or hosting configuration.",
 	},
 	{
@@ -987,7 +987,7 @@ const defs: RuleDef[] = [
 		summary: "Production builds must not expose source maps.",
 		description: "Reports `//# sourceMappingURL` comments whose map file is publicly reachable.",
 		recommended: "warn",
-		implemented: false,
+		implemented: true,
 		fix: "Disable source map emission for production, or restrict access to the .map files.",
 	},
 	{

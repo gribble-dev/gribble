@@ -18,6 +18,8 @@ yarn gribble audit
 
 Examples below omit the runner for readability.
 
+Two flags work on every command: `--verbose` prints debug logs and full stack traces, `--version` prints the version.
+
 ## Commands at a glance
 
 | Command | Purpose |
@@ -53,6 +55,7 @@ gribble init --update-skills
 | `--url <url>` | Target URL. Skips that question. |
 | `--start <cmd>` | Start command. Skips that question. |
 | `--model <provider/id>` | Model. Skips model selection. |
+| `--force` | Overwrite `.gribble/` files and skill files that already exist. Without it, existing files are kept and listed. |
 
 Creates:
 
@@ -145,7 +148,7 @@ jq '.summary.gate' report.json     # "pass" | "fail"
 jq '.summary.newCount' report.json
 ```
 
-With `--all`, stdout carries one report per target.
+With `--all`, stdout carries a JSON array with one report per target.
 
 ---
 
@@ -153,9 +156,10 @@ With `--all`, stdout carries one report per target.
 
 ```bash
 gribble install
+gribble install --with-deps
 ```
 
-Downloads the Playwright Chromium build Gribble drives. Run once after installing, and after a Gribble upgrade that changes the browser version. Unnecessary inside the [Docker image](/docs/ci-github-action#docker-image) or on a CI image that already provisions Playwright browsers.
+Downloads the Playwright Chromium build Gribble drives. `--with-deps` also installs the system libraries Chromium needs on a bare Linux image (it is passed straight to Playwright). Run once after installing, and after a Gribble upgrade that changes the browser version. Unnecessary inside the [Docker image](/docs/ci-github-action#docker-image) or on a CI image that already provisions Playwright browsers.
 
 ---
 
@@ -215,9 +219,10 @@ Prints a rule's description, option schema with defaults, severity in each prese
 
 ```bash
 gribble ignore 9f2c1d4a7b3e0c58
+gribble ignore 9f2c1d4a7b3e0c58 --target apps/web
 ```
 
-Appends a fingerprint to `ignore` in `rules.yaml`. Add a comment explaining why, on the same line, before you commit it:
+Appends a fingerprint to `ignore` in `rules.yaml` (the one in `.gribble/` of the current directory, or of `--target`), leaving every other line and comment untouched. Add a comment explaining why, on the same line, before you commit it:
 
 ```yaml
 ignore:
@@ -232,9 +237,11 @@ Fingerprints come from the report, the PR comment marker, or the terminal output
 
 ```bash
 gribble baseline update
+gribble baseline update --target apps/web --env preview
+gribble baseline update --mode all
 ```
 
-Runs an audit and writes `.gribble/baseline/` from it. Equivalent to `gribble audit --update-baseline`. It does not commit — staging and committing is always your decision.
+Runs a `gate` audit and writes `.gribble/baseline/` from it. Equivalent to `gribble audit --mode gate --update-baseline`; pass `--mode all` to record AI findings in the baseline too. `--target`, `--all`, `--env`, `--json` and `--ci` behave as they do for `audit`. It does not commit — staging and committing is always your decision.
 
 Reach for it when you deliberately accepted a regression, rewrote a page, changed viewports or rule severities, or are onboarding a new app. To suppress a single finding, use `ignore` instead. See [Baseline](/docs/concepts/baseline#updating-by-hand).
 
@@ -256,7 +263,9 @@ Prints the Gribble version. Also available as `--version`.
 | --- | --- |
 | `0` | Everything passed. No new blocking findings. |
 | `1` | The gate failed — at least one new `error` or `critical` finding from a deterministic rule or `flows/replay`. |
-| `2` | Config or auth error. Invalid YAML, a missing environment variable, no credentials for the configured provider, a browser that will not start. |
+| `2` | Config or auth error. Invalid YAML, a missing environment variable, no credentials for the configured provider, a browser that will not start, a prompt that would be needed without a terminal. |
+| `3` | Gribble itself crashed. Re-run with `--verbose` for the stack trace and please report it. |
+| `130` | Interrupted: Ctrl+C during a prompt or an audit. |
 
 The distinction between `1` and `2` is the useful part: `1` means your site has a problem, `2` means your setup does. A CI job that treats them identically will send people hunting for a bug that does not exist.
 

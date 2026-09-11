@@ -1,0 +1,77 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`event renderer > renders a TTY stream with spinner updates and live findings 1`] = `
+"[spinner start] preparing
+[spinner message] starting pnpm dev
+[spinner message] discovering routes
+[spinner message] running deterministic checks
+[spinner message] nibbling on / (desktop)
+[spinner message] checking links/broken on /
+[spinner message] nibbling on /pricing (desktop)
+[spinner clear]
+[spinner start] nibbling on /pricing (desktop)
+[spinner clear]
+[spinner start] nibbling on /pricing (desktop)
+[spinner clear]
+[spinner start] nibbling on /pricing (desktop)
+[spinner message] walking flow smoke
+[spinner clear]
+[spinner start] walking flow smoke
+[spinner message] walking flow checkout
+[spinner clear]
+[spinner start] walking flow checkout
+[spinner clear]
+[spinner start] walking flow checkout
+[spinner message] reviewing
+[spinner message] reviewing: page_snapshot (1 steps)
+[spinner message] reviewing: add_finding (2 steps)
+[spinner clear]
+[spinner start] reviewing: add_finding (2 steps)
+[spinner message] reviewing (40/200 steps · 120k/2.0M tokens · $0.12)
+[spinner message] comparing with the baseline
+[spinner message] writing the report
+[spinner clear]
+[spinner stop] [2mdone[22m"
+`;
+
+exports[`event renderer > renders a plain (CI) stream to stderr without ANSI 1`] = `
+"🪱 3 gribbles are nibbling on http://localhost:3000…
+   reviewer: prov/model-x
+[prepare] preparing
+[server] starting pnpm dev
+   dev server responded after 3.1s
+[routes] discovering routes
+[gate] running deterministic checks
+route / (desktop)
+   ✓ links/broken / 120ms
+   ✓ seo/title / 4ms
+route /pricing (desktop)
+   ✓ links/broken /pricing 200ms · 1 findings
+  error    links/broken           /pricing       /docs/plans returns 404 (src/routes/pricing.tsx#PlansLink)
+   ✓ a11y/axe /pricing 900ms
+  error    a11y/form-labels       /signup        Input #email has no associated label (#email)
+   ! lighthouse skipped: could not attach to the CDP endpoint
+flow smoke
+   ✓ flow smoke 1.5s
+flow checkout
+   ✗ flow checkout 2.1s: step 3: no element matching "text=Pay"
+   ✓ routes         2 audited
+   ✓ links          2 routes · 1 findings
+   ✓ seo            1 routes
+   ✓ a11y           1 routes
+[review] reviewing
+  warn     review/copy            /pricing       "Contact sales" and "Talk to sales" on the same page 82%
+[baseline] comparing with the baseline
+[report] writing the report
+
+The gribbles found 4 holes in your hull — 2 need patching before you sail.
+
+  warn     seo/meta-description /blog/[slug] 22 characters, minimum is 50
+
+  error 2 · warn 2
+  3 existing · 1 fixed ✅
+  Report: .gribble/runs/2026-09-12T10-20-30-123Z/report.json
+  12 steps · 318k tokens · $0.42 · prov/model-x · 4.2s
+  The gate is closed. Patch the holes above before you sail.
+"
+`;

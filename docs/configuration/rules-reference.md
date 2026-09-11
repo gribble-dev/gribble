@@ -739,7 +739,7 @@ Text must meet the WCAG contrast ratio for `level`.
 
 Reports text whose contrast against its background is below 4.5:1 (AA) or 7:1 (AAA); large text uses the lower thresholds.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -802,7 +802,7 @@ Interactive elements must be at least `minPx` square on mobile.
 
 Measures bounding boxes of interactive elements in the mobile viewport; anything smaller than `minPx` in either dimension is reported.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -992,7 +992,7 @@ Images need explicit width and height.
 
 Reports <img> elements without `width`/`height` attributes or CSS aspect-ratio; they cause layout shift.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1011,7 +1011,7 @@ Images should use a modern format.
 
 Reports large JPEG/PNG images that would be smaller as WebP or AVIF.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1030,7 +1030,7 @@ No render-blocking scripts or styles.
 
 Reports synchronous scripts and stylesheets in <head> that delay first paint. Off by default.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1079,7 +1079,7 @@ Computed colors must come from the design tokens.
 
 Collects computed `color`, `background-color` and `border-color` values and compares them with the token set (`auto` reads tailwind.config and CSS custom properties). Values not in the set are reported with their selector.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1104,7 +1104,7 @@ Font sizes must come from the type scale.
 
 Compares computed font sizes with the sizes defined in the project's tokens.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1142,7 +1142,7 @@ Text must be at least `px` pixels.
 
 Reports visible text with a computed font size below the threshold.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1167,7 +1167,7 @@ Interactive elements must not overlap.
 
 Compares bounding boxes of interactive elements; overlapping pairs that are both visible are reported.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1186,7 +1186,7 @@ Pages must not scroll horizontally in the listed viewports.
 
 Reports routes whose document width exceeds the viewport width, together with the widest offending element.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1211,7 +1211,7 @@ Text must not be clipped or overflow its container.
 
 Reports elements whose scroll size exceeds their client size with overflow hidden and no text-overflow handling.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1230,7 +1230,7 @@ Images must load and have a non-zero natural size.
 
 Reports <img> elements whose `naturalWidth` is 0 after load.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1274,7 +1274,7 @@ The site needs a favicon.
 
 Reports a missing or non-loading `<link rel="icon">` (and `/favicon.ico` fallback).
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1541,7 +1541,7 @@ Responses must include the required security headers.
 
 Checks the document response for each header listed in `require`.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1585,7 +1585,7 @@ Production builds must not expose source maps.
 
 Reports `//# sourceMappingURL` comments whose map file is publicly reachable.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |

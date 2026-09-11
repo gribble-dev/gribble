@@ -1,0 +1,74 @@
+import type { AuditEvent } from "../audit/types.js";
+import type { Baseline } from "../baseline/schema.js";
+import type { AuditPage, BrowserSession, GotoResult, PageSnapshot } from "../browser/types.js";
+import type { ProjectContext } from "../project/types.js";
+import type { DesignTokens } from "../repo/tokens.js";
+import type { Finding, RouteMetrics } from "../report/schema.js";
+import type { LinkCache } from "./link-cache.js";
+
+/** State shared by every check in one audit run (link cache, one-time site checks). */
+export interface SharedCheckState {
+	links: LinkCache;
+	/** Rules that were already reported once per run (favicon, https-only). */
+	reportedOnce: Set<string>;
+}
+
+export interface CheckContext {
+	project: ProjectContext;
+	page: AuditPage;
+	/** Normalized route, e.g. `/blog/[slug]`. */
+	route: string;
+	/** URL that was loaded. */
+	url: string;
+	viewport: string;
+	targetName: string;
+	baseline?: Baseline;
+	runDir: string;
+	tokens?: DesignTokens;
+	routeSource?: Record<string, string>;
+	signal?: AbortSignal;
+	onEvent?: (e: AuditEvent) => void;
+	shared?: SharedCheckState;
+	/** Lazily filled caches so checks do not repeat page work. */
+	cache?: { snapshot?: PageSnapshot; html?: string; text?: string; navigation?: GotoResult };
+}
+
+export interface RouteCheckResult {
+	findings: Finding[];
+	metrics: RouteMetrics;
+	ariaSnapshot: string;
+	screenshot?: Buffer;
+	/** Document status of the route. */
+	status?: number;
+	title?: string;
+	finalUrl?: string;
+	/** `href` of the first icon link, empty string when the page declares none. */
+	faviconHref?: string;
+	/** hreflang values declared on the page. */
+	hreflangs?: string[];
+	durationMs?: number;
+}
+
+export interface SiteWideOptions {
+	project: ProjectContext;
+	browser: BrowserSession;
+	routes: string[];
+	perRoute: Map<string, RouteCheckResult>;
+	targetName: string;
+	shared?: SharedCheckState;
+	onEvent?: (e: AuditEvent) => void;
+	signal?: AbortSignal;
+}
+
+export interface RegressionOptions {
+	project: ProjectContext;
+	targetName: string;
+	routes: string[];
+	perRoute: Map<string, RouteCheckResult>;
+	baseline: Baseline | undefined;
+	/** `route@viewport` -> PNG. */
+	screenshots: Map<string, Buffer>;
+	baselineDir: string;
+	runDir: string;
+	onEvent?: (e: AuditEvent) => void;
+}

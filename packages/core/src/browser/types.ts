@@ -3,7 +3,6 @@
  * through `AuditPage`; nothing outside this folder touches Playwright directly except Lighthouse.
  */
 import type { Page } from "playwright";
-import type { GribbleConfig } from "../config/types.js";
 import type { Flow } from "../flows/schema.js";
 import type { ProjectContext } from "../project/types.js";
 
@@ -165,5 +164,3 @@ export interface LaunchBrowserOptions {
 	authFlowRunner?: (opts: { profile: string; flow: Flow; page: AuditPage }) => Promise<boolean>;
 	onLog?: (level: "debug" | "info" | "warn" | "error", message: string) => void;
 }
-
-export type { Flow, GribbleConfig, ProjectContext };

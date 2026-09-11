@@ -9,6 +9,7 @@ export * from "./gate/index.js";
 export * from "./models/index.js";
 export * from "./project/index.js";
 export * from "./prompt/index.js";
+export * from "./repo/index.js";
 export * from "./report/index.js";
 export * from "./rules/index.js";
 export * from "./util/index.js";

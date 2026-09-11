@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Sign in – Fixture Harbor</title>
+	<meta name="description" content="A tiny sign-in form used by the flow replay tests; it accepts one password.">
+</head>
+<body>
+	<main>
+		<h1>Sign in</h1>
+		<form id="login" data-testid="login-form">
+			<label for="email">Email</label>
+			<input id="email" name="email" type="email" data-testid="email">
+			<label for="password">Password</label>
+			<input id="password" name="password" type="password" data-testid="password">
+			<button type="submit" data-testid="submit">Sign in</button>
+		</form>
+		<p id="status" aria-live="polite"></p>
+	</main>
+	<script>
+		document.getElementById("login").addEventListener("submit", (event) => {
+			event.preventDefault();
+			const password = document.getElementById("password").value;
+			const status = document.getElementById("status");
+			if (password === "hunter2") {
+				status.textContent = "Welcome back, captain";
+				history.replaceState(null, "", "/dashboard");
+			} else {
+				status.textContent = "Wrong password";
+			}
+		});
+	</script>
+</body>
+</html>
