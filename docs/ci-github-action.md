@@ -98,7 +98,7 @@ A few choices in there worth explaining.
 | `environment` | string | — | Environment name from `gribble.yaml`, passed as `--env`. |
 | `update-baseline` | boolean | `false` | Write the baseline after the run and commit it back. Only meaningful on the default branch. |
 | `comment` | boolean | `true` | Post and update PR comments. |
-| `max-comments` | number | from config | Override `review.max_comments` for this run. |
+| `max-comments` | number | `5` | Maximum number of new per-finding review comments per run; the rest are listed in the summary comment. |
 | `fail-on` | `critical` \| `error` \| `warn` \| `none` | `error` | Lowest severity of a **new** finding that fails the step. |
 | `github-token` | string | `${{ github.token }}` | Token used for comments, checks and baseline commits. |
 | `report-artifact` | boolean | `true` | Upload the run directory as a workflow artifact. |
@@ -111,7 +111,8 @@ A few choices in there worth explaining.
 | --- | --- |
 | `gate` | `pass` or `fail`. |
 | `new-findings` | Number of findings with status `new`. |
-| `report-path` | Path to the report JSON, normally `.gribble/runs/latest.json`. |
+| `report-path` | Absolute path of the report JSON, normally `.gribble/runs/latest.json`. |
+| `sarif-path` | Absolute path of `gribble.sarif`, ready for `github/codeql-action/upload-sarif`. |
 
 ```yaml
       - uses: gribble-dev/action@v1
@@ -140,9 +141,11 @@ Gribble uses `GITHUB_TOKEN` and does not require a GitHub App.
 
 **Forked pull requests** get a read-only token, so comments and check annotations will not post. This is a GitHub restriction, not a Gribble one. The audit still runs and the artifact still uploads; if you need comments on fork PRs, use `pull_request_target` and understand the security trade-off you are making by doing so.
 
+**Workflow approval.** Pull requests from first-time contributors, and workflow runs on branches pushed by a bot or an automation token, can sit in "workflow awaiting approval" until a maintainer approves the run from the pull request's Checks tab. Nothing posts until then; this is not the action being slow.
+
 ## How the Action runs the audit
 
-1. Locates the `gribble` binary in your repository, falling back to `npx gribble`. The version in your lockfile is the version that runs.
+1. Locates the `gribble` package in your repository (`working-directory` first, then the repository root). The version in your lockfile is the version that runs. When nothing is installed it falls back to `npx --yes gribble` and logs a warning: that is slower, unpinned, and runs whatever the latest release is. Add `gribble` as a devDependency instead.
 2. Executes `gribble audit --ci --mode <mode>` with flags derived from the inputs.
 3. Reads `.gribble/runs/latest.json`.
 4. Creates or updates a **check run** with annotations. When a finding has `location.file`, the annotation lands on that file; the line is resolved by locating the recorded symbol in the file, since Gribble stores symbol names rather than line numbers on purpose.
@@ -208,7 +211,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/gribble-dev/gribble:1
+      image: ghcr.io/gribble-dev/gribble:0
     permissions:
       contents: read
       pull-requests: write
@@ -228,11 +231,17 @@ No `gribble install` step is needed inside the container. The image is also hand
 docker run --rm \
   -v "$PWD":/app -w /app \
   -e ANTHROPIC_API_KEY \
-  ghcr.io/gribble-dev/gribble:1 \
+  ghcr.io/gribble-dev/gribble:0 \
   gribble audit --ci --mode gate
 ```
 
-Pin the major tag (`:1`) rather than `:latest` so a release cannot change your CI behaviour without a commit.
+The image is tagged `latest`, with the exact version (`0.2.1`) and with the moving major (`0` while the CLI is 0.x, `1` from 1.0.0). Pin the major tag rather than `:latest` so a release cannot change your CI behaviour without a commit. Inside the container the action still runs the `gribble` from your lockfile; the image only supplies Node and the browser.
+
+## Versions and the Node runtime
+
+`uses: gribble-dev/action@v1` follows every release; `uses: gribble-dev/action@v0.2.1` pins one. The action is built from the [monorepo](https://github.com/gribble-dev/gribble/tree/main/packages/action) and published to [`gribble-dev/action`](https://github.com/gribble-dev/action) on every CLI release, so a version tag on the action equals the `gribble` version it was built from. `v1` is the moving tag for every 0.x and 1.x release.
+
+The action declares `runs.using: node24`. GitHub runners have run JavaScript actions on Node 24 by default since June 16, 2026 and remove Node 20 on September 23, 2026, so this only matches what the runner does anyway. Your own job can still use `actions/setup-node` with Node 22 for the CLI; the two do not interfere.
 
 ## Secrets
 
