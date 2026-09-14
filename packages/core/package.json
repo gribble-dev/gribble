@@ -1,6 +1,6 @@
 {
 	"name": "@gribble/core",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Gribble core: pi-based audit harness, tool packs, config and flow parsing, report schema.",
 	"license": "MIT",
 	"type": "module",
