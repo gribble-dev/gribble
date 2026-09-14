@@ -4,7 +4,7 @@
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
-import { baselinePaths } from "../baseline/io.js";
+import { baselinePaths, screenshotPlatformKey } from "../baseline/io.js";
 import { routeSlug } from "../baseline/slug.js";
 import type { Finding } from "../report/schema.js";
 import { makeFinding, ruleEnabled, ruleOptions } from "./finding.js";
@@ -57,12 +57,6 @@ export interface RenderPlatform {
 	os: string;
 	arch: string;
 	browser: string;
-}
-
-/** Screenshots from another OS or browser build differ in font rendering; comparing them is noise. */
-export function samePlatform(a: RenderPlatform | undefined, b: RenderPlatform | undefined): boolean {
-	if (!a || !b) return true;
-	return a.os === b.os && a.arch === b.arch && a.browser === b.browser;
 }
 
 export interface VisualDiff {
@@ -132,7 +126,8 @@ export async function checkRegressions(opts: RegressionOptions): Promise<Finding
 	const { project, targetName, baseline, perRoute } = opts;
 	if (!baseline) return out;
 	const paths = baselinePaths(project.gribbleDir);
-	let platformWarned = false;
+	let missingPlatformLogged = false;
+	const platformKey = screenshotPlatformKey(opts.platform ?? { os: process.platform, browser: "chromium" });
 	const emit = (
 		route: string,
 		viewport: string | null,
@@ -228,21 +223,7 @@ export async function checkRegressions(opts: RegressionOptions): Promise<Finding
 		}
 
 		// visual/regression
-		if (
-			ruleEnabled(ctx, "visual/regression") &&
-			project.config.baseline.screenshots !== "off" &&
-			!samePlatform(opts.platform, opts.baseline?.meta.platform)
-		) {
-			if (!platformWarned) {
-				platformWarned = true;
-				const b = opts.baseline?.meta.platform;
-				opts.onEvent?.({
-					type: "log",
-					level: "warn",
-					message: `visual/regression skipped: the baseline screenshots were rendered on ${b?.os}/${b?.arch} with ${b?.browser}, this run uses ${opts.platform?.os}/${opts.platform?.arch} with ${opts.platform?.browser}. Refresh the baseline from the same environment (usually CI) to compare pixels.`,
-				});
-			}
-		} else if (ruleEnabled(ctx, "visual/regression") && project.config.baseline.screenshots !== "off") {
+		if (ruleEnabled(ctx, "visual/regression") && project.config.baseline.screenshots !== "off") {
 			const { threshold, viewports } = ruleOptions<{ threshold: number; viewports: string[] }>(
 				ctx,
 				"visual/regression",
@@ -252,12 +233,24 @@ export async function checkRegressions(opts: RegressionOptions): Promise<Finding
 				if (!current) continue;
 				const slug = routeSlug(route);
 				const previous =
-					(await readIfExists(join(paths.screenshots, `${slug}@${viewport}.webp`))) ??
-					(await readIfExists(join(paths.screenshots, `${slug}@${viewport}.png`)));
-				if (!previous) continue;
+					(await readIfExists(join(paths.screenshots, `${slug}@${viewport}.${platformKey}.webp`))) ??
+					(await readIfExists(join(paths.screenshots, `${slug}@${viewport}.${platformKey}.png`)));
+				if (!previous) {
+					if (!missingPlatformLogged) {
+						missingPlatformLogged = true;
+						opts.onEvent?.({
+							type: "log",
+							level: "info",
+							message: `No baseline screenshots for ${platformKey} yet; pixel comparison starts after a run with --update-baseline on this platform.`,
+						});
+					}
+					continue;
+				}
 				let diff: VisualDiff;
 				try {
-					diff = await compareScreenshots(current, previous);
+					// Encode the fresh screenshot exactly like the baseline (max width, webp) so both sides
+					// have the same dimensions; otherwise the comparison stretches one of them.
+					diff = await compareScreenshots(await encodeBaselineScreenshot(current), previous);
 				} catch (err) {
 					opts.onEvent?.({
 						type: "log",

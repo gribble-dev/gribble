@@ -135,8 +135,8 @@ describe.skipIf(!hasChromium())(`runAudit gate mode (${SKIP_BROWSER_REASON})`, (
 		expect(baseline.meta.commit).toBe("abc123");
 		expect(baseline.metrics["/"]?.requestCount).toBeGreaterThan(0);
 		const shots = await readdir(join(project.gribbleDir, "baseline/screenshots"));
-		expect(shots).toContain("index@desktop.webp");
-		expect(shots).toContain("holes_html@mobile.webp");
+		expect(shots).toContain(`index@desktop.chromium-${process.platform}.webp`);
+		expect(shots).toContain(`holes_html@mobile.chromium-${process.platform}.webp`);
 	}, 180_000);
 
 	it("marks known findings as existing on the next run and reports fixed ones", async () => {

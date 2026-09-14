@@ -163,6 +163,7 @@ export async function runAuthFlow(opts: RunAuthFlowOptions): Promise<boolean> {
 			throw new Error("Not available during login.");
 		},
 		cdpPort: () => 0,
+		version: () => opts.page.raw.context().browser()?.version() ?? "unknown",
 		close: async () => {},
 	};
 

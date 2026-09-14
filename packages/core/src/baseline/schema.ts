@@ -47,15 +47,9 @@ export const baselineMetaSchema = Type.Object(
 			Type.String(),
 			Type.Object({ width: Type.Integer(), height: Type.Integer() }, { additionalProperties: false }),
 		),
-		/** Where the screenshots were rendered; pixel comparison only makes sense on the same platform. */
-		platform: Type.Optional(
-			Type.Object(
-				{ os: Type.String(), arch: Type.String(), browser: Type.String() },
-				{ additionalProperties: false },
-			),
-		),
 	},
-	{ additionalProperties: false, description: "baseline/meta.json" },
+	// Tolerate fields written by other Gribble versions: a baseline must never make an audit fail to start.
+	{ additionalProperties: true, description: "baseline/meta.json" },
 );
 
 export type BaselineFinding = Static<typeof baselineFindingSchema>;

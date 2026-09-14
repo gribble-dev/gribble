@@ -9,7 +9,8 @@ import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 import sharp from "sharp";
 import { Type } from "typebox";
-import { baselineScreenshotPath, routeSlug } from "../../baseline/index.js";
+import { baselineScreenshotPath, routeSlug, screenshotPlatformKey } from "../../baseline/index.js";
+import { encodeBaselineScreenshot } from "../../checks/regressions.js";
 import { VISUAL_TOOLS } from "../names.js";
 import type { AgentState } from "../state.js";
 import { textResult } from "./common.js";
@@ -27,9 +28,10 @@ async function findBaselineScreenshot(
 	gribbleDir: string,
 	route: string,
 	viewport: string,
+	platformKey: string,
 ): Promise<string | undefined> {
 	for (const ext of ["webp", "png"]) {
-		const path = baselineScreenshotPath(gribbleDir, route, viewport, ext);
+		const path = baselineScreenshotPath(gribbleDir, route, viewport, ext, platformKey);
 		if (await exists(path)) return path;
 	}
 	return undefined;
@@ -80,7 +82,16 @@ export function visualPack(state: AgentState): InlineExtension {
 				async execute(_id, params, _signal, onUpdate) {
 					const page = await state.currentPage();
 					const route = params.route ?? state.trackUrl(page.url());
-					const baseline = await findBaselineScreenshot(state.project.gribbleDir, route, page.viewport);
+					const platformKey = screenshotPlatformKey({
+						os: process.platform,
+						browser: state.browser.version(),
+					});
+					const baseline = await findBaselineScreenshot(
+						state.project.gribbleDir,
+						route,
+						page.viewport,
+						platformKey,
+					);
 					if (!baseline) {
 						return textResult(`No baseline screenshot for ${route}@${page.viewport}; nothing to compare.`, {
 							route,
@@ -91,7 +102,10 @@ export function visualPack(state: AgentState): InlineExtension {
 					}
 					onUpdate?.({ content: [{ type: "text", text: "Comparing pixels…" }], details: {} });
 					const current = await page.screenshot({ fullPage: false });
-					const { ratio, diffPng, width, height } = await diffImages(current, baseline);
+					const { ratio, diffPng, width, height } = await diffImages(
+						await encodeBaselineScreenshot(current),
+						baseline,
+					);
 					const dir = join(state.runDir, "diffs");
 					await mkdir(dir, { recursive: true });
 					const diffPath = join(dir, `${routeSlug(route)}@${page.viewport}.diff.png`);

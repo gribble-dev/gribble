@@ -44,13 +44,25 @@ export function baselineSnapshotPath(gribbleDir: string, route: string): string 
 	return join(baselinePaths(gribbleDir).snapshots, `${routeSlug(route)}.aria.yaml`);
 }
 
+/**
+ * Screenshots are stored per rendering platform, like Playwright's `toHaveScreenshot` snapshots:
+ * `index@desktop.chromium-linux.webp`. Every platform that updates the baseline keeps its own set,
+ * so a laptop and CI never compare each other's pixels.
+ */
+export function screenshotPlatformKey(platform: { os: string; browser: string }): string {
+	const browser = (platform.browser.trim().split(/\s+/)[0] ?? "browser").toLowerCase();
+	return `${browser}-${platform.os}`;
+}
+
 export function baselineScreenshotPath(
 	gribbleDir: string,
 	route: string,
 	viewport: string,
 	ext = "webp",
+	platformKey?: string,
 ): string {
-	return join(baselinePaths(gribbleDir).screenshots, `${routeSlug(route)}@${viewport}.${ext}`);
+	const suffix = platformKey ? `.${platformKey}` : "";
+	return join(baselinePaths(gribbleDir).screenshots, `${routeSlug(route)}@${viewport}${suffix}.${ext}`);
 }
 
 async function readJsonIfExists<T>(file: string, schema: TSchema): Promise<T | undefined> {
@@ -116,7 +128,7 @@ export interface WriteBaselineInput {
 	auditedRoutes?: string[];
 	/** Viewport configuration to record in meta.json; falls back to the previous baseline's. */
 	viewports?: Record<string, { width: number; height: number }>;
-	/** Rendering platform of the screenshots, recorded in meta.json. */
+	/** Rendering platform of the screenshots; becomes part of their file names. */
 	platform?: { os: string; arch: string; browser: string };
 	/** `lfs` writes a .gitattributes so screenshots go through Git LFS. */
 	screenshotsMode?: "commit" | "lfs" | "off";
@@ -180,8 +192,6 @@ export async function writeBaseline(gribbleDir: string, data: WriteBaselineInput
 	if (report.repo?.commit) meta.commit = report.repo.commit;
 	if (report.repo?.branch) meta.branch = report.repo.branch;
 	if (report.model) meta.model = report.model;
-	const platform = data.platform ?? previous?.meta.platform;
-	if (platform) meta.platform = platform;
 
 	await mkdir(paths.dir, { recursive: true });
 	await writeFile(paths.findings, `${JSON.stringify(findingsFile, null, 2)}\n`, "utf8");
@@ -207,7 +217,11 @@ export async function writeBaseline(gribbleDir: string, data: WriteBaselineInput
 			const at = key.lastIndexOf("@");
 			const route = at === -1 ? key : key.slice(0, at);
 			const viewport = at === -1 ? "default" : key.slice(at + 1);
-			await writeFile(baselineScreenshotPath(gribbleDir, route, viewport, imageExtension(bytes)), bytes);
+			const platformKey = data.platform ? screenshotPlatformKey(data.platform) : undefined;
+			await writeFile(
+				baselineScreenshotPath(gribbleDir, route, viewport, imageExtension(bytes), platformKey),
+				bytes,
+			);
 		}
 	}
 }

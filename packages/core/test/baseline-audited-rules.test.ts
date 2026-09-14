@@ -32,7 +32,7 @@ describe("diffAgainstBaseline auditedRules", () => {
 });
 
 describe("writeBaseline screenshots modes", () => {
-	it("writes a .gitattributes for Git LFS and records the render platform", async () => {
+	it("writes a .gitattributes for Git LFS and names screenshots by platform", async () => {
 		const { mkdtemp, readFile, rm } = await import("node:fs/promises");
 		const { tmpdir } = await import("node:os");
 		const { join } = await import("node:path");
@@ -67,11 +67,8 @@ describe("writeBaseline screenshots modes", () => {
 				platform: { os: "linux", arch: "x64", browser: "chromium 1.0" },
 			});
 			expect(await readFile(join(dir, "baseline", ".gitattributes"), "utf8")).toBe(LFS_GITATTRIBUTES);
-			expect((await readBaseline(dir))?.meta.platform).toEqual({
-				os: "linux",
-				arch: "x64",
-				browser: "chromium 1.0",
-			});
+			expect((await readBaseline(dir))?.meta).not.toHaveProperty("platform");
+			await readFile(join(dir, "baseline", "screenshots", "index@desktop.chromium-linux.png"));
 		} finally {
 			await rm(dir, { recursive: true, force: true });
 		}

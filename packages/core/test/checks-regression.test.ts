@@ -74,7 +74,7 @@ describe("checkRegressions", () => {
 		await mkdir(join(baselineDir, "screenshots"), { recursive: true });
 		await mkdir(join(baselineDir, "snapshots"), { recursive: true });
 		await writeFile(
-			join(baselineDir, "screenshots", "index@desktop.webp"),
+			join(baselineDir, "screenshots", `index@desktop.chromium-${process.platform}.webp`),
 			await encodeBaselineScreenshot(white),
 		);
 		await writeFile(

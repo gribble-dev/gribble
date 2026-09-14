@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "at": "2026-09-14T12:35:14.572Z",
+  "at": "2026-09-14T12:48:39.004Z",
   "gribbleVersion": "0.1.0",
   "viewports": {
     "mobile": {
@@ -12,11 +12,6 @@
       "height": 768
     }
   },
-  "commit": "6af10ea21af203dfb9813c52bbd8ef88a9edb69c",
-  "branch": "main",
-  "platform": {
-    "os": "darwin",
-    "arch": "arm64",
-    "browser": "chromium 153.0.8010.12"
-  }
+  "commit": "be208aa158bcac0450dc6fbe9748cfd01e5f7ef9",
+  "branch": "main"
 }

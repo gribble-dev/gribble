@@ -5,7 +5,9 @@ export {
 	baselinePaths,
 	baselineScreenshotPath,
 	baselineSnapshotPath,
+	LFS_GITATTRIBUTES,
 	readBaseline,
+	screenshotPlatformKey,
 	type WriteBaselineInput,
 	writeBaseline,
 } from "./io.js";
