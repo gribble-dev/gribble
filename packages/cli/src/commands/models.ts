@@ -1,5 +1,6 @@
 import { copy } from "../copy.js";
 import { EXIT } from "../errors.js";
+import { projectAgentDir } from "../project-agent-dir.js";
 import type { CommandContext } from "./context.js";
 
 export interface ModelsOptions {
@@ -11,7 +12,7 @@ export async function runModels(opts: ModelsOptions, ctx: CommandContext): Promi
 	const { deps, ui } = ctx;
 	const c = ui.colors;
 	const env = deps.context.env;
-	const agentDir = opts.agentDir ?? deps.gribbleAgentDir({ env });
+	const agentDir = await projectAgentDir(deps, opts.agentDir);
 	const runtime = await deps.createModelRuntime({ agentDir, env });
 	const available = deps.rankModels([...(await runtime.getAvailable())]);
 	if (available.length === 0) {

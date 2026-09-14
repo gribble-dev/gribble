@@ -1,6 +1,7 @@
 import { createAuthInteraction } from "../auth-interaction.js";
 import { copy } from "../copy.js";
 import { CliError, EXIT } from "../errors.js";
+import { projectAgentDir } from "../project-agent-dir.js";
 import type { ProviderInfo, RuntimeLike } from "../providers.js";
 import type { CommandContext } from "./context.js";
 
@@ -88,7 +89,7 @@ export async function runLogin(
 	const { deps, ui } = ctx;
 	const env = deps.context.env;
 	if (opts.apiKey) ui.line(ui.colors.dim(copy.login.apiKeyInHistory));
-	const agentDir = opts.agentDir ?? deps.gribbleAgentDir({ env });
+	const agentDir = await projectAgentDir(deps, opts.agentDir);
 	const runtime = await deps.createModelRuntime({ agentDir, env });
 	await loginFlow(ctx, runtime, { provider: providerArg, apiKey: opts.apiKey });
 	return EXIT.ok;

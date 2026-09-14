@@ -1,5 +1,6 @@
 import { copy } from "../copy.js";
 import { EXIT } from "../errors.js";
+import { projectAgentDir } from "../project-agent-dir.js";
 import type { CommandContext } from "./context.js";
 
 export interface LogoutOptions {
@@ -14,7 +15,7 @@ export async function runLogout(
 ): Promise<number> {
 	const { deps, ui } = ctx;
 	const env = deps.context.env;
-	const agentDir = opts.agentDir ?? deps.gribbleAgentDir({ env });
+	const agentDir = await projectAgentDir(deps, opts.agentDir);
 	const runtime = await deps.createModelRuntime({ agentDir, env });
 	const stored = await runtime.listCredentials();
 	if (providerArg) {
