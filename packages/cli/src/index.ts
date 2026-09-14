@@ -205,6 +205,11 @@ function reportError(err: unknown, deps: CliDeps, verbose: boolean): number {
 		write(copy.audit.interrupted);
 		return EXIT.cancelled;
 	}
+	if (err instanceof Error && err.name === "DevServerError") {
+		write(`error: ${err.message}`);
+		write(copy.errors.devServerHint);
+		return EXIT.config;
+	}
 	write(`${copy.errors.unexpected} ${errorMessage(err)}`);
 	if (verbose && err instanceof Error && err.stack) write(err.stack);
 	else write(copy.errors.unexpectedHint);

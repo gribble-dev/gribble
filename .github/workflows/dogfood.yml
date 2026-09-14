@@ -25,6 +25,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - run: pnpm --filter @gribble/website build
       - run: pnpm --filter @gribble/core exec playwright install --with-deps chromium
       - name: Audit the website
         uses: ./packages/action

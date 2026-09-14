@@ -1,4 +1,10 @@
-export { type DevServer, type StartDevServerOptions, startDevServer, urlResponds } from "./dev-server.js";
+export {
+	type DevServer,
+	DevServerError,
+	type StartDevServerOptions,
+	startDevServer,
+	urlResponds,
+} from "./dev-server.js";
 export {
 	crawlRoutes,
 	type ResolvedRoutes,

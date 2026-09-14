@@ -83,6 +83,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.2
+      gribble:
+        specifier: workspace:*
+        version: link:../../packages/cli
       marked:
         specifier: 18.0.12
         version: 18.0.12

@@ -39,7 +39,9 @@ export async function urlResponds(url: string, timeoutMs = 3_000): Promise<boole
 }
 
 function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms).unref());
+	// Deliberately not unref'd: while polling, this timer may be the only live handle (the dev
+	// server may already have died), and an unref'd timer lets Node exit mid-await with code 13.
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function killTree(child: ChildProcess): Promise<void> {
@@ -66,6 +68,11 @@ async function killTree(child: ChildProcess): Promise<void> {
 }
 
 /** Start the dev server unless the URL already responds; resolves once the URL answers. */
+/** The configured `target.start` command could not bring the site up; a setup problem, not a crash. */
+export class DevServerError extends Error {
+	override readonly name = "DevServerError";
+}
+
 export async function startDevServer(opts: StartDevServerOptions): Promise<DevServer> {
 	if (await urlResponds(opts.url)) {
 		return { started: false, stop: async () => {} };
@@ -105,7 +112,7 @@ export async function startDevServer(opts: StartDevServerOptions): Promise<DevSe
 			throw new Error("aborted while waiting for the dev server");
 		}
 		if (exited) {
-			throw new Error(
+			throw new DevServerError(
 				`dev server command exited ${exited.code !== null ? `with code ${exited.code}` : `on ${exited.signal}`} before ${opts.url} responded: ${opts.command}`,
 			);
 		}
@@ -113,7 +120,7 @@ export async function startDevServer(opts: StartDevServerOptions): Promise<DevSe
 		await sleep(POLL_MS);
 	}
 	await server.stop();
-	throw new Error(
+	throw new DevServerError(
 		`dev server did not respond at ${opts.url} within ${Math.round(opts.timeoutMs / 1000)}s: ${opts.command}`,
 	);
 }
