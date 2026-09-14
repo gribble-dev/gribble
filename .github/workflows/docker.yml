@@ -2,7 +2,8 @@ name: Docker image
 
 on:
   push:
-    tags: ["v*"]
+    # changesets tags releases as <package>@<version>; the CLI package's tag drives the image.
+    tags: ["gribble@*"]
   workflow_dispatch:
 
 permissions:
@@ -27,3 +28,5 @@ jobs:
           tags: |
             ghcr.io/gribble-dev/gribble:latest
             ghcr.io/gribble-dev/gribble:${{ github.ref_name }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/gribble-dev/gribble

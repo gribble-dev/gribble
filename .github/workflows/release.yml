@@ -24,6 +24,7 @@ jobs:
       # npm >= 11.5.1 publishes with OIDC trusted publishing (no token) and attaches provenance.
       - run: npm install -g npm@latest && npm --version
       - name: Create release PR or publish
+        id: changesets
         uses: changesets/action@v1
         with:
           publish: pnpm release
@@ -33,3 +34,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
+      # `changeset publish` tags the published versions locally; push them so tag-driven workflows run.
+      - name: Push release tags
+        run: git push origin --tags
