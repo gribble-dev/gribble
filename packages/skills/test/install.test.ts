@@ -58,10 +58,16 @@ describe("detectAgents", () => {
 
 describe("skillTargetPath", () => {
 	it("maps agent kinds to their skill directories", () => {
-		expect(skillTargetPath("/repo", "agents")).toBe("/repo/.agents/skills/gribble/SKILL.md");
-		expect(skillTargetPath("/repo", "pi")).toBe("/repo/.agents/skills/gribble/SKILL.md");
-		expect(skillTargetPath("/repo", "claude")).toBe("/repo/.claude/skills/gribble/SKILL.md");
-		expect(skillTargetPath("/repo", "cursor")).toBe("/repo/.cursor/skills/gribble/SKILL.md");
+		expect(skillTargetPath("/repo", "agents")).toBe(
+			join("/repo", ".agents", "skills", "gribble", "SKILL.md"),
+		);
+		expect(skillTargetPath("/repo", "pi")).toBe(join("/repo", ".agents", "skills", "gribble", "SKILL.md"));
+		expect(skillTargetPath("/repo", "claude")).toBe(
+			join("/repo", ".claude", "skills", "gribble", "SKILL.md"),
+		);
+		expect(skillTargetPath("/repo", "cursor")).toBe(
+			join("/repo", ".cursor", "skills", "gribble", "SKILL.md"),
+		);
 	});
 
 	it("has a label for every kind", () => {

@@ -7,7 +7,9 @@ const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url
 	files: string[];
 };
 
-function frontmatter(text: string): string {
+function frontmatter(raw: string): string {
+	// Tolerate CRLF checkouts: the frontmatter contract is about lines, not line endings.
+	const text = raw.replace(/\r\n/g, "\n");
 	expect(text.startsWith("---\n")).toBe(true);
 	const end = text.indexOf("\n---", 4);
 	expect(end).toBeGreaterThan(0);

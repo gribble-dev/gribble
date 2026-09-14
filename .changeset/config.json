@@ -2,10 +2,10 @@
 	"$schema": "https://unpkg.com/@changesets/config@3.0.2/schema.json",
 	"changelog": "@changesets/cli/changelog",
 	"commit": false,
-	"fixed": [["gribble", "@gribble/core", "@gribble/skills", "@gribble/action"]],
+	"fixed": [["gribble", "@gribble/core", "@gribble/skills"]],
 	"linked": [],
 	"access": "public",
 	"baseBranch": "main",
 	"updateInternalDependencies": "patch",
-	"ignore": ["@gribble/website"]
+	"ignore": ["@gribble/action", "@gribble/website"]
 }
