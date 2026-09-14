@@ -1,0 +1,329 @@
+- link "Skip to content":
+  - /url: "#main"
+- banner:
+  - link "Gribble":
+    - /url: /
+  - navigation "Main":
+    - link "Docs":
+      - /url: /docs
+    - link "llms.txt":
+      - /url: /llms.txt
+    - link "GitHub":
+      - /url: https://github.com/gribble-dev/gribble
+- main:
+  - complementary:
+    - navigation "Documentation":
+      - list:
+        - listitem:
+          - link "Gribble":
+            - /url: /docs
+        - listitem:
+          - link "Getting started":
+            - /url: /docs/getting-started
+        - listitem:
+          - link "Flows":
+            - /url: /docs/flows
+        - listitem:
+          - link "Guidelines":
+            - /url: /docs/guidelines
+        - listitem:
+          - link "Auth":
+            - /url: /docs/auth
+        - listitem:
+          - link "CI and the GitHub Action":
+            - /url: /docs/ci-github-action
+        - listitem:
+          - link "Monorepos":
+            - /url: /docs/monorepos
+        - listitem:
+          - link "Skills for coding agents":
+            - /url: /docs/skills
+        - listitem:
+          - link "CLI reference":
+            - /url: /docs/cli
+        - listitem:
+          - link "Report format":
+            - /url: /docs/report-format
+        - listitem:
+          - link "FAQ":
+            - /url: /docs/faq
+        - listitem:
+          - link "README":
+            - /url: /docs/README
+      - heading "Concepts" [level=2]
+      - list:
+        - listitem:
+          - link "Gate and review":
+            - /url: /docs/concepts/gate-and-review
+        - listitem:
+          - link "Baseline":
+            - /url: /docs/concepts/baseline
+        - listitem:
+          - link "Findings":
+            - /url: /docs/concepts/findings
+      - heading "Configuration" [level=2]
+      - list:
+        - listitem:
+          - link "gribble.yaml":
+            - /url: /docs/configuration/gribble-yaml
+        - listitem:
+          - link "rules.yaml":
+            - /url: /docs/configuration/rules-yaml
+        - listitem:
+          - link "Rules reference":
+            - /url: /docs/configuration/rules-reference
+  - article:
+    - heading "Getting started" [level=1]
+    - paragraph: Install Gribble, run init, and get your first audit and baseline.
+    - paragraph:
+      - link "View as Markdown":
+        - /url: /docs/getting-started.md
+    - navigation "On this page":
+      - heading "On this page" [level=2]
+      - list:
+        - listitem:
+          - link "Prerequisites":
+            - /url: "#prerequisites"
+        - listitem:
+          - link "Install":
+            - /url: "#install"
+        - listitem:
+          - link "gribble init":
+            - /url: "#gribble-init"
+        - listitem:
+          - link "Log in to a model provider":
+            - /url: "#log-in-to-a-model-provider"
+        - listitem:
+          - link "Your first audit":
+            - /url: "#your-first-audit"
+        - listitem:
+          - link "The bootstrap run":
+            - /url: "#the-bootstrap-run"
+        - listitem:
+          - link "What .gribble/ contains":
+            - /url: "#what-gribble-contains"
+        - listitem:
+          - link "What to commit":
+            - /url: "#what-to-commit"
+        - listitem:
+          - link "Next steps":
+            - /url: "#next-steps"
+    - paragraph: This page takes you from an empty project to a first audit and a committed baseline. Budget about ten minutes, most of which is the browser download.
+    - heading "Prerequisites" [level=2]
+    - list:
+      - listitem:
+        - strong: Node.js >= 22.
+        - text: Gribble is ESM-only and pi requires it.
+      - listitem:
+        - strong: A package manager
+        - text: — pnpm, npm or yarn all work.
+      - listitem:
+        - strong: A dev server or a preview URL.
+        - text: Gribble can start your dev server for you (
+        - code: target.start
+        - text: ) or point at a URL that is already up.
+      - listitem:
+        - strong: A model provider credential
+        - text: for
+        - code: review
+        - text: mode — an API key, or a subscription you log in to.
+        - code: gate
+        - text: mode runs without any model at all.
+    - heading "Install" [level=2]
+    - paragraph: "Install Gribble as a devDependency, the way you would ESLint or Playwright. It is not meant to be a global tool: the version belongs in your lockfile so CI and your laptop agree."
+    - code: "pnpm add -D gribble # npm install --save-dev gribble # yarn add --dev gribble"
+    - paragraph: "Then fetch the browser binary:"
+    - code: pnpm exec gribble install
+    - paragraph:
+      - text: This runs Playwright's Chromium download. If your CI image already has Playwright browsers (or you use the
+      - link "Docker image":
+        - /url: /docs/ci-github-action#docker-image
+      - text: ), you can skip it there.
+    - heading "gribble init" [level=2]:
+      - code: gribble init
+    - code: pnpm exec gribble init
+    - blockquote:
+      - paragraph: Let's put some gribbles in your repo.
+    - paragraph: The walkthrough asks four things.
+    - paragraph:
+      - strong: 1. Where does your site live?
+      - text: The URL Gribble should audit, defaulting to
+      - code: http://localhost:3000
+      - text: . You can type an environment variable reference like
+      - code: "${PREVIEW_URL}"
+      - text: instead of a literal URL.
+    - paragraph:
+      - strong: 2. How does it start?
+      - text: An optional command such as
+      - code: pnpm dev
+      - text: . If you give one, Gribble runs it before each audit and waits until the URL responds (120 seconds by default). Leave it blank if you always point at something that is already running.
+    - paragraph:
+      - strong: 3. Which model?
+      - text: Gribble asks your model runtime which models your current credentials can actually reach, then sorts them with a
+      - strong: recommended set first
+      - text: — models that handle tool calling well, do not need vision, and are cheap enough to run on every PR. Pick one and it is written into
+      - code: gribble.yaml
+      - text: so your whole team reproduces the same audit. If you have no credentials yet, init offers to run
+      - link "gribble login":
+        - /url: /docs/auth#part-2-model-provider-auth
+        - code: gribble login
+      - text: first.
+    - paragraph: Gribble deliberately ships no default model name. The recommended table lives in one place in the source and is refreshed every release.
+    - paragraph:
+      - strong: 4. Should we teach your coding agent?
+    - blockquote:
+      - paragraph: Teach your coding agent to feed the gribbles?
+    - paragraph:
+      - text: Init looks for
+      - code: .claude/
+      - text: ","
+      - code: .pi/
+      - text: ","
+      - code: .cursor/
+      - text: and
+      - code: AGENTS.md
+      - text: and offers to install the
+      - link "Gribble skill":
+        - /url: /docs/skills
+      - text: into each agent it finds. The skill teaches your coding agent to read the latest report, fix findings by severity, verify with
+      - code: gribble audit --mode gate
+      - text: ", and keep your flows and rules up to date."
+    - paragraph:
+      - text: Pass
+      - code: "--yes"
+      - text: to accept every default, including installing the skill everywhere. Pass
+      - code: "--url"
+      - text: ","
+      - code: "--start"
+      - text: and
+      - code: "--model"
+      - text: to answer individual questions non-interactively.
+    - heading "Log in to a model provider" [level=2]
+    - code: "gribble login # pick a provider interactively gribble login <provider> # OAuth flow or API key prompt gribble login <provider> --api-key \"$MY_KEY\""
+    - paragraph:
+      - text: Credentials go to
+      - code: ~/.gribble/auth.json
+      - text: ", never into your repository. If you already use pi, set"
+      - code: "reusePiAuth: true"
+      - text: in
+      - code: gribble.yaml
+      - text: and Gribble reads
+      - code: ~/.pi/agent/
+      - text: instead of keeping a second copy.
+    - paragraph: "Gribble also picks up the standard provider environment variables, which is how CI is expected to work:"
+    - code: "# whichever provider you chose; e.g. export ANTHROPIC_API_KEY=... export OPENAI_API_KEY=... export GOOGLE_API_KEY=..."
+    - paragraph:
+      - strong: Subscription OAuth logins are personal.
+      - text: Do not try to move one into CI — use an API key there. See
+      - link "Auth":
+        - /url: /docs/auth#part-2-model-provider-auth
+      - text: .
+    - heading "Your first audit" [level=2]
+    - code: pnpm exec gribble audit
+    - paragraph: "You get a live event stream: the dev server coming up, routes being discovered, deterministic checks running per route, then the agent exploring."
+    - code: 🪱 3 gribbles are nibbling on localhost:3000… ✓ routes 12 discovered ✓ links 248 checked ✓ a11y 12 routes ✓ perf 12 routes … reviewing /pricing
+    - paragraph: "And then one of two endings:"
+    - code: The gribbles went hungry. Ship it.
+    - code: "The gribbles found 4 holes in your hull — 2 need patching before you sail. error links/broken /pricing → /docs/plans returns 404 error a11y/form-labels /signup Input #email has no associated label warn seo/meta-description /blog/[slug] 22 characters, minimum is 50 warn review/copy /pricing \"Contact sales\" and \"Talk to sales\" on the same page"
+    - paragraph: Findings are dry on purpose. The jokes stop where the bug begins.
+    - paragraph:
+      - text: "Exit codes:"
+      - code: "0"
+      - text: everything passed,
+      - code: "1"
+      - text: the gate failed,
+      - code: "2"
+      - text: a config or auth problem. See the
+      - link "CLI reference":
+        - /url: /docs/cli#exit-codes
+      - text: .
+    - heading "The bootstrap run" [level=2]
+    - paragraph:
+      - text: The first audit has nothing to compare against, so Gribble enters
+      - strong: bootstrap mode
+      - text: ": it records what it finds as the known state instead of reporting it as new, writes"
+      - code: .gribble/baseline/
+      - text: ", posts no PR comments, and tells you to commit the result."
+    - code: No baseline yet — this run is the baseline. 18 findings recorded as known. Commit .gribble/baseline/ so future runs have something to diff against.
+    - paragraph:
+      - text: "From then on, every run is a diff: new findings get reported, existing ones get counted, fixed ones get celebrated. See"
+      - link "Baseline":
+        - /url: /docs/concepts/baseline
+      - text: .
+    - heading "What .gribble/ contains" [level=2]:
+      - text: What
+      - code: .gribble/
+      - text: contains
+    - code: ".gribble/ gribble.yaml project settings: URL, start command, model, budgets (commit) rules.yaml rule severities, ESLint style (commit) guidelines.md judgement-call house rules for the review AI (commit) flows/ user journeys in Markdown, plus replay sidecars (commit) baseline/ known findings, metrics, aria snapshots, screenshots (commit) .gitignore generated; ignores runs/ sessions/ cache/ (commit) runs/ reports, traces and screenshots per audit (ignored) sessions/ pi session files = full audit traces for replay (ignored) cache/ incremental audit cache, auth storage state (ignored)"
+    - heading "What to commit" [level=3]
+    - paragraph:
+      - text: Commit everything except
+      - code: runs/
+      - text: ","
+      - code: sessions/
+      - text: and
+      - code: cache/
+      - text: — and you do not have to do anything to arrange that, because
+      - code: gribble init
+      - text: writes
+      - code: .gribble/.gitignore
+      - text: "for you:"
+    - code: runs/ sessions/ cache/
+    - paragraph:
+      - text: That file is self-contained and is itself committed.
+      - code: gribble init
+      - strong:
+        - text: never touches your repository root
+        - code: .gitignore
+      - text: . It only warns you if your root
+      - code: .gitignore
+      - text: already ignores the whole
+      - code: .gribble/
+      - text: "directory, because that would also throw away your rules, flows and baseline:"
+    - code: Your root .gitignore ignores .gribble/ entirely. That also ignores rules.yaml, flows/ and baseline/, which should be committed.
+    - paragraph:
+      - code: sessions/
+      - text: and
+      - code: cache/
+      - text: "are ignored for a reason beyond noise: session files record tool arguments (screenshots, test-account data) and"
+      - code: cache/auth/
+      - text: holds browser storage state for logged-in profiles. Keep them out of git. In CI, reports travel as
+      - link "artifacts":
+        - /url: /docs/ci-github-action#artifacts
+      - text: ", not commits."
+    - heading "Next steps" [level=2]
+    - list:
+      - listitem:
+        - text: Loosen or tighten the checks in
+        - link "rules.yaml":
+          - /url: /docs/configuration/rules-yaml
+        - text: .
+      - listitem:
+        - text: Write your first
+        - link "flow":
+          - /url: /docs/flows
+        - text: so review mode knows what "checkout" means in your app.
+      - listitem:
+        - text: Put your house style into
+        - link "guidelines.md":
+          - /url: /docs/guidelines
+        - text: .
+      - listitem:
+        - text: Add the
+        - link "GitHub Action":
+          - /url: /docs/ci-github-action
+        - text: so every PR gets a comment.
+    - link "Edit this page on GitHub":
+      - /url: https://github.com/gribble-dev/gribble/blob/main/docs/getting-started.md
+- contentinfo:
+  - paragraph: Let the gribbles chew on it before your users do.
+  - navigation "Footer":
+    - link "Docs":
+      - /url: /docs
+    - link "GitHub":
+      - /url: https://github.com/gribble-dev/gribble
+    - link "npm":
+      - /url: https://www.npmjs.com/package/gribble
+    - link "JSON Schema":
+      - /url: /schema/gribble.json
+  - paragraph: MIT licensed. © 2026 the Gribble contributors.

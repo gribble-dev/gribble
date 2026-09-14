@@ -126,6 +126,12 @@ export function renderMarkdown(body: string, options: { slug: string }): Rendere
 
 	marked.use({
 		renderer: {
+			code(token) {
+				// Code blocks scroll horizontally, so they must be keyboard focusable (axe: scrollable-region-focusable).
+				const lang = (token.lang ?? "").trim().split(/\s+/)[0] ?? "";
+				const cls = lang ? ` class="language-${escapeHtml(lang)}"` : "";
+				return `<pre tabindex="0"><code${cls}>${escapeHtml(token.text)}\n</code></pre>\n`;
+			},
 			heading(token) {
 				// `this` is bound to the renderer by marked.
 				const inner = this.parser.parseInline(token.tokens);
@@ -147,4 +153,13 @@ export function renderMarkdown(body: string, options: { slug: string }): Rendere
 
 	const html = marked.parse(body, { async: false });
 	return { html, headings };
+}
+
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
 }

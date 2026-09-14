@@ -68,7 +68,7 @@
 	}
 
 	.group-label {
-		font-size: 0.74rem;
+		font-size: 0.75rem;
 		text-transform: uppercase;
 		letter-spacing: 0.09em;
 		color: var(--text-faint);

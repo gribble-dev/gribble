@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "findings": [
+    {
+      "fingerprint": "127f8b49cf6744ce",
+      "rule": "links/broken-external",
+      "severity": "warn",
+      "route": "/",
+      "firstSeen": {
+        "commit": "8d62f1b5145d3567dae94b01b28e3d162543b19b",
+        "at": "2026-09-11T16:57:52.064Z"
+      },
+      "location": {
+        "selector": "[data-gribble-ref=\"e5\"]"
+      },
+      "subject": "https://github.com/gribble-dev/gribble"
+    },
+    {
+      "fingerprint": "670da9383c689b5e",
+      "rule": "links/broken-external",
+      "severity": "warn",
+      "route": "/docs/[...slug]",
+      "firstSeen": {
+        "commit": "8d62f1b5145d3567dae94b01b28e3d162543b19b",
+        "at": "2026-09-11T16:57:52.064Z"
+      },
+      "location": {
+        "file": "src/routes/docs/[...slug]/+page.svelte",
+        "selector": "[data-gribble-ref=\"e58\"]"
+      },
+      "subject": "https://github.com/gribble-dev/gribble/blob/main/docs/getting-started.md"
+    },
+    {
+      "fingerprint": "6d2b5b83da7e7213",
+      "rule": "links/broken-external",
+      "severity": "warn",
+      "route": "/docs/[...slug]",
+      "firstSeen": {
+        "commit": "8d62f1b5145d3567dae94b01b28e3d162543b19b",
+        "at": "2026-09-11T16:57:52.064Z"
+      },
+      "location": {
+        "selector": "[data-gribble-ref=\"e5\"]"
+      },
+      "subject": "https://github.com/gribble-dev/gribble"
+    },
+    {
+      "fingerprint": "748c2a24689b3877",
+      "rule": "links/broken-external",
+      "severity": "warn",
+      "route": "/docs",
+      "firstSeen": {
+        "commit": "8d62f1b5145d3567dae94b01b28e3d162543b19b",
+        "at": "2026-09-11T16:57:52.064Z"
+      },
+      "location": {
+        "selector": "[data-gribble-ref=\"e5\"]"
+      },
+      "subject": "https://github.com/gribble-dev/gribble"
+    }
+  ]
+}

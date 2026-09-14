@@ -1,0 +1,193 @@
+- link "Skip to content":
+  - /url: "#main"
+- banner:
+  - link "Gribble":
+    - /url: /
+  - navigation "Main":
+    - link "Docs":
+      - /url: /docs
+    - link "llms.txt":
+      - /url: /llms.txt
+    - link "GitHub":
+      - /url: https://github.com/gribble-dev/gribble
+- main:
+  - paragraph: AI website audit, at development time
+  - heading "Tiny bugs that find your bugs before you ship." [level=1]
+  - paragraph: Let the gribbles chew on it before your users do.
+  - link "Get started":
+    - /url: /docs/getting-started
+  - link "View on GitHub":
+    - /url: https://github.com/gribble-dev/gribble
+  - paragraph: MIT licensed. Node 22+. Runs on your machine and in CI — no crawler, no production traffic.
+  - img "A gribble, the tiny sea bug that chews holes in ships"
+  - region "A code reviewer for your website, not a rank tracker":
+    - heading "A code reviewer for your website, not a rank tracker" [level=2]
+    - paragraph:
+      - text: Gribble is an audit agent that runs while the site is still on
+      - code: localhost
+      - text: — before the pull request, inside CI, ahead of the release. It starts your dev server, walks your routes and your flows, and reports broken links, dead ends, console errors, accessibility problems, SEO gaps, performance regressions and violations of your own written guidelines.
+    - paragraph: "Tools like Ahrefs and Lighthouse-as-a-service point at a site that is already live: the damage has shipped and the report lands in a dashboard. Gribble points at the build you have not merged yet, and traces every finding back to a file and a component so the fix is a diff, not a ticket."
+    - list:
+      - listitem: Runs against localhost or a preview deploy
+      - listitem: Findings carry source locations, not screenshots alone
+      - listitem: A baseline on main, so you review the diff
+      - listitem:
+        - text: Your house style lives in
+        - code: guidelines.md
+  - region "Three steps to your first audit":
+    - heading "Three steps to your first audit" [level=2]
+    - list:
+      - listitem:
+        - code: pnpm add -D gribble
+        - paragraph: Install the CLI in the app you want audited.
+      - listitem:
+        - code: pnpm exec gribble init
+        - paragraph: Writes .gribble/ — config, rules, guidelines and a first flow.
+      - listitem:
+        - code: pnpm exec gribble audit
+        - paragraph: Starts your dev server, walks the site, reports what it chewed through.
+    - paragraph:
+      - text: npm, yarn and bun work too — swap the package manager. The full walkthrough lives in
+      - link "Getting started":
+        - /url: /docs/getting-started
+      - text: .
+  - region "What it leaves on your pull request":
+    - heading "What it leaves on your pull request" [level=2]
+    - paragraph:
+      - text: One summary comment, updated in place on every run. Findings that map to source get inline review comments; the rest are folded into the summary. When a finding disappears, its comment is edited to
+      - emphasis: patched
+      - text: and the thread is resolved.
+    - figure "gribble bot commented 2 minutes ago":
+      - strong: gribble
+      - text: bot commented 2 minutes ago
+      - heading "The gribbles found 7 holes in your hull — 2 need patching before you sail." [level=3]
+      - paragraph: "Gate: fail 2 new blocking 3 new advisory 2 already on main"
+      - table "New findings by severity":
+        - caption: New findings by severity
+        - rowgroup:
+          - row "Severity Count":
+            - columnheader "Severity"
+            - columnheader "Count"
+        - rowgroup:
+          - row "Critical 0":
+            - rowheader "Critical"
+            - cell "0"
+          - row "Error 2":
+            - rowheader "Error"
+            - cell "2"
+          - row "Warn 3":
+            - rowheader "Warn"
+            - cell "3"
+          - row "Info 2":
+            - rowheader "Info"
+            - cell "2"
+      - list:
+        - listitem:
+          - paragraph:
+            - text: Error
+            - link "links/broken":
+              - /url: /rules/links/broken
+            - text: /pricing
+          - paragraph: Link to /pricing/enterprise returns 404
+          - paragraph:
+            - code: src/routes/pricing/+page.svelte — PlanTable
+          - paragraph: The "Talk to sales" link in the Enterprise column points at /pricing/enterprise, which no route serves.
+          - paragraph:
+            - strong: "Fix:"
+            - text: Point it at /contact?plan=enterprise or add the missing route.
+        - listitem:
+          - paragraph:
+            - text: Error
+            - link "a11y/form-labels":
+              - /url: /rules/a11y/form-labels
+            - text: /signup
+          - paragraph: Email field has no accessible name
+          - paragraph:
+            - code: src/lib/components/SignupForm.svelte — EmailInput
+          - paragraph: The input is labelled only by hint text, so screen readers announce it as an unnamed edit field.
+          - paragraph:
+            - strong: "Fix:"
+            - text: Add <label for="email"> or aria-label to the input.
+        - listitem:
+          - paragraph:
+            - text: Warn
+            - link "review/content":
+              - /url: /rules/review/content
+            - text: /checkout/shipping
+          - paragraph: Checkout step 2 has no way back
+          - paragraph:
+            - code: src/routes/checkout/shipping/+page.svelte
+          - paragraph: Shipping is the only step without a back control; correcting the address requires restarting the flow. Confidence 0.82.
+          - paragraph:
+            - strong: "Fix:"
+            - text: Add a back link to /checkout/cart that preserves the entered address.
+      - paragraph: Showing 3 of 7 holes. The rest are in the full report.
+    - paragraph:
+      - text: The example above is a mock-up of a real summary comment. See
+      - link "Findings":
+        - /url: /docs/concepts/findings
+      - text: for the anatomy of one.
+  - 'region "Gate and review: two speeds, one report"':
+    - 'heading "Gate and review: two speeds, one report" [level=2]'
+    - article:
+      - heading "Gate — deterministic, cheap, blocking" [level=3]
+      - paragraph: "Crawlers, checkers and replayed flows. No model involved: broken links, failed requests, missing meta, duplicate ids, axe violations, Lighthouse budgets, mixed content. Fast enough to run on every push, strict enough to fail the build."
+      - paragraph:
+        - code: gribble audit --mode gate
+    - article:
+      - heading "Review — judgement, slower, advisory" [level=3]
+      - paragraph:
+        - text: "An agent browses the site like an irritable reviewer: confusing copy, dead ends, layout that breaks at 390 px, guideline violations, journeys that silently do nothing. Findings come with a confidence score, are capped by your"
+        - code: review/*
+        - text: severities, and never block on their own.
+      - paragraph:
+        - code: gribble audit --mode review
+    - paragraph:
+      - code: gribble audit
+      - text: runs both. Read
+      - link "Gate and review":
+        - /url: /docs/concepts/gate-and-review
+      - text: for the whole story.
+  - region "Documentation":
+    - heading "Documentation" [level=2]
+    - list:
+      - listitem:
+        - link "Getting started From install to a first clean run.":
+          - /url: /docs/getting-started
+      - listitem:
+        - link "Gate and review The deterministic half and the judgement half.":
+          - /url: /docs/concepts/gate-and-review
+      - listitem:
+        - link "gribble.yaml Targets, budgets, viewports, environments.":
+          - /url: /docs/configuration/gribble-yaml
+      - listitem:
+        - link "Rules reference Every rule, its options and its fix.":
+          - /url: /docs/configuration/rules-reference
+      - listitem:
+        - link "Flows Describe a user journey in plain Markdown.":
+          - /url: /docs/flows
+      - listitem:
+        - link "CI and GitHub Action Wire it into pull requests.":
+          - /url: /docs/ci-github-action
+    - paragraph:
+      - text: "Machine readers:"
+      - link "/llms.txt":
+        - /url: /llms.txt
+      - text: ","
+      - link "/llms-full.txt":
+        - /url: /llms-full.txt
+      - text: ", and every page also served as raw Markdown at"
+      - code: /docs/<page>.md
+      - text: .
+- contentinfo:
+  - paragraph: Let the gribbles chew on it before your users do.
+  - navigation "Footer":
+    - link "Docs":
+      - /url: /docs
+    - link "GitHub":
+      - /url: https://github.com/gribble-dev/gribble
+    - link "npm":
+      - /url: https://www.npmjs.com/package/gribble
+    - link "JSON Schema":
+      - /url: /schema/gribble.json
+  - paragraph: MIT licensed. © 2026 the Gribble contributors.

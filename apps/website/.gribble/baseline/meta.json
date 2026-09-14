@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "at": "2026-09-11T16:57:52.064Z",
+  "gribbleVersion": "0.1.0",
+  "viewports": {
+    "mobile": {
+      "width": 390,
+      "height": 844
+    },
+    "desktop": {
+      "width": 1366,
+      "height": 768
+    }
+  },
+  "commit": "8d62f1b5145d3567dae94b01b28e3d162543b19b",
+  "branch": "main"
+}

@@ -1,0 +1,393 @@
+- link "Skip to content":
+  - /url: "#main"
+- banner:
+  - link "Gribble":
+    - /url: /
+  - navigation "Main":
+    - link "Docs":
+      - /url: /docs
+    - link "llms.txt":
+      - /url: /llms.txt
+    - link "GitHub":
+      - /url: https://github.com/gribble-dev/gribble
+- main:
+  - complementary:
+    - navigation "Documentation":
+      - list:
+        - listitem:
+          - link "Gribble":
+            - /url: /docs
+        - listitem:
+          - link "Getting started":
+            - /url: /docs/getting-started
+        - listitem:
+          - link "Flows":
+            - /url: /docs/flows
+        - listitem:
+          - link "Guidelines":
+            - /url: /docs/guidelines
+        - listitem:
+          - link "Auth":
+            - /url: /docs/auth
+        - listitem:
+          - link "CI and the GitHub Action":
+            - /url: /docs/ci-github-action
+        - listitem:
+          - link "Monorepos":
+            - /url: /docs/monorepos
+        - listitem:
+          - link "Skills for coding agents":
+            - /url: /docs/skills
+        - listitem:
+          - link "CLI reference":
+            - /url: /docs/cli
+        - listitem:
+          - link "Report format":
+            - /url: /docs/report-format
+        - listitem:
+          - link "FAQ":
+            - /url: /docs/faq
+        - listitem:
+          - link "README":
+            - /url: /docs/README
+      - heading "Concepts" [level=2]
+      - list:
+        - listitem:
+          - link "Gate and review":
+            - /url: /docs/concepts/gate-and-review
+        - listitem:
+          - link "Baseline":
+            - /url: /docs/concepts/baseline
+        - listitem:
+          - link "Findings":
+            - /url: /docs/concepts/findings
+      - heading "Configuration" [level=2]
+      - list:
+        - listitem:
+          - link "gribble.yaml":
+            - /url: /docs/configuration/gribble-yaml
+        - listitem:
+          - link "rules.yaml":
+            - /url: /docs/configuration/rules-yaml
+        - listitem:
+          - link "Rules reference":
+            - /url: /docs/configuration/rules-reference
+  - article:
+    - heading "Documentation" [level=1]
+    - paragraph: An AI website quality audit agent that runs while you build, not after you ship.
+    - paragraph:
+      - link "View as Markdown":
+        - /url: /docs/index.md
+    - paragraph:
+      - text: Gribble is a website quality audit agent that runs
+      - strong: during development
+      - text: "— before you open a pull request, inside CI, and before a release. It walks your site the way a picky reviewer would: it follows the links, walks the flows you described, checks SEO, accessibility, performance, security and your own house rules, and points every finding at the source file that caused it."
+    - code: "pnpm add -D gribble pnpm exec gribble install # downloads the Playwright browser pnpm exec gribble init # creates .gribble/ pnpm exec gribble audit # let the gribbles chew on it"
+    - heading "Why the name" [level=2]
+    - paragraph: "A gribble is a tiny marine isopod that bores holes into ship hulls from places nobody looks at. Whole piers have quietly collapsed because of them. We named the pest hunter after the pest: tiny bugs that find your bugs before you ship."
+    - paragraph: The "ship" pun is the house joke, and we are not sorry.
+    - heading "Not a production site auditor" [level=2]
+    - paragraph:
+      - text: Tools like Ahrefs Site Audit, Screaming Frog or a scheduled Lighthouse run point at a site that is
+      - strong: already live
+      - text: . They tell you what your users are seeing right now. That is useful, and Gribble does not replace it.
+    - paragraph:
+      - text: Gribble points at
+      - code: localhost:3000
+      - text: ", at your Vercel preview URL, at the container your compose file just brought up. It runs on a branch, against code that has not merged yet, and its job is to stop a regression from reaching the live site in the first place."
+    - table:
+      - rowgroup:
+        - row "Production auditors Gribble":
+          - columnheader
+          - columnheader "Production auditors"
+          - columnheader "Gribble"
+      - rowgroup:
+        - row "Target The deployed site A dev server, preview URL or container":
+          - cell "Target"
+          - cell "The deployed site"
+          - cell "A dev server, preview URL or container"
+        - row "Cadence Scheduled crawls Every PR, every push, before release":
+          - cell "Cadence"
+          - cell "Scheduled crawls"
+          - cell "Every PR, every push, before release"
+        - row "Output Dashboards and scores PR comments, check annotations, a JSON report":
+          - cell "Output"
+          - cell "Dashboards and scores"
+          - cell "PR comments, check annotations, a JSON report"
+        - row "Fix loop File a ticket Points at the source file; your coding agent fixes it":
+          - cell "Fix loop"
+          - cell "File a ticket"
+          - cell "Points at the source file; your coding agent fixes it"
+    - heading "Two modes" [level=2]
+    - paragraph: Gribble runs two very different kinds of check, and the difference matters because only one of them is allowed to block a merge.
+    - paragraph:
+      - strong:
+        - link "gate":
+          - /url: /docs/concepts/gate-and-review
+      - text: "is deterministic. Plain code, no model: broken links, failed requests, console errors, SEO metadata, axe accessibility violations, Lighthouse thresholds, HTML sanity, security checks, replay of flows that were already fixed in place. Fast, reproducible, same answer every time. Gate findings can fail your build."
+    - paragraph:
+      - strong: review
+      - text: is the AI agent. It explores the site, walks the flows in
+      - code: .gribble/flows/*.md
+      - text: ", looks for new flows nobody wrote down, judges the UI against your"
+      - code: .gribble/guidelines.md
+      - text: ", and writes fix suggestions. Slow, non-deterministic, and"
+      - strong: never blocks a merge
+      - text: — it comments. AI findings are capped in severity by your
+      - code: review/*
+      - text: rules, which default to
+      - code: warn
+      - text: .
+    - paragraph:
+      - text: Run both with
+      - code: gribble audit
+      - text: ", or pick one with"
+      - code: "--mode gate"
+      - text: /
+      - code: "--mode review"
+      - text: .
+    - heading "Three entry points" [level=2]
+    - paragraph: All three consume the same audit and the same report.
+    - list:
+      - listitem:
+        - strong:
+          - link "CLI":
+            - /url: /docs/cli
+        - text: —
+        - code: gribble audit
+        - text: ", with a live event stream in your terminal and"
+        - code: "--ci"
+        - text: for machine-readable output.
+      - listitem:
+        - strong:
+          - link "GitHub Action":
+            - /url: /docs/ci-github-action
+        - text: —
+        - code: "uses: gribble-dev/action@v1"
+        - text: . Check runs with annotations, PR comments that update in place, SARIF for code scanning, JUnit, and the run directory as an artifact.
+      - listitem:
+        - strong: Local web UI
+        - text: —
+        - emphasis: coming later.
+        - text: A local server that streams the same event bus to a browser, next to a live view of the page the agent is driving, so you can replay exactly what it did when a finding was raised.
+    - heading "Diff, not score" [level=2]
+    - paragraph: Gribble does not hand you a number out of 100. A number out of 100 on an established codebase is a number everybody learns to ignore.
+    - paragraph:
+      - text: Everything is a
+      - strong:
+        - text: diff against the
+        - link "baseline":
+          - /url: /docs/concepts/baseline
+      - text: "stored on your main branch:"
+    - list:
+      - listitem:
+        - strong: New
+        - text: findings are reported and commented on. These are the ones your change introduced.
+      - listitem:
+        - strong: Existing
+        - text: findings are counted and never commented on. You already know.
+      - listitem:
+        - strong: Fixed
+        - text: findings are celebrated in the summary. Somebody patched a hole.
+    - paragraph:
+      - text: "Performance works the same way:"
+      - code: perf/regression
+      - text: compares against the metrics your main branch recorded, so a slow legacy app is perfectly usable with Gribble as long as it stops getting slower.
+    - heading "Built on pi, keyed by you" [level=2]
+    - paragraph:
+      - text: Gribble is a shell around
+      - link "pi":
+        - /url: https://github.com/earendil-works/pi
+      - text: . The agent loop, the model catalog, the provider auth and the session format come from pi's SDK; the browser tools, the deterministic checks, the guardrails and the report format come from Gribble. We do not maintain our own agent loop, and we do not patch pi.
+    - paragraph: "Consequences worth knowing up front:"
+    - list:
+      - listitem:
+        - strong: Bring your own key.
+        - text: Gribble has no cloud, no account and no server of ours in the path. You log in to a model provider with
+        - code: gribble login
+        - text: ", or you set an API key environment variable in CI. Your pages, your screenshots and your source never touch infrastructure we run."
+      - listitem:
+        - strong: No hardcoded model.
+        - text: Gribble does not ship a default model name.
+        - code: gribble init
+        - text: shows you what your credentials can reach, with a recommended set first, and writes your choice into
+        - code: gribble.yaml
+        - text: so your whole team reproduces the same audit.
+      - listitem:
+        - strong: The session file is the trace.
+        - text: Every tool call, argument and result is recorded in
+        - code: .gribble/sessions/
+        - text: (gitignored), which is what the replay UI will read.
+      - listitem:
+        - strong: Read-only by default.
+        - text: The agent gets read, grep, find, ls and Gribble's audit tools. No
+        - code: edit
+        - text: ", no"
+        - code: write
+        - text: ", no"
+        - code: bash
+        - text: .
+    - paragraph: Licensed MIT. The report JSON is designed to be self-contained and uploadable, so a hosted dashboard stays possible later — but there is nothing to sign up for today.
+    - heading "Where to go next" [level=2]
+    - list:
+      - listitem:
+        - strong:
+          - link "Getting started":
+            - /url: /docs/getting-started
+        - text: — install, init, first audit, what to commit.
+      - listitem:
+        - strong: Concepts
+        - text: —
+        - link "gate and review":
+          - /url: /docs/concepts/gate-and-review
+        - text: ","
+        - link "the baseline":
+          - /url: /docs/concepts/baseline
+        - text: ","
+        - link "findings and fingerprints":
+          - /url: /docs/concepts/findings
+        - text: .
+      - listitem:
+        - strong: Configuration
+        - text: —
+        - link "gribble.yaml":
+          - /url: /docs/configuration/gribble-yaml
+        - text: ","
+        - link "rules.yaml":
+          - /url: /docs/configuration/rules-yaml
+        - text: ","
+        - link "the rules reference":
+          - /url: /docs/configuration/rules-reference
+        - text: .
+      - listitem:
+        - strong:
+          - link "Flows":
+            - /url: /docs/flows
+        - text: — describe user journeys in Markdown and replay them deterministically.
+      - listitem:
+        - strong:
+          - link "Guidelines":
+            - /url: /docs/guidelines
+        - text: — the house rules a model has to read, not a linter.
+      - listitem:
+        - strong:
+          - link "Auth":
+            - /url: /docs/auth
+        - text: — logging in to the site under test, and to your model provider.
+      - listitem:
+        - strong:
+          - link "CI and the GitHub Action":
+            - /url: /docs/ci-github-action
+        - text: — the workflow, inputs, outputs and permissions.
+      - listitem:
+        - strong:
+          - link "Monorepos":
+            - /url: /docs/monorepos
+        - text: — one
+        - code: .gribble/
+        - text: per app, cascading rules.
+      - listitem:
+        - strong:
+          - link "Skills for coding agents":
+            - /url: /docs/skills
+        - text: — teach Claude Code, pi or Cursor to fix what Gribble finds.
+      - listitem:
+        - strong:
+          - link "CLI reference":
+            - /url: /docs/cli
+        - text: — every command, flag and exit code.
+      - listitem:
+        - strong:
+          - link "Report format":
+            - /url: /docs/report-format
+        - text: — the JSON, SARIF and JUnit outputs.
+      - listitem:
+        - strong:
+          - link "FAQ":
+            - /url: /docs/faq
+        - text: — cost, false positives, privacy, Windows, and why not Lighthouse CI.
+    - heading "Overview" [level=2]
+    - list:
+      - listitem:
+        - link "Getting started":
+          - /url: /docs/getting-started
+        - text: Install Gribble, run init, and get your first audit and baseline.
+      - listitem:
+        - link "Flows":
+          - /url: /docs/flows
+        - text: Describe user journeys in Markdown; let the gribbles walk them.
+      - listitem:
+        - link "Guidelines":
+          - /url: /docs/guidelines
+        - text: House rules a model has to judge — written in prose, appended to Gribble's system prompt.
+      - listitem:
+        - link "Auth":
+          - /url: /docs/auth
+        - text: Logging in to the site under test, and logging in to your model provider. Two different problems.
+      - listitem:
+        - link "CI and the GitHub Action":
+          - /url: /docs/ci-github-action
+        - text: Run Gribble on every pull request, comment findings, upload SARIF, and keep the baseline fresh.
+      - listitem:
+        - link "Monorepos":
+          - /url: /docs/monorepos
+        - text: One .gribble/ per app, with rules and guidelines cascading up to the repository root.
+      - listitem:
+        - link "Skills for coding agents":
+          - /url: /docs/skills
+        - text: Teach Claude Code, pi or Cursor to read Gribble's report, fix what it found, and keep your rules and flows current.
+      - listitem:
+        - link "CLI reference":
+          - /url: /docs/cli
+        - text: Every command, every flag, exit codes, and the --ci output contract.
+      - listitem:
+        - link "Report format":
+          - /url: /docs/report-format
+        - text: The report JSON, its versioning guarantees, and the SARIF and JUnit outputs derived from it.
+      - listitem:
+        - link "FAQ":
+          - /url: /docs/faq
+        - text: Cost, non-determinism, false positives, privacy, Windows, mobile, and why not just use Lighthouse CI.
+      - listitem:
+        - link "README":
+          - /url: /docs/README
+    - heading "Concepts" [level=2]
+    - list:
+      - listitem:
+        - link "Gate and review":
+          - /url: /docs/concepts/gate-and-review
+        - text: Two modes with different contracts — one is deterministic and can block a merge, the other is an AI agent that only ever comments.
+      - listitem:
+        - link "Baseline":
+          - /url: /docs/concepts/baseline
+        - text: The committed snapshot of your main branch's known state — everything Gribble reports is a diff against it.
+      - listitem:
+        - link "Findings":
+          - /url: /docs/concepts/findings
+        - text: What a finding contains, how its fingerprint is computed, how severity works, and how comments live and die.
+    - heading "Configuration" [level=2]
+    - list:
+      - listitem:
+        - link "gribble.yaml":
+          - /url: /docs/configuration/gribble-yaml
+        - text: Project settings — target URL, model, budgets, origins, environments, auth profiles, baseline and output.
+      - listitem:
+        - link "rules.yaml":
+          - /url: /docs/configuration/rules-yaml
+        - text: ESLint-style rule configuration — extends, ignore, severities, options and per-route overrides.
+      - listitem:
+        - link "Rules reference":
+          - /url: /docs/configuration/rules-reference
+        - text: Every rule Gribble knows, with options, preset defaults and fix hints.
+- contentinfo:
+  - paragraph: Let the gribbles chew on it before your users do.
+  - navigation "Footer":
+    - link "Docs":
+      - /url: /docs
+    - link "GitHub":
+      - /url: https://github.com/gribble-dev/gribble
+    - link "npm":
+      - /url: https://www.npmjs.com/package/gribble
+    - link "JSON Schema":
+      - /url: /schema/gribble.json
+  - paragraph: MIT licensed. © 2026 the Gribble contributors.

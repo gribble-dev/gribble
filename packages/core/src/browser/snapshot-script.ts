@@ -271,7 +271,13 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 	const viewport = { width: win.innerWidth, height: win.innerHeight };
 
 	const overlapPairs = new Set<string>();
-	const candidates = interactive.filter((e) => e.box.width > 0 && e.box.height > 0);
+	// Inline elements that wrap across lines (a link inside a paragraph) have a bounding box that
+	// covers the whole line block; comparing those boxes yields phantom overlaps.
+	const wrapsLines = (el: Element): boolean =>
+		win.getComputedStyle(el).display === "inline" && el.getClientRects().length > 1;
+	const candidates = interactive.filter(
+		(e) => e.box.width > 0 && e.box.height > 0 && !wrapsLines(elementByRef.get(e.ref)!),
+	);
 	for (let i = 0; i < candidates.length && i < 400; i++) {
 		const a = candidates[i]!;
 		const elA = elementByRef.get(a.ref)!;
@@ -335,15 +341,19 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 
 	if (opts.minTouchPx) {
 		const min = opts.minTouchPx;
+		// WCAG 2.5.8 exempts inline targets in a block of text; anything else needs to be
+		// comfortably tappable: flag when both dimensions miss the configured minimum, or when the
+		// smaller one is below the 24px hard floor.
+		const HARD_FLOOR = 24;
 		for (const e of interactive) {
 			if (e.box.width <= 0 || e.box.height <= 0) continue;
-			if (
-				e.tag === "input" &&
-				["checkbox", "radio"].includes(elementByRef.get(e.ref)?.getAttribute("type") ?? "")
-			) {
-				continue;
-			}
-			if (e.box.width < min || e.box.height < min) {
+			const el = elementByRef.get(e.ref);
+			if (!el) continue;
+			if (e.tag === "input" && ["checkbox", "radio"].includes(el.getAttribute("type") ?? "")) continue;
+			if (win.getComputedStyle(el).display === "inline") continue;
+			const smaller = Math.min(e.box.width, e.box.height);
+			const bothTooSmall = e.box.width < min && e.box.height < min;
+			if (bothTooSmall || smaller < Math.min(min, HARD_FLOOR)) {
 				layout.push({
 					kind: "small-touch-target",
 					refs: [e.ref],

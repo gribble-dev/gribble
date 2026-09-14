@@ -35,9 +35,15 @@ function findKeys(input: { sources: string[]; limit: number }): KeyHit[] {
 		}
 		return parts.join(" > ");
 	};
+	// File names, hostnames and package names look exactly like dotted message keys.
+	const knownSuffix =
+		/\.(md|mdx|txt|ya?ml|json|jsonc|toml|ini|env|lock|js|mjs|cjs|ts|mts|cts|tsx|jsx|css|scss|less|html?|svg|png|jpe?g|gif|webp|avif|ico|pdf|zip|tar|gz|xml|csv|sh|py|rb|go|rs|java|kt|swift|php|sql|log|map|wasm|com|org|net|io|dev|app|ai|co|me|sh|xyz|info|edu|gov|uk|de|fr|jp|cn|local|test|internal|localhost)$/i;
+	const codeLike = new Set(["CODE", "PRE", "KBD", "SAMP", "VAR", "TT"]);
 	const consider = (text: string, el: Element) => {
 		const trimmed = text.replace(/\s+/g, " ").trim();
 		if (!trimmed || trimmed.length > 120 || seen.has(trimmed)) return;
+		if (knownSuffix.test(trimmed)) return;
+		if (el.closest("code, pre, kbd, samp, var, tt")) return;
 		if (regexes.some((re) => re.test(trimmed))) {
 			seen.add(trimmed);
 			hits.push({ key: trimmed, selector: selectorFor(el) });
@@ -47,7 +53,11 @@ function findKeys(input: { sources: string[]; limit: number }): KeyHit[] {
 	let node = walker.nextNode();
 	while (node && hits.length < limit) {
 		const parent = node.parentElement;
-		if (parent && !["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE"].includes(parent.tagName)) {
+		if (
+			parent &&
+			!["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE"].includes(parent.tagName) &&
+			!codeLike.has(parent.tagName)
+		) {
 			const style = window.getComputedStyle(parent);
 			if (style.display !== "none" && style.visibility !== "hidden") consider(node.textContent ?? "", parent);
 		}

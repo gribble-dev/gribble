@@ -108,7 +108,7 @@ describe.skipIf(!hasChromium())(`runAudit gate mode (${SKIP_BROWSER_REASON})`, (
 		expect(rules).toContain("ui/horizontal-overflow");
 		expect(rules).toContain("seo/sitemap");
 		expect(report.findings.every((f) => f.status === "new")).toBe(true);
-		expect(report.summary.gate).toBe("fail");
+		expect(report.summary.gate).toBe("pass"); // bootstrap runs never block
 		expect(report.summary.counts.error).toBeGreaterThan(0);
 		expect(report.summary.headline).toContain("gribbles");
 		expect(report.budget).toEqual({ steps: 0, maxSteps: 200, tokens: 0, maxTokens: 2000000, costUsd: 0 });

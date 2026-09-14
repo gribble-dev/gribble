@@ -113,7 +113,8 @@ export async function checkSecurity(ctx: CheckContext): Promise<Finding[]> {
 		}
 	}
 
-	if (ruleEnabled(ctx, "security/headers")) {
+	// Dev and preview servers on loopback never carry production headers; checking them there is noise.
+	if (ruleEnabled(ctx, "security/headers") && !loopback) {
 		const required = (ruleOptions<{ require: string[] }>(ctx, "security/headers").require ?? []).map((h) =>
 			h.toLowerCase(),
 		);

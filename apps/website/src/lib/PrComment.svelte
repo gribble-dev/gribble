@@ -31,7 +31,7 @@
 			title: "Email field has no accessible name",
 			route: "/signup",
 			location: "src/lib/components/SignupForm.svelte — EmailInput",
-			detail: "The input is labelled only by a placeholder, so screen readers announce it as an unnamed edit field.",
+			detail: "The input is labelled only by hint text, so screen readers announce it as an unnamed edit field.",
 			fix: "Add <label for=\"email\"> or aria-label to the input."
 		},
 		{
@@ -214,18 +214,21 @@
 	}
 
 	.f-head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: var(--space-2);
+		/* Inline flow (not flex) so the rule link stays an inline text link. */
+		display: block;
+		line-height: 1.9;
 		font-size: 0.84rem;
+	}
+
+	.f-head > * + * {
+		margin-left: var(--space-2);
 	}
 
 	.sev {
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 		font-weight: 700;
-		font-size: 0.72rem;
+		font-size: 0.75rem;
 		border-radius: var(--radius-sm);
 		padding: 0.1rem 0.45rem;
 	}

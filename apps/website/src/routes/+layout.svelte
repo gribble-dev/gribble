@@ -93,6 +93,12 @@
 	}
 
 	.bar nav a {
+		/* Comfortable tap targets: at least 44px tall without changing the visual rhythm. */
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		padding: 0 var(--space-2);
+		margin: 0 calc(-1 * var(--space-2));
 		color: var(--text-muted);
 		text-decoration: none;
 	}
@@ -133,6 +139,14 @@
 		flex-wrap: wrap;
 		gap: var(--space-4);
 		font-size: 0.94rem;
+	}
+
+	.site-footer nav a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		padding: 0 var(--space-2);
+		margin: 0 calc(-1 * var(--space-2));
 	}
 
 	.legal {

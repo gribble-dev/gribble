@@ -404,6 +404,11 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	const diff = diffAgainstBaseline(deduped, bootstrap ? undefined : baseline, { auditedRoutes: routes });
 	const findings = sortFindings(diff.findings);
 	const summary = summarizeReport(findings, { ci: options.ci, fixedCount: diff.fixed.length });
+	if (bootstrap && summary.gate === "fail") {
+		// Nothing to compare against yet: the first run records the known state instead of blocking.
+		summary.gate = "pass";
+		summary.headline = `${summary.headline} Recorded as the baseline; nothing blocks until something gets worse.`;
+	}
 
 	// ----------------------------------------------------------------- report
 	emit({ type: "phase", phase: "report", message: "Writing the log book…" });
