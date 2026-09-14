@@ -301,7 +301,7 @@ describe("guardrails: context elision", () => {
 		const texts = result!.messages.map((m) => m.content[0]!.text!);
 		expect(texts[1]).toContain("elided from context");
 		expect(texts[1]).toContain("page_snapshot again");
-		expect(texts[1].length).toBeLessThan(600);
+		expect(texts[1]!.length).toBeLessThan(600);
 		expect(texts[2]).toBe("ok");
 		expect(texts[3]).toContain("elided from context");
 		for (const i of [4, 5, 6]) expect(texts[i]!.length).toBeGreaterThan(5_000);
@@ -311,5 +311,30 @@ describe("guardrails: context elision", () => {
 		const h = await setup();
 		const messages = [big("page_snapshot", 1), big("page_snapshot", 2)];
 		expect(await h.emit({ type: "context", messages })).toBeUndefined();
+	});
+});
+
+describe("guardrails: low-budget warning", () => {
+	it("steers the model once when 75% of the token budget is used", async () => {
+		const h = await setup();
+		h.state.budget.maxTokens = 1_000;
+		h.state.budget.maxSteps = 100;
+		const turn = (tokens: number) => ({
+			type: "turn_end",
+			turnIndex: 0,
+			message: {
+				role: "assistant",
+				usage: { totalTokens: tokens, input: tokens, output: 0, cost: { total: 0 } },
+			},
+			toolResults: [],
+		});
+		await h.emit(turn(500));
+		expect(h.sent).toHaveLength(0);
+		await h.emit(turn(300));
+		expect(h.sent).toHaveLength(1);
+		expect(JSON.stringify(h.sent[0])).toContain("finalize_report");
+		await h.emit(turn(100));
+		expect(h.sent).toHaveLength(1);
+		expect(h.state.budget.exhausted).toBe(false);
 	});
 });

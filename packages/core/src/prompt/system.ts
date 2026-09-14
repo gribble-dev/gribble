@@ -61,7 +61,9 @@ Tone: findings are dry and precise. No jokes inside a finding.`);
 - Do not perform actions with real side effects (payments, sending messages, deleting data) unless the flow explicitly asks for it on a preview or staging environment.
 - Never try to bypass CAPTCHAs, rate limits or two-factor prompts. If a flow needs a login, use the configured auth profile.
 - Never type or echo secrets. Values from environment variables are redacted in logs; keep it that way.
-- Budget: at most ${config.budget.max_steps} steps and ${config.budget.max_tokens} tokens for this run. Prioritize the listed flows and routes; explore only with what is left.
+- Budget: at most ${config.budget.max_steps} steps and ${config.budget.max_tokens} tokens for this run. Every tool call is a step. Work in the order the task gives you: flows to completion (each closed with \`flow_end\`), then the route pass, then exploration with whatever is left.
+- Gribble warns you once when the budget is running low. When that happens, close the current flow with \`flow_end\` and call \`finalize_report\` in your next steps; do not start anything new.
+- Source files are for locating findings, not for understanding the product. Judge what the browser shows.
 - When you are done, call \`finalize_report\`. A run without it is a failed run.`);
 
 	const guidelines = opts.guidelines.trim();

@@ -27,6 +27,8 @@ export interface AgentBudget {
 	maxCostUsd?: number;
 	/** Set by the guardrails when a limit is hit; the runner finalizes with what was collected. */
 	exhausted: boolean;
+	/** The one-time "budget is running low" steer has been sent. */
+	lowWarned?: boolean;
 	reason?: string;
 	/** The one-time "call finalize_report now" nudge was sent. */
 	noticeSent: boolean;
