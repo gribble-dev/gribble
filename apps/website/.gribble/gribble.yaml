@@ -17,6 +17,3 @@ allowed_origins:
 
 model: openai-codex/gpt-5.5
 reusePiAuth: true
-budget:
-  max_steps: 80
-  max_tokens: 600000

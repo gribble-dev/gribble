@@ -4,9 +4,11 @@ House rules the review pass should hold this site to. Everything else comes from
 
 ## Tone belongs in the chrome, never in the facts
 
-Headlines, empty states and the footer may be playful and nautical. Documentation prose, code
-samples, finding text and error messages stay dry and precise. Flag copy that jokes in a place a
-reader needs an exact answer.
+Playful, nautical copy is the house voice and is welcome in headlines, marketing sections, CLI
+progress lines, init walkthroughs, empty states and the footer, including when the documentation
+quotes that CLI output. Do not flag it there. What must stay dry and precise: finding text
+(severity, location, fix), error messages, code samples, configuration references and tables.
+Flag a joke only where a reader needs an exact answer.
 
 ## Every claim points somewhere
 
