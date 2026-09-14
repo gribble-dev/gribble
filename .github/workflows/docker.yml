@@ -22,7 +22,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Read the released version
         id: version
-        run: echo "version=$(node -p "require('./packages/cli/package.json').version")" >> "$GITHUB_OUTPUT"
+        run: |
+          version="$(node -p "require('./packages/cli/package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # Moving major tag (`:0` while the CLI is 0.x, `:1` from 1.0.0), the same idea as the action's `@v1`.
+          echo "major=${version%%.*}" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -31,6 +35,7 @@ jobs:
           tags: |
             ghcr.io/gribble-dev/gribble:latest
             ghcr.io/gribble-dev/gribble:${{ steps.version.outputs.version }}
+            ghcr.io/gribble-dev/gribble:${{ steps.version.outputs.major }}
           labels: |
             org.opencontainers.image.source=https://github.com/gribble-dev/gribble
             org.opencontainers.image.version=${{ steps.version.outputs.version }}

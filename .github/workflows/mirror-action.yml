@@ -1,0 +1,124 @@
+# Mirrors the built GitHub Action into gribble-dev/action so consumers can write
+# `uses: gribble-dev/action@v1`.
+#
+# Why a mirror: GitHub resolves `uses:` against a repository whose root holds action.yml and the
+# built entry point, and this monorepo git-ignores packages/action/dist/. So every CLI release
+# (changesets pushes a `gribble@X.Y.Z` tag from release.yml) rebuilds the action here and commits
+# action.yml, dist/index.js, README.md, CHANGELOG.md and LICENSE to gribble-dev/action, tagged
+# vX.Y.Z, then moves the floating major tag to it. The version is read from packages/cli; the
+# action shares the CLI's changesets fixed group, so packages/action/package.json must agree.
+#
+# Authentication: GITHUB_TOKEN only reaches this repository, so pushing to gribble-dev/action needs
+# its own credential, stored as the ACTION_MIRROR_TOKEN repository secret. It is a fine-grained
+# personal access token (GitHub → Settings → Developer settings → Personal access tokens →
+# Fine-grained tokens) created by an owner of gribble-dev with:
+#   - Resource owner: gribble-dev
+#   - Repository access: "Only select repositories" → gribble-dev/action
+#   - Repository permissions: Contents → Read and write (Metadata → Read-only is added automatically).
+#     Nothing else: no Workflows, no Administration, no account permissions.
+#   - Expiration: whatever the org policy allows; note the date, the job fails with a 403 when it lapses.
+# A GitHub App installed on gribble-dev/action (minted per run with actions/create-github-app-token)
+# would not expire and would belong to the org rather than a person. The PAT was chosen first
+# because it needs no app registration; switch when rotating the token becomes a chore.
+name: Mirror action
+
+on:
+  push:
+    tags: ["gribble@*"]
+  # Re-run for the version currently in packages/cli/package.json (first publish, or a repair).
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-action
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: Read the released version
+        id: version
+        run: |
+          set -euo pipefail
+          cli="$(node -p "require('./packages/cli/package.json').version")"
+          action="$(node -p "require('./packages/action/package.json').version")"
+          if [ "$cli" != "$action" ]; then
+            echo "::error::packages/action is $action but the CLI is $cli. They share a changesets fixed group and the mirror tag must equal the CLI version."
+            exit 1
+          fi
+          # The action promises a stable v1 interface while the CLI is still 0.x, so the moving tag is
+          # v1 for every 0.x and 1.x release and follows the major from 2.0.0 on.
+          major="${cli%%.*}"
+          if [ "$major" -le 1 ]; then major_tag="v1"; else major_tag="v$major"; fi
+          echo "version=$cli" >> "$GITHUB_OUTPUT"
+          echo "major_tag=$major_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Check out gribble-dev/action
+        uses: actions/checkout@v4
+        with:
+          repository: gribble-dev/action
+          token: ${{ secrets.ACTION_MIRROR_TOKEN }}
+          path: mirror
+
+      - name: Copy the built action into the mirror
+        run: |
+          set -euo pipefail
+          test -s packages/action/dist/index.js
+          rm -rf mirror/dist
+          mkdir -p mirror/dist
+          cp packages/action/dist/index.js mirror/dist/index.js
+          cp packages/action/action.yml mirror/action.yml
+          cp packages/action/README.md mirror/README.md
+          cp packages/action/CHANGELOG.md mirror/CHANGELOG.md
+          cp LICENSE mirror/LICENSE
+
+      - name: Commit, tag and push
+        working-directory: mirror
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          MAJOR_TAG: ${{ steps.version.outputs.major_tag }}
+          SOURCE_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ secrets.ACTION_MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The mirror already matches v$VERSION; nothing to commit."
+          else
+            git commit -m "chore: release v$VERSION" \
+              -m "Built from gribble-dev/gribble@$SOURCE_SHA (gribble@$VERSION)."
+            git push origin HEAD:main
+          fi
+          head="$(git rev-parse HEAD)"
+          # A published version tag is never moved; the major tag always is. Lightweight tags on
+          # both sides so ls-remote returns commit ids that compare with HEAD.
+          existing="$(git ls-remote --tags origin "refs/tags/v$VERSION" | cut -f1)"
+          if [ -n "$existing" ] && [ "$existing" != "$head" ]; then
+            echo "::error::v$VERSION already exists on gribble-dev/action at $existing and points at different content. Release a new version instead of moving it."
+            exit 1
+          fi
+          git tag -f "v$VERSION"
+          git tag -f "$MAJOR_TAG"
+          git push origin "refs/tags/v$VERSION"
+          git push --force origin "refs/tags/$MAJOR_TAG"
+          if gh release view "v$VERSION" --repo gribble-dev/action >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists."
+          else
+            gh release create "v$VERSION" --repo gribble-dev/action --verify-tag --title "v$VERSION" \
+              --notes "Built from [gribble@$VERSION](https://github.com/gribble-dev/gribble/releases/tag/gribble%40$VERSION). Changes: [packages/action/CHANGELOG.md](https://github.com/gribble-dev/gribble/blob/gribble%40$VERSION/packages/action/CHANGELOG.md). Use \`gribble-dev/action@$MAJOR_TAG\` to follow releases or \`gribble-dev/action@v$VERSION\` to pin."
+          fi
+          echo "Mirrored v$VERSION; $MAJOR_TAG -> $head"

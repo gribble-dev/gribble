@@ -2,8 +2,10 @@ import { defineConfig } from "tsdown";
 
 /**
  * GitHub runs `dist/index.js` with no node_modules, so every dependency
- * (`@actions/*`, `@gribble/core`, `yaml`) is inlined into one ESM file.
- * ESM works on the node20 runner because this package has `"type": "module"`.
+ * (`@actions/*`, `yaml`) is inlined into one ESM file; `@gribble/core` is the
+ * exception (see `deps` below). ESM works on the node24 runtime declared in
+ * action.yml because this package has `"type": "module"`. The bundle targets
+ * node20 so it also runs where a runner still pins the older runtime.
  */
 export default defineConfig({
 	entry: ["src/index.ts"],
