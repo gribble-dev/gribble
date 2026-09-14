@@ -1,6 +1,6 @@
 {
 	"name": "@gribble/skills",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Skill files that teach coding agents (Claude Code, pi, Cursor) to fix Gribble findings and maintain flows and rules.",
 	"license": "MIT",
 	"type": "module",
