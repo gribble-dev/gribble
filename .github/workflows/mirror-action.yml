@@ -95,20 +95,24 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # A published version tag is never moved; the major tag always is. Lightweight tags on
+          # both sides so ls-remote returns commit ids that compare with HEAD. Checked before
+          # anything is pushed, so a conflicting re-run leaves the mirror untouched.
+          existing="$(git ls-remote --tags origin "refs/tags/v$VERSION" | cut -f1)"
           git add -A
           if git diff --cached --quiet; then
             echo "The mirror already matches v$VERSION; nothing to commit."
+          elif [ -n "$existing" ]; then
+            echo "::error::v$VERSION is already published on gribble-dev/action ($existing) and this build differs from it. Release a new version instead of moving a published tag."
+            exit 1
           else
             git commit -m "chore: release v$VERSION" \
               -m "Built from gribble-dev/gribble@$SOURCE_SHA (gribble@$VERSION)."
             git push origin HEAD:main
           fi
           head="$(git rev-parse HEAD)"
-          # A published version tag is never moved; the major tag always is. Lightweight tags on
-          # both sides so ls-remote returns commit ids that compare with HEAD.
-          existing="$(git ls-remote --tags origin "refs/tags/v$VERSION" | cut -f1)"
           if [ -n "$existing" ] && [ "$existing" != "$head" ]; then
-            echo "::error::v$VERSION already exists on gribble-dev/action at $existing and points at different content. Release a new version instead of moving it."
+            echo "::error::v$VERSION exists on gribble-dev/action at $existing but the mirror's main is at $head with identical content. Move main back or release a new version; a published tag is never moved."
             exit 1
           fi
           git tag -f "v$VERSION"
