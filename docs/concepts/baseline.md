@@ -82,9 +82,15 @@ Control how they are stored with `baseline.screenshots` in [`gribble.yaml`](/doc
 
 | Value | Behaviour |
 | --- | --- |
-| `commit` | Written into `.gribble/baseline/screenshots/` and committed. The default. |
+| `commit` | Written into `.gribble/baseline/screenshots/` and committed. Fine for small sites: three routes and two viewports are under 200 KB. |
 | `lfs` | Same paths, tracked via Git LFS. Recommended for large sites — you will need a matching `.gitattributes` entry. |
-| `off` | No baseline screenshots. `visual/regression` cannot run. |
+| `off` | No baseline screenshots. `visual/regression` cannot run. The default. |
+
+Screenshots are opt-in because they are binary churn in git history and because pixels differ between rendering platforms. `visual/regression` is off in `gribble:recommended`; turn it on together with `baseline.screenshots`. Baseline screenshots are capped at 1280px wide and encoded as WebP at quality 70.
+
+`lfs` writes `.gribble/baseline/.gitattributes` so the screenshot folder goes through Git LFS; install Git LFS before committing, Gribble warns when it is missing.
+
+`meta.json` records the platform that rendered the screenshots (OS, CPU architecture, browser build). When a run happens on a different platform, for example a macOS laptop comparing against a baseline captured on Linux CI, pixel comparison is skipped with a warning instead of reporting font-rendering noise as a regression. Refresh the baseline from the same environment to compare pixels. The aria snapshots behind `structure/regression` are plain text and compare across platforms; they stay on by default and catch the regressions that matter most: a navigation item, form or landmark that disappeared.
 
 If the repository size worries you, `off` is a legitimate choice: `structure/regression` on aria snapshots catches most of what matters at a fraction of the bytes.
 

@@ -47,6 +47,13 @@ export const baselineMetaSchema = Type.Object(
 			Type.String(),
 			Type.Object({ width: Type.Integer(), height: Type.Integer() }, { additionalProperties: false }),
 		),
+		/** Where the screenshots were rendered; pixel comparison only makes sense on the same platform. */
+		platform: Type.Optional(
+			Type.Object(
+				{ os: Type.String(), arch: Type.String(), browser: Type.String() },
+				{ additionalProperties: false },
+			),
+		),
 	},
 	{ additionalProperties: false, description: "baseline/meta.json" },
 );

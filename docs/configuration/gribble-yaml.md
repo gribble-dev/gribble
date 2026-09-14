@@ -193,7 +193,7 @@ A flow claims a profile with `requires_auth: user` in its frontmatter.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `baseline.screenshots` | `commit` \| `lfs` \| `off` | `commit` | How baseline screenshots are stored. `lfs` for large sites; `off` disables `visual/regression`. |
+| `baseline.screenshots` | `commit` \| `lfs` \| `off` | `off` | How baseline screenshots are stored. Set `commit` (small sites) or `lfs` (large sites) when you enable `visual/regression`; `off` disables it. |
 | `baseline.update` | `commit` \| `pr` \| `manual` | `commit` | How the baseline is refreshed after a merge. `commit` pushes to the default branch with `[skip ci]`; `pr` opens a chore PR; `manual` leaves it to you. |
 
 See [Baseline](/docs/concepts/baseline).

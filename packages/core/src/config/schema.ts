@@ -264,8 +264,9 @@ const baselineSchema = Type.Object(
 	{
 		screenshots: Type.Optional(
 			Type.Union([Type.Literal("commit"), Type.Literal("lfs"), Type.Literal("off")], {
-				description: "Where baseline screenshots live: committed, in Git LFS, or not stored.",
-				default: "commit",
+				description:
+					"Where baseline screenshots live: committed, in Git LFS, or not stored. Off by default; set it when you enable visual/regression.",
+				default: "off",
 			}),
 		),
 		update: Type.Optional(

@@ -124,6 +124,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	const snapshots: Record<string, string> = {};
 	let usage = { steps: 0, tokens: 0, costUsd: 0 };
 	let browser: BrowserSession | undefined;
+	let renderPlatformRecorded: { os: string; arch: string; browser: string } | undefined;
 	let devServer: { stop(): Promise<void> } | undefined;
 	let routes: string[] = [];
 	let urls: Record<string, string> = {};
@@ -170,6 +171,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 						})
 				: undefined,
 		});
+		renderPlatformRecorded = renderPlatform(browser);
 
 		// ----------------------------------------------------------------- routes
 		emit({ type: "phase", phase: "routes", message: "Charting the routes…" });
@@ -341,6 +343,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 							screenshots,
 							baselineDir: baselinePaths(project.gribbleDir).dir,
 							runDir,
+							platform: renderPlatform(browser),
 							onEvent: options.onEvent,
 						})),
 					);
@@ -499,9 +502,16 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	}
 
 	if ((options.updateBaseline || bootstrap) && !aborted()) {
+		const screenshotsMode = project.config.baseline.screenshots;
 		const baselineScreenshots: Record<string, Uint8Array> = {};
-		if (project.config.baseline.screenshots !== "off") {
+		if (screenshotsMode !== "off") {
 			for (const [key, png] of screenshots) baselineScreenshots[key] = await encodeBaselineScreenshot(png);
+			if (screenshotsMode === "lfs" && !(await gitLfsAvailable(env))) {
+				log(
+					"warn",
+					"baseline.screenshots is `lfs` but `git lfs` is not installed. The screenshots and a .gitattributes were written; install Git LFS (https://git-lfs.com) before committing, or switch to `commit`.",
+				);
+			}
 		}
 		await writeBaseline(project.gribbleDir, {
 			report,
@@ -509,6 +519,8 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 			screenshots: baselineScreenshots,
 			auditedRoutes: incremental ? routes : undefined,
 			viewports: project.config.viewports,
+			platform: renderPlatformRecorded,
+			screenshotsMode,
 		});
 		log(
 			"info",
@@ -523,4 +535,19 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	log("debug", `Report written to ${written.jsonPath}.`);
 	emit({ type: "done", report });
 	return report;
+}
+
+/** OS, CPU architecture and browser build of this run; pixel baselines only compare within one platform. */
+function renderPlatform(
+	browser: BrowserSession | undefined,
+): { os: string; arch: string; browser: string } | undefined {
+	if (!browser) return undefined;
+	return { os: process.platform, arch: process.arch, browser: browser.version() };
+}
+
+async function gitLfsAvailable(env: NodeJS.ProcessEnv): Promise<boolean> {
+	const { execFile } = await import("node:child_process");
+	return new Promise((resolve) => {
+		execFile("git", ["lfs", "version"], { env }, (error) => resolve(!error));
+	});
 }

@@ -1318,8 +1318,8 @@ Compares a screenshot per route and viewport with `baseline/screenshots/` using 
 
 | Preset | Setting |
 | --- | --- |
-| `gribble:recommended` | `[warn, {"threshold":0.01,"viewports":["mobile","desktop"]}]` |
-| `gribble:strict` | `[warn, {"threshold":0.01,"viewports":["mobile","desktop"]}]` |
+| `gribble:recommended` | `off` |
+| `gribble:strict` | `off` |
 | `gribble:seo` | `off` |
 | `gribble:a11y` | `off` |
 
@@ -1330,7 +1330,7 @@ Compares a screenshot per route and viewport with `baseline/screenshots/` using 
 | `threshold` | number | `0.01` | Maximum ratio of changed pixels (0-1). |
 | `viewports` | string[] | `["mobile","desktop"]` | Viewport names to compare. |
 
-**Fix:** Review the diff image. If the change is intended, update the baseline.
+**Fix:** Review the diff image. If the change is intended, update the baseline. Off in `gribble:recommended`: opt in with `visual/regression: warn` plus `baseline.screenshots: commit` (or `lfs`), because screenshots are binary churn in git and differ across rendering platforms.
 
 ## Structure regression
 

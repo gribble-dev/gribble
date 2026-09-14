@@ -111,8 +111,8 @@
         - listitem:
           - paragraph:
             - text: Warn
-            - link "review/content":
-              - /url: /rules/review/content
+            - link "review/copy":
+              - /url: /rules/review/copy
             - text: /checkout/shipping
           - paragraph: Checkout step 2 has no way back
           - paragraph:

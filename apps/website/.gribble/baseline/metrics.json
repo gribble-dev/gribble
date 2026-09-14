@@ -4,7 +4,7 @@
     "/": {
       "requestCount": 17,
       "pageWeightKb": 53,
-      "lcpMs": 326,
+      "lcpMs": 332,
       "cls": 0,
       "tbtMs": 0,
       "lighthousePerformance": 100
@@ -12,7 +12,7 @@
     "/docs": {
       "requestCount": 19,
       "pageWeightKb": 12,
-      "lcpMs": 251,
+      "lcpMs": 252,
       "cls": 0,
       "tbtMs": 0,
       "lighthousePerformance": 100
@@ -20,7 +20,7 @@
     "/docs/[...slug]": {
       "requestCount": 19,
       "pageWeightKb": 10,
-      "lcpMs": 251,
+      "lcpMs": 250,
       "cls": 0,
       "tbtMs": 0,
       "lighthousePerformance": 100

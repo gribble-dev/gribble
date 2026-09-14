@@ -57,6 +57,20 @@
         "selector": "[data-gribble-ref=\"e5\"]"
       },
       "subject": "https://github.com/gribble-dev/gribble"
+    },
+    {
+      "fingerprint": "79912a1020625751",
+      "rule": "links/broken-external",
+      "severity": "warn",
+      "route": "/docs",
+      "firstSeen": {
+        "commit": "6af10ea21af203dfb9813c52bbd8ef88a9edb69c",
+        "at": "2026-09-14T12:35:14.572Z"
+      },
+      "location": {
+        "selector": "[data-gribble-ref=\"e29\"]"
+      },
+      "subject": "https://github.com/gribble-dev/gribble/issues"
     }
   ]
 }

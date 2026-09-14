@@ -74,6 +74,7 @@ describe.skipIf(!hasChromium())(`runAudit gate mode (${SKIP_BROWSER_REASON})`, (
 		const project = await makeProject({
 			url: site.url,
 			targetDir: dir,
+			gribbleYamlExtra: "baseline:\n  screenshots: commit\n",
 			rulesYaml: RULES,
 			routes: ["/", "/holes.html", "/wide.html"],
 			flows,
@@ -142,6 +143,7 @@ describe.skipIf(!hasChromium())(`runAudit gate mode (${SKIP_BROWSER_REASON})`, (
 		const project = await makeProject({
 			url: site.url,
 			targetDir: dir,
+			gribbleYamlExtra: "baseline:\n  screenshots: commit\n",
 			rulesYaml: RULES,
 			routes: ["/", "/holes.html", "/wide.html", "/headings.html"],
 		});

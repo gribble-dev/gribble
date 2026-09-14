@@ -852,9 +852,9 @@ const defs: RuleDef[] = [
 			),
 			defaults: { threshold: 0.01, viewports: ["mobile", "desktop"] },
 		},
-		recommended: ["warn", { threshold: 0.01, viewports: ["mobile", "desktop"] }],
+		recommended: "off",
 		implemented: true,
-		fix: "Review the diff image. If the change is intended, update the baseline.",
+		fix: "Review the diff image. If the change is intended, update the baseline. Off in `gribble:recommended`: opt in with `visual/regression: warn` plus `baseline.screenshots: commit` (or `lfs`), because screenshots are binary churn in git and differ across rendering platforms.",
 	},
 	{
 		id: "structure/regression",

@@ -116,7 +116,14 @@ export interface WriteBaselineInput {
 	auditedRoutes?: string[];
 	/** Viewport configuration to record in meta.json; falls back to the previous baseline's. */
 	viewports?: Record<string, { width: number; height: number }>;
+	/** Rendering platform of the screenshots, recorded in meta.json. */
+	platform?: { os: string; arch: string; browser: string };
+	/** `lfs` writes a .gitattributes so screenshots go through Git LFS. */
+	screenshotsMode?: "commit" | "lfs" | "off";
 }
+
+/** Contents of baseline/.gitattributes when screenshots are stored in Git LFS. */
+export const LFS_GITATTRIBUTES = "screenshots/** filter=lfs diff=lfs merge=lfs -text\n";
 
 /**
  * Write the baseline from a report. Findings become the ledger (`firstSeen` is preserved for
@@ -173,6 +180,8 @@ export async function writeBaseline(gribbleDir: string, data: WriteBaselineInput
 	if (report.repo?.commit) meta.commit = report.repo.commit;
 	if (report.repo?.branch) meta.branch = report.repo.branch;
 	if (report.model) meta.model = report.model;
+	const platform = data.platform ?? previous?.meta.platform;
+	if (platform) meta.platform = platform;
 
 	await mkdir(paths.dir, { recursive: true });
 	await writeFile(paths.findings, `${JSON.stringify(findingsFile, null, 2)}\n`, "utf8");
@@ -191,6 +200,9 @@ export async function writeBaseline(gribbleDir: string, data: WriteBaselineInput
 	}
 	if (data.screenshots && Object.keys(data.screenshots).length > 0) {
 		await mkdir(paths.screenshots, { recursive: true });
+		if (data.screenshotsMode === "lfs") {
+			await writeFile(join(paths.dir, ".gitattributes"), LFS_GITATTRIBUTES, "utf8");
+		}
 		for (const [key, bytes] of Object.entries(data.screenshots)) {
 			const at = key.lastIndexOf("@");
 			const route = at === -1 ? key : key.slice(0, at);

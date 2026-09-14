@@ -152,6 +152,8 @@ export interface BrowserSession {
 	cdpEndpoint(): Promise<string>;
 	/** Remote debugging port of the launched browser. */
 	cdpPort(): number;
+	/** Browser name and version, e.g. `chromium 143.0.7000.0`; recorded next to baseline screenshots. */
+	version(): string;
 	close(): Promise<void>;
 }
 

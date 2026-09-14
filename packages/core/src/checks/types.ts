@@ -70,5 +70,7 @@ export interface RegressionOptions {
 	screenshots: Map<string, Buffer>;
 	baselineDir: string;
 	runDir: string;
+	/** Where this run rendered its screenshots; compared with `baseline.meta.platform`. */
+	platform?: { os: string; arch: string; browser: string };
 	onEvent?: (e: AuditEvent) => void;
 }

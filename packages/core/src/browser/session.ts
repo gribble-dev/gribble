@@ -54,6 +54,10 @@ class PlaywrightBrowserSession implements BrowserSession {
 		this.baseUrl = opts.project.config.target.url;
 	}
 
+	version(): string {
+		return `chromium ${this.browser.version()}`;
+	}
+
 	private viewportSize(name: string): ViewportSize {
 		const configured: Viewport | undefined = this.opts.project.config.viewports[name];
 		if (configured) return { width: configured.width, height: configured.height };

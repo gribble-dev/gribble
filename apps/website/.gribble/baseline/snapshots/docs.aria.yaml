@@ -167,9 +167,10 @@
         - text: . Check runs with annotations, PR comments that update in place, SARIF for code scanning, JUnit, and the run directory as an artifact.
       - listitem:
         - strong: Local web UI
-        - text: —
-        - emphasis: coming later.
-        - text: A local server that streams the same event bus to a browser, next to a live view of the page the agent is driving, so you can replay exactly what it did when a finding was raised.
+        - text: — tracked in the
+        - link "repository issues":
+          - /url: https://github.com/gribble-dev/gribble/issues
+        - text: . It will stream the same event bus to a browser next to a live view of the page the agent is driving, so you can replay exactly what it did when a finding was raised.
     - heading "Diff, not score" [level=2]
     - paragraph: Gribble does not hand you a number out of 100. A number out of 100 on an established codebase is a number everybody learns to ignore.
     - paragraph:

@@ -66,6 +66,7 @@ describe("checkRegressions", () => {
 		const project = await makeProject({
 			url: "http://localhost:3000",
 			targetDir: dir,
+			gribbleYamlExtra: "baseline:\n  screenshots: commit\n",
 			rulesYaml:
 				"rules:\n  perf/regression: warn\n  visual/regression: [warn, { threshold: 0.01, viewports: [desktop] }]\n  structure/regression: warn\n",
 		});

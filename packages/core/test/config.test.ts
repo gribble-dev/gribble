@@ -16,7 +16,7 @@ describe("parseGribbleConfig", () => {
 		expect(cfg.target.readyTimeoutMs).toBe(120000);
 		expect(cfg.review).toEqual({ max_comments: 5, min_confidence: 0.7, vision: false, explore: true });
 		expect(cfg.budget).toEqual({ max_steps: 200, max_tokens: 2000000 });
-		expect(cfg.baseline).toEqual({ screenshots: "commit", update: "commit" });
+		expect(cfg.baseline).toEqual({ screenshots: "off", update: "commit" });
 		expect(cfg.viewports.mobile).toEqual({ width: 390, height: 844 });
 		expect(cfg.output).toEqual({ dir: ".gribble/runs", keep: 10 });
 		expect(cfg.reusePiAuth).toBe(false);

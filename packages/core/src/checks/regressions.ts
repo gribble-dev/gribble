@@ -37,14 +37,32 @@ function crop(img: RawImage, width: number, height: number): Buffer {
 	return out;
 }
 
-/** Encode a PNG screenshot as webp for the baseline; falls back to the PNG bytes. */
+/** Baseline screenshots are capped at this width so a wide desktop viewport stays small on disk. */
+export const BASELINE_SCREENSHOT_MAX_WIDTH = 1280;
+
+/** Encode a PNG screenshot as webp for the baseline (max 1280px wide, quality 70); falls back to the PNG bytes. */
 export async function encodeBaselineScreenshot(png: Buffer): Promise<Buffer> {
 	try {
 		const { default: sharp } = await import("sharp");
-		return await sharp(png).webp({ quality: 80 }).toBuffer();
+		return await sharp(png)
+			.resize({ width: BASELINE_SCREENSHOT_MAX_WIDTH, withoutEnlargement: true })
+			.webp({ quality: 70 })
+			.toBuffer();
 	} catch {
 		return png;
 	}
+}
+
+export interface RenderPlatform {
+	os: string;
+	arch: string;
+	browser: string;
+}
+
+/** Screenshots from another OS or browser build differ in font rendering; comparing them is noise. */
+export function samePlatform(a: RenderPlatform | undefined, b: RenderPlatform | undefined): boolean {
+	if (!a || !b) return true;
+	return a.os === b.os && a.arch === b.arch && a.browser === b.browser;
 }
 
 export interface VisualDiff {
@@ -114,6 +132,7 @@ export async function checkRegressions(opts: RegressionOptions): Promise<Finding
 	const { project, targetName, baseline, perRoute } = opts;
 	if (!baseline) return out;
 	const paths = baselinePaths(project.gribbleDir);
+	let platformWarned = false;
 	const emit = (
 		route: string,
 		viewport: string | null,
@@ -209,7 +228,21 @@ export async function checkRegressions(opts: RegressionOptions): Promise<Finding
 		}
 
 		// visual/regression
-		if (ruleEnabled(ctx, "visual/regression") && project.config.baseline.screenshots !== "off") {
+		if (
+			ruleEnabled(ctx, "visual/regression") &&
+			project.config.baseline.screenshots !== "off" &&
+			!samePlatform(opts.platform, opts.baseline?.meta.platform)
+		) {
+			if (!platformWarned) {
+				platformWarned = true;
+				const b = opts.baseline?.meta.platform;
+				opts.onEvent?.({
+					type: "log",
+					level: "warn",
+					message: `visual/regression skipped: the baseline screenshots were rendered on ${b?.os}/${b?.arch} with ${b?.browser}, this run uses ${opts.platform?.os}/${opts.platform?.arch} with ${opts.platform?.browser}. Refresh the baseline from the same environment (usually CI) to compare pixels.`,
+				});
+			}
+		} else if (ruleEnabled(ctx, "visual/regression") && project.config.baseline.screenshots !== "off") {
 			const { threshold, viewports } = ruleOptions<{ threshold: number; viewports: string[] }>(
 				ctx,
 				"visual/regression",

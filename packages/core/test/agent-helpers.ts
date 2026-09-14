@@ -173,6 +173,7 @@ export function fakeBrowser(
 			return "ws://localhost:0";
 		},
 		cdpPort: () => 0,
+		version: () => "chromium test",
 		async close() {},
 	};
 }

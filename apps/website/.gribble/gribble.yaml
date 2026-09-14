@@ -11,6 +11,10 @@ target:
 review:
   max_comments: 5
 
+# Opt in to pixel comparison: three routes, small images, rendered by CI.
+baseline:
+  screenshots: commit
+
 # Only the local preview server is in scope; nothing outbound gets crawled.
 allowed_origins:
   - localhost

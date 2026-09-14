@@ -4,3 +4,7 @@
 
 extends:
   - gribble:recommended
+
+rules:
+  # Pixel comparison is off in the preset; this site is small enough to afford it.
+  visual/regression: [warn, { threshold: 0.01, viewports: [mobile, desktop] }]
