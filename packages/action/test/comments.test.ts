@@ -302,7 +302,7 @@ describe("syncComments (mocked octokit)", () => {
 			summaryBody: "<!-- gribble:summary -->\nnew summary",
 			maxComments: 5,
 			repoRoot: "/repo",
-			readFile: (p) => (p === "/repo/src/app.tsx" ? src : undefined),
+			readFile: (p) => (p.replace(/\\/g, "/") === "/repo/src/app.tsx" ? src : undefined),
 		});
 		expect(result).toMatchObject({ created: 1, updated: 1, patched: 1, resolved: 1, summary: "updated" });
 		expect(result.unplaced.map((u) => u.finding.fingerprint)).toEqual(["nofile"]);

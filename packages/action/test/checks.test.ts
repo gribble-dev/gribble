@@ -42,7 +42,8 @@ describe("locateFinding", () => {
 		"/repo/src/a.ts": "one\nexport const Hero = 1\n",
 		"/repo/apps/web/src/b.ts": "export const Nav = 1\n",
 	};
-	const readFile = (p: string) => files[p];
+	// path.join yields backslashes on Windows; the fake store is keyed by POSIX paths.
+	const readFile = (p: string) => files[p.replace(/\\/g, "/")];
 
 	it("resolves repo-root relative paths and symbols", () => {
 		const f = finding({ location: { file: "src/a.ts", symbol: "Hero" } });
@@ -89,7 +90,7 @@ describe("buildAnnotations", () => {
 		];
 		const annotations = buildAnnotations(findings, {
 			repoRoot: "/repo",
-			readFile: (p) => (p === "/repo/src/a.ts" ? "a\nHero\n" : undefined),
+			readFile: (p) => (p.replace(/\\/g, "/") === "/repo/src/a.ts" ? "a\nHero\n" : undefined),
 		});
 		expect(annotations).toHaveLength(1);
 		expect(annotations[0]).toMatchObject({
