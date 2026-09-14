@@ -1,5 +1,5 @@
 import { access, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
 	type AuditMode,
 	formatModelSpec,
@@ -14,6 +14,7 @@ import { copy } from "../copy.js";
 import type { AuditOptionsWithModel } from "../deps.js";
 import { CliError, EXIT } from "../errors.js";
 import type { GitInfo } from "../git.js";
+import { displayPath } from "../paths.js";
 import type { RuntimeLike } from "../providers.js";
 import { createEventRenderer } from "../render/index.js";
 import type { CommandContext } from "./context.js";
@@ -40,9 +41,9 @@ export function parseRoutes(value: string | undefined): string[] | undefined {
 }
 
 /** Relative to cwd when inside it, else absolute; no `../../..` chains in output. */
-function displayPath(cwd: string, path: string): string {
-	const rel = relative(cwd, path);
-	return rel && !rel.startsWith("..") ? rel : path;
+function shortPath(cwd: string, path: string): string {
+	const rel = displayPath(cwd, path);
+	return rel !== "." && !rel.startsWith("..") ? rel : path;
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -69,7 +70,7 @@ async function listTargets(ctx: CommandContext, opts: AuditCommandOptions): Prom
 	const { cwd } = ctx.deps.context;
 	if (!opts.all) return [opts.target ?? "."];
 	const dirs = await ctx.deps.findGribbleDirs(cwd);
-	const targets = dirs.map((dir) => relative(cwd, dirname(dir)) || ".");
+	const targets = dirs.map((dir) => displayPath(cwd, dirname(dir)));
 	if (targets.length === 0) {
 		throw new CliError(copy.audit.noTargets(cwd), { exitCode: EXIT.config });
 	}
@@ -186,7 +187,7 @@ export async function runAuditCommand(opts: AuditCommandOptions, ctx: CommandCon
 		const runDir = await locateRunDir(project, report);
 		let reportPath: string | undefined;
 		if (runDir) {
-			reportPath = displayPath(context.cwd, join(runDir, "report.json"));
+			reportPath = shortPath(context.cwd, join(runDir, "report.json"));
 			if (opts.ci) {
 				await writeFile(
 					join(runDir, "gribble.sarif"),
@@ -196,7 +197,7 @@ export async function runAuditCommand(opts: AuditCommandOptions, ctx: CommandCon
 				await writeFile(join(runDir, "gribble-junit.xml"), toJUnit(report), "utf8");
 			}
 		} else {
-			reportPath = displayPath(context.cwd, join(project.gribbleDir, "runs", "latest.json"));
+			reportPath = shortPath(context.cwd, join(project.gribbleDir, "runs", "latest.json"));
 		}
 
 		renderer.finish(report, { reportPath, baselineUpdated: opts.updateBaseline });

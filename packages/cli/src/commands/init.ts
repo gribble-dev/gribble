@@ -1,9 +1,10 @@
 import { access, mkdir, writeFile } from "node:fs/promises";
-import { dirname, join, relative } from "node:path";
+import { dirname, join } from "node:path";
 import { findRepoRoot } from "@gribble/core";
 import { AGENT_KINDS, AGENT_LABELS, type AgentKind } from "@gribble/skills";
 import { copy } from "../copy.js";
 import { EXIT } from "../errors.js";
+import { displayPath } from "../paths.js";
 import type { RuntimeLike } from "../providers.js";
 import type { CommandContext } from "./context.js";
 import { loginFlow } from "./login.js";
@@ -55,7 +56,7 @@ async function refreshSkills(ctx: CommandContext, repoRoot: string): Promise<num
 		return EXIT.ok;
 	}
 	const results = await deps.installSkill(repoRoot, installed, { force: true });
-	for (const r of results) prompter.step(describeSkillResult(r.status, relative(repoRoot, r.path)));
+	for (const r of results) prompter.step(describeSkillResult(r.status, displayPath(repoRoot, r.path)));
 	prompter.success(copy.init.skillsRefreshed(results.length));
 	return EXIT.ok;
 }
@@ -156,7 +157,7 @@ async function installSkills(ctx: CommandContext, opts: InitOptions, repoRoot: s
 	for (const r of results) {
 		if (reported.has(r.path)) continue;
 		reported.add(r.path);
-		prompter.step(describeSkillResult(r.status, relative(repoRoot, r.path)));
+		prompter.step(describeSkillResult(r.status, displayPath(repoRoot, r.path)));
 	}
 }
 
@@ -203,7 +204,7 @@ export async function runInit(opts: InitOptions, ctx: CommandContext): Promise<n
 	let written = 0;
 	for (const [rel, content] of Object.entries(files)) {
 		const path = join(gribbleDir, rel);
-		const shown = relative(cwd, path);
+		const shown = displayPath(cwd, path);
 		if (!opts.force && (await exists(path))) {
 			prompter.info(copy.init.kept(shown));
 			continue;

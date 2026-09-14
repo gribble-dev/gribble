@@ -1,8 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { type Document, isMap, isPair, isScalar, isSeq, type Pair, parseDocument, type YAMLSeq } from "yaml";
 import { copy } from "../copy.js";
 import { CliError, EXIT } from "../errors.js";
+import { displayPath } from "../paths.js";
 import type { CommandContext } from "./context.js";
 
 export interface IgnoreOptions {
@@ -152,13 +153,13 @@ export async function runIgnore(
 		status = await addIgnoredFingerprint(rulesPath, fp);
 	} catch (err) {
 		if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-			throw new CliError(copy.ignore.noRulesFile(relative(deps.context.cwd, rulesPath)), {
+			throw new CliError(copy.ignore.noRulesFile(displayPath(deps.context.cwd, rulesPath)), {
 				exitCode: EXIT.config,
 			});
 		}
 		throw err;
 	}
-	const shown = relative(deps.context.cwd, rulesPath) || rulesPath;
+	const shown = displayPath(deps.context.cwd, rulesPath) || rulesPath;
 	if (status === "already") {
 		ui.line(copy.ignore.already(fp));
 	} else {
