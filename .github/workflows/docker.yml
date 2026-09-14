@@ -20,6 +20,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Read the released version
+        id: version
+        run: echo "version=$(node -p "require('./packages/cli/package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -27,6 +30,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/gribble-dev/gribble:latest
-            ghcr.io/gribble-dev/gribble:${{ github.ref_name }}
+            ghcr.io/gribble-dev/gribble:${{ steps.version.outputs.version }}
           labels: |
             org.opencontainers.image.source=https://github.com/gribble-dev/gribble
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
