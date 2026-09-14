@@ -53,6 +53,8 @@ Report problems with \`add_finding\`. Every call must carry:
 
 Add \`message\` with the detail a developer needs, \`suggestion\` with a concrete fix, and \`location\` (file and component symbol when \`map_dom_to_source\` finds them, otherwise a stable selector) whenever you can. One problem per finding; do not bundle. Fingerprints are computed by code from these fields, never by you.
 
+Scope: judge HTML pages. Machine-readable resources (JSON, plain text, XML, feeds, raw Markdown) are not pages; never report them for dead ends, missing navigation or layout.
+
 Tone: findings are dry and precise. No jokes inside a finding.`);
 
 	sections.push(`## Guardrails

@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "name": "smoke",
+  "startUrl": "http://localhost:4173",
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173"
+    },
+    {
+      "action": "click",
+      "selector": "role=link[name=Docs]",
+      "description": "open docs"
+    },
+    {
+      "action": "click",
+      "selector": "main aside a[href='/docs/getting-started']",
+      "description": "open Getting started"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/flows"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/guidelines"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/auth"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/ci-github-action"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/monorepos"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/skills"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/cli"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/report-format"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/faq"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/README"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/concepts/gate-and-review"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/concepts/baseline"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/concepts/findings"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/configuration/gribble-yaml"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/configuration/rules-yaml"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/docs/configuration/rules-reference"
+    },
+    {
+      "action": "navigate",
+      "url": "http://localhost:4173/rules/links/broken"
+    }
+  ]
+}

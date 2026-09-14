@@ -36,7 +36,7 @@
 		},
 		{
 			severity: "warn",
-			rule: "review/content",
+			rule: "review/copy",
 			title: "Checkout step 2 has no way back",
 			route: "/checkout/shipping",
 			location: "src/routes/checkout/shipping/+page.svelte",
