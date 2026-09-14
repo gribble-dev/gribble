@@ -215,6 +215,44 @@ export function guardrails(state: AgentState, opts: GuardrailsOptions): InlineEx
 				return changed ? { content } : undefined;
 			});
 
+			// Old, bulky tool results (page snapshots, file reads, axe output) stay in the session file but
+			// are elided from what the model sees, keeping every turn's context bounded. The last few
+			// large results are kept verbatim; the model can call the tool again for anything older.
+			pi.on("context", (event) => {
+				const KEEP_RECENT = 3;
+				const LARGE_CHARS = 2_000;
+				const messages = event.messages as Array<{
+					role: string;
+					toolName?: string;
+					content?: Array<{ type: string; text?: string }>;
+				}>;
+				let kept = 0;
+				let changed = false;
+				for (let i = messages.length - 1; i >= 0; i--) {
+					const message = messages[i];
+					if (message?.role !== "toolResult" || !Array.isArray(message.content)) continue;
+					const size = message.content.reduce(
+						(n, part) => n + (part.type === "text" ? (part.text?.length ?? 0) : 0),
+						0,
+					);
+					if (size < LARGE_CHARS) continue;
+					if (kept < KEEP_RECENT) {
+						kept++;
+						continue;
+					}
+					message.content = message.content.map((part) => {
+						if (part.type !== "text" || !part.text || part.text.length < LARGE_CHARS) return part;
+						const head = part.text.slice(0, 300).trimEnd();
+						return {
+							...part,
+							text: `${head}\n[… ${part.text.length - 300} more characters elided from context to save tokens; call ${message.toolName ?? "the tool"} again if you need this output.]`,
+						};
+					});
+					changed = true;
+				}
+				return changed ? { messages: event.messages } : undefined;
+			});
+
 			pi.on("turn_end", (event, ctx) => {
 				const message = event.message as {
 					role?: string;

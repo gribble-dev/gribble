@@ -128,7 +128,7 @@ Reports `href="#"`, `href="javascript:void(0)"` and anchors without an href. The
 | `gribble:seo` | `off` |
 | `gribble:a11y` | `off` |
 
-**Fix:** Use a <button> for actions, or give the anchor a real URL.
+**Fix:** Use a `<button>` for actions, or give the anchor a real URL.
 
 Bad:
 
@@ -313,7 +313,7 @@ Counts every request made until the page is idle.
 
 ### seo/title
 
-Every page needs a <title> within the configured length.
+Every page needs a `<title>` within the configured length.
 
 A missing, empty, too short or too long document title is reported.
 
@@ -341,7 +341,7 @@ A missing, empty, too short or too long document title is reported.
 
 Titles must be unique across routes.
 
-Two or more audited routes share the same <title>. Search engines and tab bars cannot tell them apart.
+Two or more audited routes share the same `<title>`. Search engines and tab bars cannot tell them apart.
 
 **Status:** implemented · **Kind:** deterministic
 
@@ -384,9 +384,9 @@ A missing, empty, too short or too long `<meta name="description">` is reported.
 
 ### seo/single-h1
 
-Exactly one <h1> per page.
+Exactly one `<h1>` per page.
 
-Zero or multiple <h1> elements are reported. One top-level heading tells crawlers and screen readers what the page is about.
+Zero or multiple `<h1>` elements are reported. One top-level heading tells crawlers and screen readers what the page is about.
 
 **Status:** implemented · **Kind:** deterministic
 
@@ -397,7 +397,7 @@ Zero or multiple <h1> elements are reported. One top-level heading tells crawler
 | `gribble:seo` | `error` |
 | `gribble:a11y` | `off` |
 
-**Fix:** Keep one <h1> for the page subject; demote the others to <h2>.
+**Fix:** Keep one `<h1>` for the page subject; demote the others to `<h2>`.
 
 Bad:
 
@@ -417,7 +417,7 @@ Good:
 
 Heading levels must not skip.
 
-An <h4> directly after an <h2> (and similar jumps) is reported. Heading order is the page outline for assistive technology.
+An `<h4>` directly after an `<h2>` (and similar jumps) is reported. Heading order is the page outline for assistive technology.
 
 **Status:** implemented · **Kind:** deterministic
 
@@ -516,7 +516,7 @@ Loads the sitemap referenced by robots.txt or `/sitemap.xml`, validates the XML,
 
 ### seo/lang-attribute
 
-<html> must declare a language.
+`<html>` must declare a language.
 
 A missing or invalid `lang` attribute on the root element is reported. Screen readers use it to pick a voice and search engines to pick a market.
 
@@ -836,7 +836,7 @@ Reports pages whose first focusable element is not a link to the main content. O
 | `gribble:seo` | `off` |
 | `gribble:a11y` | `warn` |
 
-**Fix:** Add <a href="#main" class="skip-link">Skip to content</a> as the first element in <body>.
+**Fix:** Add <a href="#main" class="skip-link">Skip to content</a> as the first element in `<body>`.
 
 <a id="a11y-reduced-motion"></a>
 
@@ -1020,7 +1020,7 @@ Reports large JPEG/PNG images that would be smaller as WebP or AVIF.
 | `gribble:seo` | `off` |
 | `gribble:a11y` | `off` |
 
-**Fix:** Serve WebP/AVIF via <picture> or an image CDN.
+**Fix:** Serve WebP/AVIF via `<picture>` or an image CDN.
 
 <a id="perf-render-blocking"></a>
 
@@ -1028,7 +1028,7 @@ Reports large JPEG/PNG images that would be smaller as WebP or AVIF.
 
 No render-blocking scripts or styles.
 
-Reports synchronous scripts and stylesheets in <head> that delay first paint. Off by default.
+Reports synchronous scripts and stylesheets in `<head>` that delay first paint. Off by default.
 
 **Status:** implemented · **Kind:** deterministic
 
@@ -1391,7 +1391,7 @@ Reports a missing `<meta charset>` or a charset other than UTF-8, and a charset 
 | `gribble:seo` | `off` |
 | `gribble:a11y` | `off` |
 
-**Fix:** Put <meta charset="utf-8"> first in <head>.
+**Fix:** Put <meta charset="utf-8"> first in `<head>`.
 
 <a id="html-viewport-meta"></a>
 
@@ -1455,7 +1455,7 @@ Good:
 
 No deprecated HTML elements.
 
-Reports <center>, <font>, <marquee>, <frame> and other obsolete elements.
+Reports `<center>`, `<font>`, `<marquee>`, `<frame>` and other obsolete elements.
 
 **Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
 
@@ -1821,7 +1821,7 @@ The reviewer explores the site and reports user journeys that have no matching `
 | `gribble:seo` | `off` |
 | `gribble:a11y` | `off` |
 
-**Fix:** Write the flow as flows/<name>.md so that it is walked on every audit.
+**Fix:** Write the flow as flows/`<name>`.md so that it is walked on every audit.
 
 <a id="review-error-handling"></a>
 

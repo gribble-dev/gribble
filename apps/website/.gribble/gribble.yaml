@@ -14,3 +14,9 @@ review:
 # Only the local preview server is in scope; nothing outbound gets crawled.
 allowed_origins:
   - localhost
+
+model: openai-codex/gpt-5.5
+reusePiAuth: true
+budget:
+  max_steps: 80
+  max_tokens: 600000

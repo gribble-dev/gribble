@@ -18,7 +18,11 @@ export interface BaselineDiff {
 export function diffAgainstBaseline(
 	findings: Finding[],
 	baseline: Baseline | undefined,
-	opts: { auditedRoutes?: string[] } = {},
+	opts: {
+		auditedRoutes?: string[];
+		/** Only baseline findings whose rule actually ran this time can be reported as fixed. */
+		auditedRules?: (rule: string) => boolean;
+	} = {},
 ): BaselineDiff {
 	if (!baseline) {
 		const marked = findings.map((f) => ({ ...f, status: "new" as const }));
@@ -37,7 +41,10 @@ export function diffAgainstBaseline(
 		return { ...f, status };
 	});
 	const fixed = baseline.findings.filter(
-		(f) => !current.has(f.fingerprint) && (!audited || audited.has(normalizeRoute(f.route))),
+		(f) =>
+			!current.has(f.fingerprint) &&
+			(!audited || audited.has(normalizeRoute(f.route))) &&
+			(!opts.auditedRules || opts.auditedRules(f.rule)),
 	);
 	return { findings: marked, fixed, existingCount, newCount };
 }

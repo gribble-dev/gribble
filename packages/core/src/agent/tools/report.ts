@@ -6,7 +6,12 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, InlineExtension } from "@earendil-works/pi-coding-agent";
 import { type Static, Type } from "typebox";
 import { locationFor, mapDomToSource } from "../../repo/index.js";
-import { diceCoefficient, FUZZY_TITLE_THRESHOLD, normalizeTitle } from "../../report/findings.js";
+import {
+	capSeverity,
+	diceCoefficient,
+	FUZZY_TITLE_THRESHOLD,
+	normalizeTitle,
+} from "../../report/findings.js";
 import { computeFingerprint, normalizeRoute } from "../../report/fingerprint.js";
 import { FINDING_SEVERITIES, type Finding, type FindingLocation } from "../../report/schema.js";
 import { isRuleId, RULE_IDS } from "../../rules/ids.js";
@@ -182,7 +187,7 @@ export async function buildFinding(state: AgentState, input: AddFindingInput): P
 		if (input.evidence.snippet) finding.evidence.snippet = input.evidence.snippet;
 		if (input.evidence.url) finding.evidence.url = input.evidence.url;
 	}
-	return finding;
+	return capSeverity(finding, state.project.rules);
 }
 
 export function reportPack(state: AgentState): InlineExtension {

@@ -276,3 +276,40 @@ describe("guardrails: session_start, summary injection and search_tools", () => 
 		expect(none.content[0]?.text).toMatch(/check_links/);
 	});
 });
+
+describe("guardrails: context elision", () => {
+	const big = (tool: string, i: number) => ({
+		role: "toolResult",
+		toolCallId: `c${i}`,
+		toolName: tool,
+		content: [{ type: "text", text: `${tool} result ${i} ${"x".repeat(5_000)}` }],
+	});
+
+	it("keeps the last three large tool results and elides older ones", async () => {
+		const h = await setup();
+		const messages = [
+			{ role: "user", content: [{ type: "text", text: "go" }] },
+			big("page_snapshot", 1),
+			{ role: "toolResult", toolCallId: "s", toolName: "click", content: [{ type: "text", text: "ok" }] },
+			big("page_snapshot", 2),
+			big("read", 3),
+			big("page_snapshot", 4),
+			big("page_snapshot", 5),
+		];
+		const result = await h.emit<{ messages: typeof messages }>({ type: "context", messages });
+		expect(result).toBeDefined();
+		const texts = result!.messages.map((m) => m.content[0]!.text!);
+		expect(texts[1]).toContain("elided from context");
+		expect(texts[1]).toContain("page_snapshot again");
+		expect(texts[1].length).toBeLessThan(600);
+		expect(texts[2]).toBe("ok");
+		expect(texts[3]).toContain("elided from context");
+		for (const i of [4, 5, 6]) expect(texts[i]!.length).toBeGreaterThan(5_000);
+	});
+
+	it("returns nothing when there is nothing to elide", async () => {
+		const h = await setup();
+		const messages = [big("page_snapshot", 1), big("page_snapshot", 2)];
+		expect(await h.emit({ type: "context", messages })).toBeUndefined();
+	});
+});

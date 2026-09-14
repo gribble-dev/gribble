@@ -118,7 +118,7 @@ const defs: RuleDef[] = [
 			'Reports `href="#"`, `href="javascript:void(0)"` and anchors without an href. These are usually buttons in disguise, which breaks keyboard access and "open in new tab".',
 		recommended: "warn",
 		implemented: true,
-		fix: "Use a <button> for actions, or give the anchor a real URL.",
+		fix: "Use a `<button>` for actions, or give the anchor a real URL.",
 		examples: {
 			bad: '<a href="#" onclick="open()">Open</a>',
 			good: '<button type="button" onclick="open()">Open</button>',
@@ -231,7 +231,7 @@ const defs: RuleDef[] = [
 	// ------------------------------------------------------------------ seo
 	{
 		id: "seo/title",
-		summary: "Every page needs a <title> within the configured length.",
+		summary: "Every page needs a `<title>` within the configured length.",
 		description: "A missing, empty, too short or too long document title is reported.",
 		options: {
 			schema: Type.Object(
@@ -251,7 +251,7 @@ const defs: RuleDef[] = [
 		id: "seo/duplicate-title",
 		summary: "Titles must be unique across routes.",
 		description:
-			"Two or more audited routes share the same <title>. Search engines and tab bars cannot tell them apart.",
+			"Two or more audited routes share the same `<title>`. Search engines and tab bars cannot tell them apart.",
 		recommended: "warn",
 		implemented: true,
 		fix: "Include the page-specific subject in each title.",
@@ -276,19 +276,19 @@ const defs: RuleDef[] = [
 	},
 	{
 		id: "seo/single-h1",
-		summary: "Exactly one <h1> per page.",
+		summary: "Exactly one `<h1>` per page.",
 		description:
-			"Zero or multiple <h1> elements are reported. One top-level heading tells crawlers and screen readers what the page is about.",
+			"Zero or multiple `<h1>` elements are reported. One top-level heading tells crawlers and screen readers what the page is about.",
 		recommended: "error",
 		implemented: true,
-		fix: "Keep one <h1> for the page subject; demote the others to <h2>.",
+		fix: "Keep one `<h1>` for the page subject; demote the others to `<h2>`.",
 		examples: { bad: "<h1>Shop</h1> ... <h1>Featured</h1>", good: "<h1>Shop</h1> ... <h2>Featured</h2>" },
 	},
 	{
 		id: "seo/heading-order",
 		summary: "Heading levels must not skip.",
 		description:
-			"An <h4> directly after an <h2> (and similar jumps) is reported. Heading order is the page outline for assistive technology.",
+			"An `<h4>` directly after an `<h2>` (and similar jumps) is reported. Heading order is the page outline for assistive technology.",
 		recommended: "warn",
 		implemented: true,
 		fix: "Use the next heading level down; style with CSS, not by picking a smaller heading tag.",
@@ -338,7 +338,7 @@ const defs: RuleDef[] = [
 	},
 	{
 		id: "seo/lang-attribute",
-		summary: "<html> must declare a language.",
+		summary: "`<html>` must declare a language.",
 		description:
 			"A missing or invalid `lang` attribute on the root element is reported. Screen readers use it to pick a voice and search engines to pick a market.",
 		recommended: "error",
@@ -536,7 +536,7 @@ const defs: RuleDef[] = [
 			"Reports pages whose first focusable element is not a link to the main content. Off by default.",
 		recommended: "off",
 		implemented: false,
-		fix: 'Add <a href="#main" class="skip-link">Skip to content</a> as the first element in <body>.',
+		fix: 'Add <a href="#main" class="skip-link">Skip to content</a> as the first element in `<body>`.',
 	},
 	{
 		id: "a11y/reduced-motion",
@@ -653,13 +653,13 @@ const defs: RuleDef[] = [
 		description: "Reports large JPEG/PNG images that would be smaller as WebP or AVIF.",
 		recommended: "warn",
 		implemented: true,
-		fix: "Serve WebP/AVIF via <picture> or an image CDN.",
+		fix: "Serve WebP/AVIF via `<picture>` or an image CDN.",
 	},
 	{
 		id: "perf/render-blocking",
 		summary: "No render-blocking scripts or styles.",
 		description:
-			"Reports synchronous scripts and stylesheets in <head> that delay first paint. Off by default.",
+			"Reports synchronous scripts and stylesheets in `<head>` that delay first paint. Off by default.",
 		recommended: "off",
 		implemented: true,
 		fix: "Add defer/async to scripts, inline critical CSS, preload the rest.",
@@ -881,7 +881,7 @@ const defs: RuleDef[] = [
 			"Reports a missing `<meta charset>` or a charset other than UTF-8, and a charset declared after the first 1024 bytes.",
 		recommended: "error",
 		implemented: true,
-		fix: 'Put <meta charset="utf-8"> first in <head>.',
+		fix: 'Put <meta charset="utf-8"> first in `<head>`.',
 	},
 	{
 		id: "html/viewport-meta",
@@ -908,7 +908,7 @@ const defs: RuleDef[] = [
 	{
 		id: "html/deprecated-elements",
 		summary: "No deprecated HTML elements.",
-		description: "Reports <center>, <font>, <marquee>, <frame> and other obsolete elements.",
+		description: "Reports `<center>`, `<font>`, `<marquee>`, `<frame>` and other obsolete elements.",
 		recommended: "warn",
 		implemented: false,
 		fix: "Replace the element with semantic HTML and CSS.",
@@ -1113,7 +1113,7 @@ const defs: RuleDef[] = [
 		recommended: "warn",
 		deterministic: false,
 		implemented: true,
-		fix: "Write the flow as flows/<name>.md so that it is walked on every audit.",
+		fix: "Write the flow as flows/`<name>`.md so that it is walked on every audit.",
 	},
 	{
 		id: "review/error-handling",

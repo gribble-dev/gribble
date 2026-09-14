@@ -48,7 +48,7 @@ All three consume the same audit and the same report.
 
 1. **[CLI](/docs/cli)** — `gribble audit`, with a live event stream in your terminal and `--ci` for machine-readable output.
 2. **[GitHub Action](/docs/ci-github-action)** — `uses: gribble-dev/action@v1`. Check runs with annotations, PR comments that update in place, SARIF for code scanning, JUnit, and the run directory as an artifact.
-3. **Local web UI** — *coming later.* A local server that streams the same event bus to a browser, next to a live view of the page the agent is driving, so you can replay exactly what it did when a finding was raised.
+3. **Local web UI** — tracked in the [repository issues](https://github.com/gribble-dev/gribble/issues). It will stream the same event bus to a browser next to a live view of the page the agent is driving, so you can replay exactly what it did when a finding was raised.
 
 ## Diff, not score
 

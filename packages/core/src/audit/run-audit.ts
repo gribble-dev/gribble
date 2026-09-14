@@ -26,6 +26,7 @@ import { normalizeRoute } from "../report/fingerprint.js";
 import type { Finding, FlowResult, Report, RouteResult } from "../report/schema.js";
 import { summarizeReport } from "../report/summary.js";
 import { RUNS_DIR, runDirName, writeRunReport } from "../report/write.js";
+import { getRule } from "../rules/registry.js";
 import { GRIBBLE_CORE_VERSION } from "../version.js";
 import { startDevServer } from "./dev-server.js";
 import { resolveRoutes } from "./routes.js";
@@ -115,6 +116,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 
 	const gateFindings: Finding[] = [];
 	const aiFindings: Finding[] = [];
+	let reviewRan = false;
 	const flowResults: FlowResult[] = [];
 	const routeResults: RouteResult[] = [];
 	const perRoute = new Map<string, RouteCheckResult>();
@@ -377,6 +379,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 						signal: options.signal,
 						mode,
 					});
+					reviewRan = true;
 					aiFindings.push(...review.findings);
 					flowResults.push(...review.flows);
 					usage = review.usage;
@@ -401,7 +404,19 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 		minConfidence: project.config.review.min_confidence,
 	});
 	const deduped = dedupeFindings(policy);
-	const diff = diffAgainstBaseline(deduped, bootstrap ? undefined : baseline, { auditedRoutes: routes });
+	// A review-only run never re-checks deterministic rules (and vice versa), so only rules that ran
+	// this time may declare a baseline finding fixed.
+	const ranGate = mode === "gate" || mode === "all";
+	const ranReview = (mode === "review" || mode === "all") && reviewRan;
+	const auditedRules = (rule: string): boolean => {
+		const meta = getRule(rule);
+		const deterministic = meta ? meta.deterministic : !rule.startsWith("review/");
+		return deterministic ? ranGate : ranReview;
+	};
+	const diff = diffAgainstBaseline(deduped, bootstrap ? undefined : baseline, {
+		auditedRoutes: routes,
+		auditedRules,
+	});
 	const findings = sortFindings(diff.findings);
 	const summary = summarizeReport(findings, { ci: options.ci, fixedCount: diff.fixed.length });
 	if (bootstrap && summary.gate === "fail") {
