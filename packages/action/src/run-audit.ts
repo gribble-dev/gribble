@@ -1,4 +1,5 @@
-import { existsSync, promises as fs } from "node:fs";
+import { existsSync, promises as fs, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
@@ -10,7 +11,7 @@ export interface GribbleCommand {
 	command: string;
 	/** Arguments placed before `audit` (e.g. `--yes gribble` for npx). */
 	prefixArgs: string[];
-	how: "working-directory" | "repo-root" | "npx";
+	how: "package" | "working-directory" | "repo-root" | "npx";
 }
 
 function binName(): string {
@@ -21,12 +22,34 @@ function binName(): string {
  * Locate the `gribble` binary: the audited app's own `node_modules/.bin`, then
  * the repository root's, else `npx --yes gribble`.
  */
+/** Path of the `gribble` package's bin script as seen from `from`, or undefined when not installed there. */
+function defaultResolvePackageBin(from: string): string | undefined {
+	try {
+		const require = createRequire(path.join(from, "package.json"));
+		const pkgPath = require.resolve("gribble/package.json");
+		const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { bin?: string | Record<string, string> };
+		const bin = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.gribble;
+		return bin ? path.join(path.dirname(pkgPath), bin) : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 export function resolveGribbleCommand(opts: {
 	workingDirectory: string;
 	repoRoot: string;
 	exists?: (p: string) => boolean;
+	/** Injectable for tests: absolute path of the `gribble` package's bin script, resolved from `from`. */
+	resolvePackageBin?: (from: string) => string | undefined;
 }): GribbleCommand {
 	const exists = opts.exists ?? existsSync;
+	// Prefer the package itself over .bin shims: in a monorepo the shim may be missing when the CLI
+	// was built after `pnpm install` (the bin target did not exist yet), while the package resolves.
+	const resolveBin = opts.resolvePackageBin ?? defaultResolvePackageBin;
+	for (const from of [opts.workingDirectory, opts.repoRoot]) {
+		const bin = resolveBin(from);
+		if (bin && exists(bin)) return { command: process.execPath, prefixArgs: [bin], how: "package" };
+	}
 	const local = path.join(opts.workingDirectory, "node_modules", ".bin", binName());
 	if (exists(local)) return { command: local, prefixArgs: [], how: "working-directory" };
 	const root = path.join(opts.repoRoot, "node_modules", ".bin", binName());
