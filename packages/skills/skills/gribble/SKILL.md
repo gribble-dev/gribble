@@ -2,7 +2,7 @@
 name: gribble
 description: Use when fixing Gribble audit findings (`.gribble/runs/latest.json`), writing or editing flow files in `.gribble/flows/*.md`, or changing `.gribble/rules.yaml`, `.gribble/gribble.yaml` or `.gribble/guidelines.md`. Covers finding triage by severity, flow frontmatter and replay sidecars, and which setting belongs in which file.
 metadata:
-  version: "0.1.0"
+  version: "0.0.0" # stamped with the package version by @gribble/skills at install time
 ---
 
 # Gribble

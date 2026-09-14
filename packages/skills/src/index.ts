@@ -1,14 +1,15 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Version of the shipped `skills/gribble/SKILL.md`.
- *
- * Kept in sync with the package version and with the `metadata.version` field in the
- * SKILL.md frontmatter; `test/skill-md.test.ts` fails when the three drift apart.
+ * Version of the skill file, always the package version: changesets bump package.json and this
+ * follows, and `skillSource()` stamps it into the SKILL.md frontmatter so installed copies carry it.
  */
-export const SKILL_VERSION = "0.1.0";
+export const SKILL_VERSION: string = (
+	createRequire(import.meta.url)("../package.json") as { version: string }
+).version;
 
 /** Name of the skill directory and of the skill itself. */
 export const SKILL_NAME = "gribble";
@@ -61,15 +62,25 @@ let cachedSource: Promise<string> | undefined;
  */
 export function skillSource(): Promise<string> {
 	if (!cachedSource) {
-		cachedSource = readFile(SKILL_FILE_URL, "utf8").catch((cause: unknown) => {
-			cachedSource = undefined;
-			throw new Error(
-				`@gribble/skills: could not read the bundled SKILL.md at ${fileURLToPath(SKILL_FILE_URL)}`,
-				{ cause },
-			);
-		});
+		cachedSource = readFile(SKILL_FILE_URL, "utf8")
+			.then(stampVersion)
+			.catch((cause: unknown) => {
+				cachedSource = undefined;
+				throw new Error(
+					`@gribble/skills: could not read the bundled SKILL.md at ${fileURLToPath(SKILL_FILE_URL)}`,
+					{ cause },
+				);
+			});
 	}
 	return cachedSource;
+}
+
+/** Replace the frontmatter `version:` value with the package version so the file never drifts. */
+function stampVersion(text: string): string {
+	const end = text.indexOf("\n---", 4);
+	if (!/^---\r?\n/.test(text) || end === -1) return text;
+	const frontmatter = text.slice(0, end).replace(/^(\s*version\s*:\s*).*$/m, `$1"${SKILL_VERSION}"`);
+	return frontmatter + text.slice(end);
 }
 
 async function exists(path: string): Promise<boolean> {
