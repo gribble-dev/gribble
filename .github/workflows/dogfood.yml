@@ -1,4 +1,8 @@
 # Dogfooding: Gribble audits its own website on every PR.
+#
+# External users write `uses: gribble-dev/action@v1`, which resolves to the mirror repository
+# filled by mirror-action.yml. The monorepo runs `./packages/action` instead so a PR that changes
+# the action is tested with its own build (dist/ is produced by the `pnpm build` step below).
 name: Gribble (website)
 
 on:

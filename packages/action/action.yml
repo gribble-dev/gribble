@@ -62,5 +62,5 @@ outputs:
     description: "Absolute path of the generated gribble.sarif file."
 
 runs:
-  using: "node20"
+  using: "node24"
   main: "dist/index.js"
