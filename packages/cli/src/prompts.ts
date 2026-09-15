@@ -56,6 +56,11 @@ const SPINNER_CHROME = 3 + 3 + 1;
  * Keep a spinner message on one terminal row. clack computes how many rows to erase from the
  * bare message but renders it with a frame and up to three dots, so a message that fits only
  * without them wraps every few frames and leaves a stale row behind each tick.
+ *
+ * TODO(clack): workaround for https://github.com/bombshell-dev/clack/pull/478, which upstream
+ * closed in favour of the spinner rework in https://github.com/bombshell-dev/clack/pull/479.
+ * Once a @clack/prompts release diffs the full rendered frame, delete this function and the
+ * `fit` wrapper in `clackPrompter().spinner()`; `spinner-fit.test.ts` goes with it.
  */
 export function fitSpinnerMessage(message: string, columns: number | undefined): string {
 	const width = (columns ?? 80) - SPINNER_CHROME;
