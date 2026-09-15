@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { resolvePlaywrightCli } from "../src/install-browser.js";
@@ -33,5 +35,12 @@ describe("resolvePlaywrightCli", () => {
 		const cli = resolvePlaywrightCli();
 		expect(cli).toBeDefined();
 		expect(cli?.endsWith(`${path.sep}cli.js`)).toBe(true);
+	});
+
+	it("resolves to a script node can run as the playwright CLI", () => {
+		const cli = resolvePlaywrightCli() as string;
+		const { version } = createRequire(import.meta.url)("playwright/package.json") as { version: string };
+		const out = execFileSync(process.execPath, [cli, "--version"], { encoding: "utf8" });
+		expect(out.trim()).toContain(version);
 	});
 });
