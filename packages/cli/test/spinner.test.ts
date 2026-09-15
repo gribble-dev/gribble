@@ -99,6 +99,6 @@ describe("rowSpinner", () => {
 		vi.advanceTimersByTime(200);
 		expect(tty.chunks.length).toBeGreaterThan(afterClear);
 		s.error("failed");
-		expect(tty.chunks.join("")).toContain("▲  failed\n");
+		expect(stripAnsi(tty.chunks.join(""))).toContain("▲  failed\n");
 	});
 });
