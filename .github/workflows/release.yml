@@ -1,3 +1,14 @@
+# Release flow, driven by changesets:
+#
+#   1. A PR merges to main carrying a .changeset/*.md file.
+#   2. This workflow runs `changeset version` and opens (or refreshes) the "chore: release" PR,
+#      which bumps every package in the fixed group, rewrites the CHANGELOGs and deletes the
+#      changeset files. It stays open, accumulating, until somebody merges it.
+#   3. Merging that PR runs this workflow again; with no changesets left it publishes to npm
+#      (OIDC trusted publishing, with provenance), pushes a `<package>@<version>` tag per published
+#      package and creates a GitHub release for each with that version's CHANGELOG entry as notes.
+#   4. Tags pushed with GITHUB_TOKEN never trigger other workflows, so the Docker image and the
+#      action mirror are dispatched explicitly below instead of listening for the tag.
 name: Release
 
 on:
@@ -8,6 +19,8 @@ permissions:
   contents: write
   pull-requests: write
   id-token: write
+  # `gh workflow run` for the follow-up workflows.
+  actions: write
 
 jobs:
   release:
@@ -25,15 +38,19 @@ jobs:
       - run: npm install -g npm@latest && npm --version
       - name: Create release PR or publish
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
-          publish: pnpm release
-          version: pnpm changeset version
-          commit: "chore: release"
-          title: "chore: release"
+          publish-script: pnpm release
+          version-script: pnpm changeset version
+          commit-message: "chore: release"
+          pr-title: "chore: release"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
-      # `changeset publish` tags the published versions locally; push them so tag-driven workflows run.
-      - name: Push release tags
-        run: git push origin --tags
+      - name: Build the Docker image and mirror the action
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run docker.yml --ref main
+          gh workflow run mirror-action.yml --ref main

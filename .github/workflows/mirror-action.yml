@@ -3,7 +3,7 @@
 #
 # Why a mirror: GitHub resolves `uses:` against a repository whose root holds action.yml and the
 # built entry point, and this monorepo git-ignores packages/action/dist/. So every CLI release
-# (changesets pushes a `gribble@X.Y.Z` tag from release.yml) rebuilds the action here and commits
+# (release.yml dispatches this workflow after publishing) rebuilds the action here and commits
 # action.yml, dist/index.js, README.md, CHANGELOG.md and LICENSE to gribble-dev/action, tagged
 # vX.Y.Z, then moves the floating major tag to it. The version is read from packages/cli; the
 # action shares the CLI's changesets fixed group, so packages/action/package.json must agree.
@@ -23,9 +23,8 @@
 name: Mirror action
 
 on:
-  push:
-    tags: ["gribble@*"]
-  # Re-run for the version currently in packages/cli/package.json (first publish, or a repair).
+  # Dispatched by release.yml after a publish (a tag pushed with GITHUB_TOKEN would not trigger
+  # this), or by hand to re-mirror the version currently in packages/cli/package.json.
   workflow_dispatch:
 
 permissions:

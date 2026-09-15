@@ -1,9 +1,8 @@
 name: Docker image
 
 on:
-  push:
-    # changesets tags releases as <package>@<version>; the CLI package's tag drives the image.
-    tags: ["gribble@*"]
+  # Dispatched by release.yml after a publish (a tag pushed with GITHUB_TOKEN would not trigger
+  # this), or by hand to rebuild the version currently in packages/cli/package.json.
   workflow_dispatch:
 
 permissions:
