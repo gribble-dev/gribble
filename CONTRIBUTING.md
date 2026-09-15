@@ -7,7 +7,7 @@
 - **Runtime:** Node >= 22, pnpm, ESM only, TypeScript strict.
 - **Build:** tsdown. **Lint/format:** Biome (tabs, double quotes). **Tests:** Vitest. **Schemas:** TypeBox (`typebox` package, the same one pi uses) for config validation, tool parameters and JSON Schema export. Do not add a second schema library.
 - **Versions:** all pi packages (`@earendil-works/pi-*`) are pinned to one exact version via the pnpm catalog in `pnpm-workspace.yaml`. Never patch pi internals; extend through `ResourceLoader`, inline extensions and `customTools`.
-- **Releases:** Changesets, all packages share one version. Conventional commits (`feat:`, `fix:`, `docs:`, `chore:`...).
+- **Releases:** Changesets, all packages share one version. Add a changeset to any PR that changes a published package; merging to main keeps a "chore: release" PR up to date, and merging *that* publishes to npm, tags, creates GitHub releases from the CHANGELOGs, and dispatches the Docker image and action mirror (see `.github/workflows/release.yml`). Conventional commits (`feat:`, `fix:`, `docs:`, `chore:`...).
 - **Layout:** `packages/` holds things published to npm or depended on by other packages; `apps/` holds things deployed but not published.
 
 ## Repository map
