@@ -49,6 +49,20 @@ export interface PromptSpinner {
 	clear(): void;
 }
 
+/** Width clack's spinner adds around a message: frame glyph, two spaces, up to three dots, plus one column so the row never sits exactly at the terminal edge. */
+const SPINNER_CHROME = 3 + 3 + 1;
+
+/**
+ * Keep a spinner message on one terminal row. clack computes how many rows to erase from the
+ * bare message but renders it with a frame and up to three dots, so a message that fits only
+ * without them wraps every few frames and leaves a stale row behind each tick.
+ */
+export function fitSpinnerMessage(message: string, columns: number | undefined): string {
+	const width = (columns ?? 80) - SPINNER_CHROME;
+	if (width <= 1 || message.length <= width) return message;
+	return `${message.slice(0, width - 1)}…`;
+}
+
 function unwrap<T>(value: T | symbol, cancelledMessage?: string): T {
 	if (clack.isCancel(value)) throw new CancelledError(cancelledMessage);
 	return value as T;
@@ -92,9 +106,11 @@ export function clackPrompter(output: Writable, opts: { cancelledMessage?: strin
 		},
 		spinner() {
 			const s = clack.spinner({ ...common, withGuide: false });
+			const fit = (m?: string) =>
+				m === undefined ? m : fitSpinnerMessage(m, (output as { columns?: number }).columns);
 			return {
-				start: (m) => s.start(m),
-				message: (m) => s.message(m),
+				start: (m) => s.start(fit(m)),
+				message: (m) => s.message(fit(m)),
 				stop: (m) => s.stop(m),
 				error: (m) => s.error(m),
 				clear: () => s.clear(),

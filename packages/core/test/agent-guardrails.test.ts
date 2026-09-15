@@ -337,4 +337,26 @@ describe("guardrails: low-budget warning", () => {
 		expect(h.sent).toHaveLength(1);
 		expect(h.state.budget.exhausted).toBe(false);
 	});
+
+	it("warns on cost too, so a dollar cap does not cut the review off unannounced", async () => {
+		const h = await setup();
+		h.state.budget.maxTokens = 1_000_000;
+		h.state.budget.maxSteps = 100;
+		h.state.budget.maxCostUsd = 3;
+		const turn = (cost: number) => ({
+			type: "turn_end",
+			turnIndex: 0,
+			message: {
+				role: "assistant",
+				usage: { totalTokens: 10, input: 10, output: 0, cost: { total: cost } },
+			},
+			toolResults: [],
+		});
+		await h.emit(turn(2));
+		expect(h.sent).toHaveLength(0);
+		await h.emit(turn(0.4));
+		expect(h.sent).toHaveLength(1);
+		expect(JSON.stringify(h.sent[0])).toContain("$2.40/$3");
+		expect(h.state.budget.exhausted).toBe(false);
+	});
 });

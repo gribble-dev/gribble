@@ -269,14 +269,16 @@ export function guardrails(state: AgentState, opts: GuardrailsOptions): InlineEx
 				const LOW_BUDGET_RATIO = 0.75;
 				const stepRatio = state.usage.steps / state.budget.maxSteps;
 				const tokenRatio = state.usage.tokens / state.budget.maxTokens;
-				if (!state.budget.lowWarned && (stepRatio >= LOW_BUDGET_RATIO || tokenRatio >= LOW_BUDGET_RATIO)) {
+				const costRatio = state.budget.maxCostUsd ? state.usage.costUsd / state.budget.maxCostUsd : 0;
+				const used = Math.max(stepRatio, tokenRatio, costRatio);
+				if (!state.budget.lowWarned && used >= LOW_BUDGET_RATIO) {
 					state.budget.lowWarned = true;
-					const pct = Math.round(Math.max(stepRatio, tokenRatio) * 100);
+					const pct = Math.round(used * 100);
 					state.log("info", `Budget ${pct}% used; asking the model to wrap up.`);
 					pi.sendMessage(
 						{
 							customType: "gribble-budget",
-							content: `Budget notice: ${pct}% of this run's budget is used (${state.usage.steps}/${state.budget.maxSteps} steps, ${state.usage.tokens}/${state.budget.maxTokens} tokens). Close the current flow with flow_end, then call finalize_report within your next few steps. Do not start new flows or exploration.`,
+							content: `Budget notice: ${pct}% of this run's budget is used (${state.usage.steps}/${state.budget.maxSteps} steps, ${state.usage.tokens}/${state.budget.maxTokens} tokens${state.budget.maxCostUsd ? `, $${state.usage.costUsd.toFixed(2)}/$${state.budget.maxCostUsd}` : ""}). Close the current flow with flow_end, then call finalize_report within your next few steps. Do not start new flows or exploration.`,
 							display: true,
 						},
 						{ deliverAs: "steer", triggerTurn: false },
