@@ -9,9 +9,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# The "chore: release" PR only bumps versions and CHANGELOGs; its code already passed CI on the
+# PRs that carried it. Skipping it also avoids the "workflow awaiting approval" prompt GitHub shows
+# for PRs opened by github-actions[bot].
 jobs:
   test:
     name: Test (${{ matrix.os }}, node ${{ matrix.node }})
+    if: github.head_ref != 'changeset-release/main'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -42,6 +46,7 @@ jobs:
 
   website:
     name: Website build
+    if: github.head_ref != 'changeset-release/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
