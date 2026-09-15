@@ -317,7 +317,7 @@ See [Baseline](/docs/concepts/baseline#update-strategies).
 
 ## Other CI systems
 
-There is no bespoke integration for GitLab, CircleCI or Jenkins, and none is needed — the CLI is the whole product and the Action is a convenience around it.
+There is no bespoke integration for GitLab, CircleCI or Jenkins, and none is needed — the CLI is the whole product and the Action is a convenience around it. GitLab has its own page, [GitLab CI](/docs/ci-gitlab), because its merge request widget reads two of the files the CLI writes.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -325,4 +325,4 @@ pnpm exec gribble install
 pnpm exec gribble audit --ci --mode gate
 ```
 
-`--ci` prints the report JSON to stdout and progress to stderr, so `gribble audit --ci > report.json` gives you a clean file. Exit codes are `0` pass, `1` gate fail, `2` config or auth error, which is enough to drive any pipeline. SARIF and JUnit files are written to the run directory for whatever consumes them. See the [CLI reference](/docs/cli).
+`--ci` prints the report JSON to stdout and progress to stderr, so `gribble audit --ci > report.json` gives you a clean file. Exit codes are `0` pass, `1` gate fail, `2` config or auth error, which is enough to drive any pipeline. SARIF, JUnit and GitLab Code Quality files are written to the run directory for whatever consumes them. See the [CLI reference](/docs/cli).

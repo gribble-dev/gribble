@@ -14,6 +14,7 @@ import {
 	resolveRules,
 	sortFindings,
 	summarizeReport,
+	toCodeQuality,
 	toJUnit,
 	toMarkdownSummary,
 	toSarif,
@@ -331,6 +332,39 @@ describe("sarif / junit", () => {
 		expect(xml.match(/<failure /g)).toHaveLength(1);
 		expect(xml).toContain("&gt; title");
 		expect(toJUnit(report([]))).toContain('name="no holes found"');
+	});
+
+	it("produces GitLab Code Quality issues with the finding fingerprint and a path", () => {
+		const issues = toCodeQuality(report(findings));
+		expect(issues).toHaveLength(2);
+		expect(issues[0]).toMatchObject({
+			type: "issue",
+			check_name: "links/broken",
+			description: "Broken link (/)",
+			severity: "major",
+			categories: ["links"],
+			location: { path: "src/a.tsx", lines: { begin: 1 } },
+		});
+		expect(issues[0]?.fingerprint).toBe(findings[0]?.fingerprint);
+		expect(issues[0]?.content.body).toContain("Subject: /dead");
+		expect(issues[1]).toMatchObject({
+			severity: "minor",
+			description: "Title too short",
+			location: { path: "/about", lines: { begin: 1 } },
+		});
+		expect(issues[1]?.content.body).toContain("Selector: head > title");
+	});
+
+	it("maps every severity and drops fixed findings from Code Quality", () => {
+		const issues = toCodeQuality(
+			report([
+				finding({ rule: "flows/replay", route: "/", title: "c", severity: "critical" }),
+				finding({ rule: "seo/title", route: "/", title: "i", severity: "info" }),
+				finding({ rule: "seo/title", route: "/x", title: "gone", severity: "error", status: "fixed" }),
+			]),
+		);
+		expect(issues.map((i) => i.severity)).toEqual(["critical", "info"]);
+		expect(toCodeQuality(report([]))).toEqual([]);
 	});
 });
 

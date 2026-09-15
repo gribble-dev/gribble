@@ -1,3 +1,4 @@
+export { type CodeQualityIssue, type CodeQualitySeverity, toCodeQuality } from "./codequality.js";
 export {
 	applyRulePolicy,
 	capSeverity,

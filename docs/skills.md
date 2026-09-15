@@ -1,7 +1,7 @@
 ---
 title: Skills for coding agents
 description: Teach Claude Code, pi or Cursor to read Gribble's report, fix what it found, and keep your rules and flows current.
-order: 52
+order: 53
 ---
 
 Gribble finds problems. Something has to fix them. In most repositories that something is already a coding agent, and the fastest closed loop looks like this:

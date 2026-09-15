@@ -9,7 +9,7 @@ This folder is the source of truth for Gribble's user documentation. It is used 
 ## Conventions
 
 - Every page starts with frontmatter: `title`, `description`, `order`.
-- `order` controls sidebar position: index `0`, getting started `10`, concepts `20–29`, configuration `30–39`, flows `40`, guidelines `41`, auth `42`, CI `50`, monorepos `51`, skills `52`, CLI `60`, report format `61`, FAQ `90`.
+- `order` controls sidebar position: index `0`, getting started `10`, concepts `20–29`, configuration `30–39`, flows `40`, guidelines `41`, auth `42`, GitHub CI `50`, GitLab CI `51`, monorepos `52`, skills `53`, CLI `60`, report format `61`, FAQ `90`.
 - Headings start at `##`. The site renders `title` as the `h1`.
 - Standard GitHub-flavored Markdown. Code fences are always tagged (`bash`, `yaml`, `md`, `json`, `ts`).
 - Internal links are site-absolute paths without a file extension: `/docs/flows`, `/docs/concepts/baseline`.
