@@ -1,6 +1,8 @@
+import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { createAuthInteraction } from "../src/auth-interaction.js";
 import { run } from "../src/index.js";
+import { clackPrompter } from "../src/prompts.js";
 import { fakeRuntime, scriptedPrompter, testIo } from "./helpers.js";
 
 describe("login / logout / models", () => {
@@ -55,7 +57,7 @@ describe("login / logout / models", () => {
 		});
 		expect(code).toBe(0);
 		expect(prompter.log).toContain(
-			"[note] Open this URL in your browser to continue:\nhttps://example.test/auth\nthen paste the code",
+			"[info] Open this URL in your browser to continue:\nhttps://example.test/auth\nthen paste the code",
 		);
 		expect(prompter.log).toContain("[success] Logged in to Anthropic. The gribbles have a brain now.");
 	});
@@ -89,6 +91,50 @@ describe("login / logout / models", () => {
 			"[note] Visit https://v.test and enter the code ABCD-1234\nThe code expires in 10 minutes.",
 		);
 		expect(prompter.log).toContain("[step] waiting");
+	});
+
+	it("AuthInteraction forwards pi's abort signal so a won race abandons the paste prompt", async () => {
+		// pi's OAuth flows race a manual_code prompt against a localhost callback server and abort
+		// the prompt when the browser redirect wins. The prompter must see that signal, or the
+		// prompt keeps stdin open and the CLI never exits after a successful login.
+		const seen: Array<AbortSignal | undefined> = [];
+		const prompter = scriptedPrompter([{ text: "" }, { secret: "" }, { select: "a" }]);
+		const base = prompter.text;
+		prompter.text = async (o) => {
+			seen.push(o.signal);
+			return base(o);
+		};
+		const baseSecret = prompter.secret;
+		prompter.secret = async (o) => {
+			seen.push(o.signal);
+			return baseSecret(o);
+		};
+		const baseSelect = prompter.select;
+		prompter.select = async (o) => {
+			seen.push(o.signal);
+			return baseSelect(o);
+		};
+		const interaction = createAuthInteraction(prompter);
+		const controller = new AbortController();
+		await interaction.prompt({ type: "manual_code", message: "paste", signal: controller.signal });
+		await interaction.prompt({ type: "secret", message: "key", signal: controller.signal });
+		await interaction.prompt({
+			type: "select",
+			message: "pick",
+			options: [{ id: "a", label: "A" }],
+			signal: controller.signal,
+		});
+		expect(seen).toEqual([controller.signal, controller.signal, controller.signal]);
+	});
+
+	it("clackPrompter cancels an open text prompt when its signal aborts", async () => {
+		const output = new PassThrough();
+		const input = new PassThrough();
+		const prompter = clackPrompter(output, { cancelledMessage: "gone", input });
+		const controller = new AbortController();
+		const pending = prompter.text({ message: "paste", signal: controller.signal });
+		controller.abort();
+		await expect(pending).rejects.toThrow("gone");
 	});
 
 	it("logout removes one or every stored credential", async () => {

@@ -1,4 +1,4 @@
-import type { Writable } from "node:stream";
+import type { Readable, Writable } from "node:stream";
 import type { Option } from "@clack/prompts";
 import * as clack from "@clack/prompts";
 import { CancelledError } from "./errors.js";
@@ -27,10 +27,17 @@ export interface Prompter {
 		placeholder?: string;
 		defaultValue?: string;
 		initialValue?: string;
+		/** Aborting cancels the prompt as if the user had pressed Ctrl+C. */
+		signal?: AbortSignal;
 	}): Promise<string>;
-	secret(opts: { message: string; placeholder?: string }): Promise<string>;
+	secret(opts: { message: string; placeholder?: string; signal?: AbortSignal }): Promise<string>;
 	confirm(opts: { message: string; initialValue?: boolean }): Promise<boolean>;
-	select<V>(opts: { message: string; options: PromptOption<V>[]; initialValue?: V }): Promise<V>;
+	select<V>(opts: {
+		message: string;
+		options: PromptOption<V>[];
+		initialValue?: V;
+		signal?: AbortSignal;
+	}): Promise<V>;
 	multiselect<V>(opts: {
 		message: string;
 		options: PromptOption<V>[];
@@ -73,9 +80,12 @@ function unwrap<T>(value: T | symbol, cancelledMessage?: string): T {
 	return value as T;
 }
 
-/** Prompter backed by @clack/prompts, writing to `output` (stdout normally). */
-export function clackPrompter(output: Writable, opts: { cancelledMessage?: string } = {}): Prompter {
-	const common = { output };
+/** Prompter backed by @clack/prompts, writing to `output` (stdout normally). Tests pass `input`. */
+export function clackPrompter(
+	output: Writable,
+	opts: { cancelledMessage?: string; input?: Readable } = {},
+): Prompter {
+	const common = opts.input ? { output, input: opts.input } : { output };
 	const cancelled = opts.cancelledMessage;
 	return {
 		intro: (title) => clack.intro(title, common),
@@ -90,12 +100,17 @@ export function clackPrompter(output: Writable, opts: { cancelledMessage?: strin
 			return unwrap(await clack.text({ ...o, ...common }), cancelled);
 		},
 		async secret(o) {
-			return unwrap(await clack.password({ message: o.message, ...common }), cancelled);
+			return unwrap(await clack.password({ message: o.message, signal: o.signal, ...common }), cancelled);
 		},
 		async confirm(o) {
 			return unwrap(await clack.confirm({ ...o, ...common }), cancelled);
 		},
-		async select<V>(o: { message: string; options: PromptOption<V>[]; initialValue?: V }) {
+		async select<V>(o: {
+			message: string;
+			options: PromptOption<V>[];
+			initialValue?: V;
+			signal?: AbortSignal;
+		}) {
 			return unwrap(await clack.select({ ...o, options: o.options as Option<V>[], ...common }), cancelled);
 		},
 		async multiselect<V>(o: {
