@@ -1,6 +1,7 @@
 import type { Writable } from "node:stream";
 import type { Option } from "@clack/prompts";
 import * as clack from "@clack/prompts";
+import pc from "picocolors";
 import { CancelledError } from "./errors.js";
 
 export interface PromptOption<V> {
@@ -49,23 +50,80 @@ export interface PromptSpinner {
 	clear(): void;
 }
 
-/** Width clack's spinner adds around a message: frame glyph, two spaces, up to three dots, plus one column so the row never sits exactly at the terminal edge. */
+/** Width the spinner adds around a message: frame glyph, two spaces, up to three dots, plus one column so the row never sits exactly at the terminal edge. */
 const SPINNER_CHROME = 3 + 3 + 1;
 
-/**
- * Keep a spinner message on one terminal row. clack computes how many rows to erase from the
- * bare message but renders it with a frame and up to three dots, so a message that fits only
- * without them wraps every few frames and leaves a stale row behind each tick.
- *
- * TODO(clack): workaround for https://github.com/bombshell-dev/clack/pull/478, which upstream
- * closed in favour of the spinner rework in https://github.com/bombshell-dev/clack/pull/479.
- * Once a @clack/prompts release diffs the full rendered frame, delete this function and the
- * `fit` wrapper in `clackPrompter().spinner()`; `spinner-fit.test.ts` goes with it.
- */
+/** Truncate a spinner message so the rendered row fits in `columns`; 80 when the stream has no width. */
 export function fitSpinnerMessage(message: string, columns: number | undefined): string {
 	const width = (columns ?? 80) - SPINNER_CHROME;
 	if (width <= 1 || message.length <= width) return message;
 	return `${message.slice(0, width - 1)}…`;
+}
+
+const SPINNER_FRAMES = clack.unicode ? ["◒", "◐", "◓", "◑"] : ["•", "o", "O", "0"];
+const SPINNER_DELAY = clack.unicode ? 80 : 120;
+const HIDE_CURSOR = "\x1b[?25l";
+const SHOW_CURSOR = "\x1b[?25h";
+const ERASE_ROW = "\r\x1b[2K";
+
+/**
+ * A single-row spinner in clack's style. clack's own spinner sizes its erase from the bare
+ * message and from the terminal width at creation time, so a message that wraps once the frame
+ * and dots are added, or a terminal resized mid-run, leaves a stale row behind every tick
+ * (https://github.com/bombshell-dev/clack/pull/478, deferred to the rework in #479). This one
+ * re-fits the message to the live width on every frame, so the row never wraps and erasing it
+ * is just `\r` plus clear-line.
+ */
+export function rowSpinner(output: Writable): PromptSpinner {
+	const stream = output as Writable & { columns?: number };
+	let timer: NodeJS.Timeout | undefined;
+	let text = "";
+	let frame = 0;
+	let dots = 0;
+	const showCursor = () => output.write(SHOW_CURSOR);
+
+	const render = () => {
+		const glyph = pc.magenta(SPINNER_FRAMES[frame] ?? "");
+		const trail = ".".repeat(Math.min(3, Math.floor(dots)));
+		output.write(`${ERASE_ROW}${glyph}  ${fitSpinnerMessage(text, stream.columns)}${trail}`);
+		frame = (frame + 1) % SPINNER_FRAMES.length;
+		dots = dots < 4 ? dots + 0.125 : 0;
+	};
+
+	const finish = (line?: string) => {
+		if (!timer) return;
+		clearInterval(timer);
+		timer = undefined;
+		process.removeListener("exit", showCursor);
+		output.write(ERASE_ROW);
+		if (line !== undefined) output.write(`${line}\n`);
+		showCursor();
+	};
+
+	return {
+		start(message = "") {
+			text = message.replace(/\.+$/, "");
+			if (timer) return;
+			frame = 0;
+			dots = 0;
+			process.once("exit", showCursor);
+			output.write(HIDE_CURSOR);
+			render();
+			timer = setInterval(render, SPINNER_DELAY);
+		},
+		message(message = "") {
+			text = message.replace(/\.+$/, "");
+		},
+		stop(message = "") {
+			finish(`${pc.green(clack.S_STEP_SUBMIT)}  ${message || text}`);
+		},
+		error(message = "") {
+			finish(`${pc.red(clack.S_STEP_ERROR)}  ${message || text}`);
+		},
+		clear() {
+			finish();
+		},
+	};
 }
 
 function unwrap<T>(value: T | symbol, cancelledMessage?: string): T {
@@ -109,18 +167,7 @@ export function clackPrompter(output: Writable, opts: { cancelledMessage?: strin
 				cancelled,
 			);
 		},
-		spinner() {
-			const s = clack.spinner({ ...common, withGuide: false });
-			const fit = (m?: string) =>
-				m === undefined ? m : fitSpinnerMessage(m, (output as { columns?: number }).columns);
-			return {
-				start: (m) => s.start(fit(m)),
-				message: (m) => s.message(fit(m)),
-				stop: (m) => s.stop(m),
-				error: (m) => s.error(m),
-				clear: () => s.clear(),
-			};
-		},
+		spinner: () => rowSpinner(output),
 	};
 }
 
