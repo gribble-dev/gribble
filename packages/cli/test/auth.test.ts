@@ -33,16 +33,18 @@ describe("login / logout / models", () => {
 		expect(io.stderr.text).toContain('Unknown provider "nope". Known providers: google, openai.');
 	});
 
-	it("interactive OAuth login runs through the AuthInteraction", async () => {
+	it("interactive OAuth login runs through the AuthInteraction and opens the browser", async () => {
 		const io = testIo({ isTTY: true });
 		const prompter = scriptedPrompter([{ select: "Anthropic" }, { select: "oauth" }, { text: "code-123" }]);
 		const runtime = fakeRuntime({
 			providers: [{ id: "anthropic", name: "Anthropic", oauth: true, oauthLabel: "Claude Pro/Max" }],
 		});
+		const opened: string[] = [];
 		const code = await run(["login"], {
 			context: io.context,
 			createModelRuntime: async () => runtime,
 			prompter: () => prompter,
+			openBrowser: (url) => opened.push(url),
 			loginProvider: async ({ provider, apiKey, interaction }) => {
 				expect(provider).toBe("anthropic");
 				expect(apiKey).toBeUndefined();
@@ -56,10 +58,20 @@ describe("login / logout / models", () => {
 			},
 		});
 		expect(code).toBe(0);
+		expect(opened).toEqual(["https://example.test/auth"]);
 		expect(prompter.log).toContain(
-			"[info] Open this URL in your browser to continue:\nhttps://example.test/auth\nthen paste the code",
+			"[info] Opening your browser to continue. If nothing opens, use this URL:\nhttps://example.test/auth\nthen paste the code",
 		);
 		expect(prompter.log).toContain("[success] Logged in to Anthropic. The gribbles have a brain now.");
+	});
+
+	it("AuthInteraction without an opener only prints the auth URL", () => {
+		const prompter = scriptedPrompter([]);
+		const interaction = createAuthInteraction(prompter);
+		interaction.notify({ type: "auth_url", url: "https://example.test/auth" });
+		expect(prompter.log).toContain(
+			"[info] Open this URL in your browser to continue:\nhttps://example.test/auth",
+		);
 	});
 
 	it("AuthInteraction maps every prompt and event kind", async () => {

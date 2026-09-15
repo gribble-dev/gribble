@@ -21,6 +21,7 @@ import {
 import { detectAgents, installedSkillVersion, installSkill, skillTargetPath } from "@gribble/skills";
 import { createGitApi, type GitApi } from "./git.js";
 import { type InstallBrowser, installBrowser } from "./install-browser.js";
+import { type OpenBrowser, openBrowser } from "./open-browser.js";
 import { clackPrompter, type Prompter, plainPrompter } from "./prompts.js";
 import { type ListProviders, listProviders, type RuntimeLike } from "./providers.js";
 import { type ReadSettingsModel, readSettingsModel } from "./settings.js";
@@ -82,6 +83,8 @@ export interface CliDeps {
 	// process-level helpers
 	git: GitApi;
 	installBrowser: InstallBrowser;
+	/** Opens a URL in the user's browser; `gribble login` uses it for OAuth. */
+	openBrowser: OpenBrowser;
 }
 
 export function defaultDeps(): CliDeps {
@@ -114,6 +117,7 @@ export function defaultDeps(): CliDeps {
 
 		git: createGitApi(),
 		installBrowser,
+		openBrowser,
 	};
 }
 
