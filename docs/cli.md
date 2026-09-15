@@ -138,7 +138,7 @@ This is the contract CI systems can rely on. It will not change within a major v
 - **stdout** receives exactly one thing: the complete [report JSON](/docs/report-format), printed once when the audit finishes. Nothing else is ever written to stdout — no progress, no warnings, no banner. `gribble audit --ci > report.json` yields a valid JSON file.
 - **stderr** receives all progress and diagnostics, as plain lines without ANSI colour or cursor control, safe for a log viewer.
 - **Exit code** follows the table below.
-- `.gribble/runs/latest.json` is written as usual, and `gribble.sarif` plus `gribble-junit.xml` are written to the run directory.
+- `.gribble/runs/latest.json` is written as usual, and `gribble.sarif`, `gribble-junit.xml` and `gl-code-quality.json` are written to the run directory.
 - Sessions are kept in memory rather than written to `.gribble/sessions/`.
 - No interactive prompt is ever shown. Anything that would need one is an error with exit code `2`.
 

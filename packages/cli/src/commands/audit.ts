@@ -7,6 +7,7 @@ import {
 	type ProjectContext,
 	type Report,
 	runDirName,
+	toCodeQuality,
 	toJUnit,
 	toSarif,
 } from "@gribble/core";
@@ -195,6 +196,11 @@ export async function runAuditCommand(opts: AuditCommandOptions, ctx: CommandCon
 					"utf8",
 				);
 				await writeFile(join(runDir, "gribble-junit.xml"), toJUnit(report), "utf8");
+				await writeFile(
+					join(runDir, "gl-code-quality.json"),
+					`${JSON.stringify(toCodeQuality(report), null, 2)}\n`,
+					"utf8",
+				);
 			}
 		} else {
 			reportPath = shortPath(context.cwd, join(project.gribbleDir, "runs", "latest.json"));

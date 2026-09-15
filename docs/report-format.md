@@ -1,10 +1,10 @@
 ---
 title: Report format
-description: The report JSON, its versioning guarantees, and the SARIF and JUnit outputs derived from it.
+description: The report JSON, its versioning guarantees, and the SARIF, JUnit and GitLab Code Quality outputs derived from it.
 order: 61
 ---
 
-Every audit produces one JSON document. It is the single source of truth: the terminal summary, the PR comments, the check annotations, SARIF, JUnit and the baseline update are all derived from it, and nothing consumes anything else.
+Every audit produces one JSON document. It is the single source of truth: the terminal summary, the PR comments, the check annotations, SARIF, JUnit, GitLab Code Quality and the baseline update are all derived from it, and nothing consumes anything else.
 
 ```
 .gribble/runs/
@@ -12,6 +12,7 @@ Every audit produces one JSON document. It is the single source of truth: the te
     report.json
     gribble.sarif
     gribble-junit.xml
+    gl-code-quality.json
     snapshots/
     screenshots/
     traces/
@@ -244,7 +245,7 @@ Two consequences worth planning for:
 
 ## Derived outputs
 
-Both are written next to `report.json` in the run directory, and both are projections of it. Nothing appears in them that is not in the JSON.
+All three are written next to `report.json` in the run directory when `--ci` is set, and all three are projections of it. Nothing appears in them that is not in the JSON.
 
 ### SARIF
 
@@ -263,4 +264,31 @@ Findings then appear in the repository's Security tab with GitHub's own dedupe a
 
 `gribble-junit.xml`, for test reporters and dashboards that speak JUnit. One test case per finding, grouped into suites by rule category, with the route in the case name and the message and suggestion in the failure body. Flow results appear as cases too, so a broken journey shows up as a failed test rather than only as a finding.
 
-Neither format can express everything the JSON does — per-route metrics, budget consumption, baseline status, confidence. Use them for integration, and the JSON when you want the whole picture.
+### GitLab Code Quality
+
+`gl-code-quality.json`, the [Code Quality report](https://docs.gitlab.com/ci/testing/code_quality/) GitLab reads from `artifacts:reports:codequality`. A JSON array with one issue per active finding:
+
+```json
+[
+  {
+    "type": "issue",
+    "check_name": "links/broken",
+    "description": "Link to /pricing-old returns 404 (/)",
+    "content": { "body": "…message, subject, fix and docs link…" },
+    "categories": ["links"],
+    "severity": "major",
+    "fingerprint": "3f9a1c0e7b2d4a58",
+    "location": { "path": "src/components/Footer.tsx", "lines": { "begin": 1 } }
+  }
+]
+```
+
+- `fingerprint` is the finding's own fingerprint. GitLab diffs the merge request's report against the target branch's by this field, so its new/fixed counts agree with Gribble's.
+- `severity` maps `critical → critical`, `error → major`, `warn → minor`, `info → info`. GitLab's `blocker` is never used.
+- `location.path` is `location.file` when the finding was mapped to source, otherwise the route. `lines.begin` is always `1`: Gribble locates by symbol, not by line.
+- `description` is the title, with the route appended when the path is a file so the widget still says which page it was seen on. The message, subject, suggestion and docs link go in `content.body`.
+- Fixed findings are omitted, as in SARIF and JUnit.
+
+See [GitLab CI](/docs/ci-gitlab) for the pipeline that consumes it.
+
+None of these formats can express everything the JSON does — per-route metrics, budget consumption, baseline status, confidence. Use them for integration, and the JSON when you want the whole picture.

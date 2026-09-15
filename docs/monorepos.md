@@ -1,7 +1,7 @@
 ---
 title: Monorepos
 description: One .gribble/ per app, with rules and guidelines cascading up to the repository root.
-order: 51
+order: 52
 ---
 
 A repository with several web apps needs several audits: each app has its own URL, its own routes, its own journeys and its own baseline. What it does not need is several copies of the same accessibility policy.
