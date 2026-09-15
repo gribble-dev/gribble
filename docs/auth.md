@@ -199,6 +199,8 @@ gribble logout <provider>
 
 Credentials go to `~/.gribble/auth.json`. Gribble does not implement OAuth or key storage itself — it uses pi's `ModelRuntime` with the paths pointed at its own directory.
 
+An OAuth login opens the provider's sign-in page in your browser and waits for the redirect back to `localhost`. The URL is printed too: if the browser is on another machine (SSH, a container), open it there and paste the final redirect URL into the prompt.
+
 ### `~/.gribble/`
 
 ```

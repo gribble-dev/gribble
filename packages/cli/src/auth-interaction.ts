@@ -4,7 +4,9 @@ import type { Prompter } from "./prompts.js";
 
 /**
  * pi's login flows talk to the user through an `AuthInteraction`. This one answers with clack
- * prompts and prints auth URLs / device codes to the terminal (no browser is opened for the user).
+ * prompts and prints auth URLs / device codes to the terminal. With `openBrowser` an auth URL is
+ * also opened in the user's browser; the URL is always printed as well, for the remote-machine
+ * case and for when the launcher silently fails.
  *
  * Every prompt forwards pi's `signal`: the OAuth flows race a "paste the code here" prompt
  * against a localhost callback server and abort the prompt once the browser redirect wins.
@@ -12,7 +14,7 @@ import type { Prompter } from "./prompts.js";
  */
 export function createAuthInteraction(
 	prompter: Prompter,
-	opts: { signal?: AbortSignal } = {},
+	opts: { signal?: AbortSignal; openBrowser?: (url: string) => void } = {},
 ): AuthInteraction {
 	return {
 		signal: opts.signal,
@@ -49,9 +51,10 @@ export function createAuthInteraction(
 				case "auth_url": {
 					// Not a note: clack hard-wraps note bodies into a box, which breaks a long URL when
 					// it is copied out of the terminal. `info` leaves the line to the terminal.
-					const lines = [copy.login.openUrl, event.url];
+					const lines = [opts.openBrowser ? copy.login.openingBrowser : copy.login.openUrl, event.url];
 					if (event.instructions) lines.push(event.instructions);
 					prompter.info(lines.join("\n"));
+					opts.openBrowser?.(event.url);
 					return;
 				}
 				case "device_code": {

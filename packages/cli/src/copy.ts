@@ -121,6 +121,7 @@ export const copy = {
 			"gribble login needs a terminal. In CI, set the provider's API key environment variable instead.",
 		cancelled: "Login cancelled.",
 		openUrl: "Open this URL in your browser to continue:",
+		openingBrowser: "Opening your browser to continue. If nothing opens, use this URL:",
 		deviceCode: (uri: string, code: string) => `Visit ${uri} and enter the code ${code}`,
 	},
 

@@ -74,7 +74,12 @@ export async function loginFlow(
 		}
 	}
 
-	const interaction = createAuthInteraction(prompter, { signal: deps.context.signal });
+	// Only a real terminal session gets a browser launched at it; a scripted `--api-key` login
+	// never reaches an auth URL anyway.
+	const interaction = createAuthInteraction(prompter, {
+		signal: deps.context.signal,
+		openBrowser: ui.interactive ? deps.openBrowser : undefined,
+	});
 	prompter.step(copy.login.working(provider.name));
 	await deps.loginProvider({ runtime, provider: provider.id, apiKey: apiKey?.trim(), interaction });
 	prompter.success(copy.login.done(provider.name));
