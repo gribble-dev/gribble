@@ -1,0 +1,12 @@
+# Keeps the action versions in .github/workflows current so runner deprecations (Node 20 → 24 and
+# the next one) show up as a PR instead of a warning on every run. npm dependencies are pinned
+# deliberately (see CONTRIBUTING.md on pi versions) and are not managed here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
