@@ -41,7 +41,7 @@ export const ruleSettingSchema = Type.Union(
 	{ description: "A severity, or `[severity, { options }]`." },
 );
 
-function buildRulesMapSchema(): TSchema {
+function buildRulesMapSchema(): TObject {
 	const properties: Record<string, TSchema> = {};
 	for (const wildcard of RULE_WILDCARDS) {
 		properties[wildcard] = Type.Optional(
@@ -61,6 +61,13 @@ function buildRulesMapSchema(): TSchema {
 }
 
 const rulesMapSchema = buildRulesMapSchema();
+
+/** The same map as `rules:` in rules.yaml, applied last when the environment is selected. */
+const environmentRulesSchema = Type.Object(rulesMapSchema.properties as Record<string, TSchema>, {
+	additionalProperties: false,
+	description:
+		"Rule settings applied on top of the resolved rules.yaml cascade (presets, rules and per-route overrides) when this environment is selected with `--env`. Same shape as `rules` in rules.yaml.",
+});
 
 export const ruleOverrideSchema = Type.Object(
 	{
@@ -333,6 +340,7 @@ const environmentOverrideSchema = Type.Object(
 		viewports: Type.Optional(viewportsSchema),
 		output: Type.Optional(partialObject(outputSchema, "Output overrides for this environment.")),
 		reusePiAuth: Type.Optional(reusePiAuthSchema),
+		rules: Type.Optional(environmentRulesSchema),
 	},
 	{
 		additionalProperties: false,

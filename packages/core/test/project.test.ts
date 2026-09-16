@@ -159,6 +159,57 @@ describe("loadProject", () => {
 	});
 });
 
+describe("loadProject environment rules", () => {
+	it("applies environments.<name>.rules after the cascade only when that environment is selected", async () => {
+		await withTempDir(async (dir) => {
+			await mkdir(join(dir, ".git"));
+			await write(dir, ".gribble/rules.yaml", "extends: [gribble:recommended]\n");
+			await write(
+				dir,
+				"apps/web/.gribble/gribble.yaml",
+				[
+					"target:",
+					"  url: http://localhost:5173",
+					"environments:",
+					"  preview:",
+					"    target: { url: https://p.dev }",
+					"    rules:",
+					"      seo/robots-noindex: off",
+					"      seo/title: warn",
+				].join("\n"),
+			);
+			await write(
+				dir,
+				"apps/web/.gribble/rules.yaml",
+				'rules:\n  seo/title: [error, { max: 70 }]\noverrides:\n  - routes: ["/blog/**"]\n    rules: { seo/robots-noindex: critical }\n',
+			);
+
+			const production = await loadProject({ cwd: dir, target: "apps/web", env: {} });
+			expect(production.rules.get("seo/robots-noindex").severity).toBe("error");
+			expect(production.rules.get("seo/robots-noindex", "/blog/[slug]").severity).toBe("critical");
+			expect(production.rules.get("seo/title").severity).toBe("error");
+			expect(production.rules.environment).toBeUndefined();
+
+			const preview = await loadProject({ cwd: dir, target: "apps/web", env: {}, environment: "preview" });
+			expect(preview.config.target.url).toBe("https://p.dev");
+			expect(preview.rules.get("seo/robots-noindex").severity).toBe("off");
+			expect(preview.rules.get("seo/robots-noindex", "/blog/[slug]").severity).toBe("off");
+			expect(preview.rules.get("seo/title")).toEqual({ severity: "warn", options: { min: 10, max: 70 } });
+			expect(preview.rules.source("seo/robots-noindex")).toEqual({
+				kind: "environment",
+				environment: "preview",
+				key: "seo/robots-noindex",
+			});
+			expect(preview.rules.source("seo/title")).toEqual({
+				kind: "environment",
+				environment: "preview",
+				key: "seo/title",
+			});
+			expect(preview.rules.get("links/broken").severity).toBe("error");
+		});
+	});
+});
+
 describe("findGribbleDirs", () => {
 	it("finds app dirs with a target and skips shared-only roots and node_modules", async () => {
 		await withTempDir(async (dir) => {

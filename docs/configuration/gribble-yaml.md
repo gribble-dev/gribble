@@ -122,6 +122,7 @@ Named blocks deep-merged over the top level when you pass `--env <name>`.
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `environments.<name>` | object | — | A partial `gribble.yaml` merged over the root config. Any top-level field may be overridden. |
+| `environments.<name>.rules` | object | — | Rule settings for this environment only, in the same shape as `rules` in [`rules.yaml`](/docs/configuration/rules-yaml#rules). Applied after presets, the cascade and per-route `overrides`. |
 
 ```yaml
 target:
@@ -154,6 +155,23 @@ gribble audit --env preview
 ```
 
 The merge is deep: `environments.preview.target.url` replaces `target.url` and leaves `target.routes` alone. The selected environment name ends up in `report.target.environment`, so reports from different environments are distinguishable.
+
+#### `environments.<name>.rules`
+
+Rule severities are the one thing `rules.yaml` cannot vary per environment: its `overrides` are keyed on routes and its cascade on directories. `environments.<name>.rules` fills that gap. It takes the same map as `rules` in `rules.yaml` (severities, `[severity, { options }]` pairs and `category/*` wildcards, validated against the same rule ids) and is applied last, after presets, the directory cascade and every per-route `overrides` block, but only when that environment is selected with `--env`.
+
+The classic case is a preview deployment that sends `X-Robots-Tag: noindex` by design. `seo/robots-noindex` is exactly right for production and pure noise on every PR:
+
+```yaml
+environments:
+  preview:
+    target:
+      url: ${PREVIEW_URL}
+    rules:
+      seo/robots-noindex: off
+```
+
+`gribble audit --env preview` now skips that rule; `gribble audit` against production keeps it on. Everything else in `rules.yaml` still applies to both. A rule an environment switches off stays off on every route, even where a route override in `rules.yaml` turns it on; a rule it switches on is reported the same way as any other.
 
 ### `auth`
 
@@ -315,4 +333,6 @@ environments:
       start: null
     review:
       max_comments: 3
+    rules:
+      seo/robots-noindex: off
 ```

@@ -116,13 +116,18 @@ export async function loadProject(opts: {
 	}
 
 	const flows = await loadFlows(gribbleDir);
+	// `environments.<name>.rules` is applied after the whole cascade, so a preview deployment can
+	// switch a rule off without touching rules.yaml for production.
+	const environmentRules = opts.environment ? config.environments?.[opts.environment]?.rules : undefined;
+	const environment =
+		opts.environment && environmentRules ? { name: opts.environment, rules: environmentRules } : undefined;
 	return {
 		repoRoot,
 		targetDir,
 		gribbleDir,
 		targetName,
 		config,
-		rules: resolveRules(rulesConfigs),
+		rules: resolveRules(rulesConfigs, { environment }),
 		guidelines: guidelineParts.join("\n\n"),
 		flows,
 		environment: opts.environment,

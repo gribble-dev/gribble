@@ -70,6 +70,53 @@ describe("parseGribbleConfig", () => {
 		expect(cfg.review.min_confidence).toBe(0.7);
 	});
 
+	it("accepts environments.<name>.rules and keeps it out of the merged settings", () => {
+		const text = [
+			minimal,
+			"environments:",
+			"  preview:",
+			"    target: { url: https://p.dev }",
+			"    rules:",
+			"      seo/robots-noindex: off",
+			"      seo/title: [warn, { max: 70 }]",
+			"      i18n/*: off",
+		].join("\n");
+		const plain = parseGribbleConfig(text, { env: {} });
+		expect(plain.environments?.preview?.rules).toEqual({
+			"seo/robots-noindex": "off",
+			"seo/title": ["warn", { max: 70 }],
+			"i18n/*": "off",
+		});
+		const selected = parseGribbleConfig(text, { env: {}, environment: "preview" });
+		expect(selected.target.url).toBe("https://p.dev");
+		expect(selected.environments?.preview?.rules?.["seo/robots-noindex"]).toBe("off");
+		expect("rules" in selected).toBe(false);
+	});
+
+	it("validates environments.<name>.rules like rules.yaml", () => {
+		const env = (rules: string) => `${minimal}environments:\n  preview:\n    rules: { ${rules} }\n`;
+		try {
+			parseGribbleConfig(env("seo/robots-noidnex: off"), { env: {} });
+			expect.unreachable();
+		} catch (err) {
+			const e = err as ConfigError;
+			expect(e).toBeInstanceOf(ConfigError);
+			expect(e.path).toBe("environments.preview.rules.seo/robots-noidnex");
+			expect(e.message).toContain('unknown rule "seo/robots-noidnex"');
+			expect(e.message).toContain("https://gribble.dev/docs/configuration/rules-reference");
+		}
+		expect(() => parseGribbleConfig(env("seo/title: loud"), { env: {} })).toThrow(
+			/environments.preview.rules.seo\/title: must be one of: off, info, warn, error, critical/,
+		);
+		expect(() => parseGribbleConfig(env("seo/title: [warn, { maxx: 70 }]"), { env: {} })).toThrow(
+			/unknown property: maxx/,
+		);
+		// The check runs for every environment, selected or not.
+		expect(() => parseGribbleConfig(env("nope/x: off"), { env: {}, environment: "other" })).toThrow(
+			/environments.preview.rules.nope\/x/,
+		);
+	});
+
 	it("rejects an unknown environment", () => {
 		expect(() =>
 			parseGribbleConfig(`${minimal}environments:\n  preview: {}\n`, { env: {}, environment: "prod" }),
@@ -207,6 +254,22 @@ describe("JSON schema export", () => {
 		};
 		walk(gribbleConfigJsonSchema(), "gribble");
 		expect(missing).toEqual([]);
+	});
+
+	it("exposes environments.<name>.rules with the rules.yaml shape", () => {
+		const g = gribbleConfigJsonSchema() as {
+			properties: {
+				environments: {
+					patternProperties: Record<string, { properties: { rules: Record<string, unknown> } }>;
+				};
+			};
+		};
+		const r = rulesConfigJsonSchema() as { properties: { rules: { properties: Record<string, unknown> } } };
+		const environment = Object.values(g.properties.environments.patternProperties)[0];
+		const envRules = environment!.properties.rules;
+		expect(envRules.additionalProperties).toBe(false);
+		expect(Object.keys(envRules.properties as object)).toEqual(Object.keys(r.properties.rules.properties));
+		expect(envRules.default).toBeUndefined();
 	});
 
 	it("uses prefixItems for tuples", () => {
