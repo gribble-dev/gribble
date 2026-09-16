@@ -125,12 +125,62 @@ async function pagesDir(
 	}
 }
 
+/**
+ * Upper bound on the variants a single SvelteKit route expands to. `n` optional parameters yield
+ * `2 ** n` variants, so a route with a handful of them would flood discovery. Past the cap we keep
+ * the two ends deterministically (every optional segment absent, which is the canonical path, and
+ * every one present) and drop the combinations in between.
+ */
+const MAX_OPTIONAL_VARIANTS = 16;
+
+/**
+ * Drop the `=matcher` suffix from SvelteKit parameters: in `[lang=locale]` the `=locale` names a
+ * validator in `src/params/` and is not part of the parameter. Handles rest and optional forms
+ * (`[...rest=matcher]`, `[[lang=locale]]`) and segments holding several parameters, because the
+ * inner-bracket match never spans a `[` or `]`.
+ */
+function stripMatchers(segment: string): string {
+	return segment.replace(/\[([^[\]]*)\]/g, (_full, inner: string) => `[${inner.split("=")[0]}]`);
+}
+
+/** `[[lang]]` -> `[lang]`; undefined for anything else, rest parameters included. */
+function optionalParam(segment: string): string | undefined {
+	const match = segment.match(/^\[\[(.+)\]\]$/);
+	if (!match || match[1]!.startsWith("...")) return undefined; // `[[...rest]]` is cleanSegments' job
+	return `[${match[1]}]`;
+}
+
+/**
+ * Expand SvelteKit optional parameters into every path the route actually serves:
+ * `[[lang]]/about/+page.svelte` answers both `/about` and `/fr/about`. Bit `k` of the mask marks
+ * the k-th optional segment as present, so mask `0` is the all-absent (canonical) variant and it
+ * comes first: `/about` wins the `source` mapping over `/[lang]/about`.
+ */
+function expandOptional(segments: string[]): string[][] {
+	const optional = segments.flatMap((seg, i) => (optionalParam(seg) ? [i] : []));
+	if (optional.length === 0) return [segments];
+	const total = 2 ** optional.length;
+	const masks =
+		total <= MAX_OPTIONAL_VARIANTS ? Array.from({ length: total }, (_unused, mask) => mask) : [0, total - 1];
+	return masks.map((mask) =>
+		segments
+			.filter((_seg, i) => {
+				const bit = optional.indexOf(i);
+				return bit === -1 || (mask & (1 << bit)) !== 0;
+			})
+			.map((seg) => optionalParam(seg) ?? seg),
+	);
+}
+
 async function sveltekit(dir: string, result: DiscoveredRoutes): Promise<void> {
 	const files = await glob(join(dir, "src/routes"), ["**/+page.{svelte,md,svx}"]);
 	for (const file of files) {
-		const segments = cleanSegments(file.split("/").slice(0, -1));
-		if (!segments) continue;
-		addRoute(result, toRoute(segments), `src/routes/${file}`);
+		const raw = file.split("/").slice(0, -1).map(stripMatchers);
+		for (const variant of expandOptional(raw)) {
+			const segments = cleanSegments(variant);
+			if (!segments) continue;
+			addRoute(result, toRoute(segments), `src/routes/${file}`);
+		}
 	}
 }
 
