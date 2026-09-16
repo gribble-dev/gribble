@@ -53,6 +53,15 @@ export function isNoModelError(err: unknown): boolean {
 	return errorName(err) === "NoModelError";
 }
 
+/**
+ * `--mode review`, `--mode all` or `gribble login` was reached without the optional pi peer
+ * dependencies on disk. Core throws it from the lazy import; the CLI turns it into the install
+ * command plus the reminder that gate needs none of it.
+ */
+export function isReviewRuntimeMissingError(err: unknown): boolean {
+	return errorName(err) === "ReviewRuntimeMissingError";
+}
+
 export function errorMessage(err: unknown): string {
 	if (err instanceof Error) return err.message;
 	return String(err);

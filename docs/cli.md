@@ -18,6 +18,8 @@ yarn gribble audit
 
 Examples below omit the runner for readability.
 
+`gate` mode needs no model, and installs none: the AI review runtime is an [optional peer dependency](/docs/getting-started#the-review-runtime-is-optional). Commands that do need it — `audit --mode review`, `audit --mode all`, `login`, `logout`, `models` — stop with the install command when it is absent. `init` keeps going and skips model selection.
+
 Two flags work on every command: `--verbose` prints debug logs and full stack traces, `--version` prints the version.
 
 ## Commands at a glance
@@ -91,7 +93,7 @@ gribble audit --all --changed
 
 | Flag | Default | Description |
 | --- | --- | --- |
-| `--mode gate\|review\|all` | `all` | Which half to run. `gate` is deterministic and needs no model; `review` is the AI agent. See [Gate and review](/docs/concepts/gate-and-review). |
+| `--mode gate\|review\|all` | `all` | Which half to run. `gate` is deterministic and needs neither a model nor the packages that would call one; `review` is the AI agent and needs both. See [Gate and review](/docs/concepts/gate-and-review). |
 | `--ci` | off | Machine-readable mode: report JSON on stdout, progress on stderr. |
 | `--target <dir>` | — | Audit a specific app in a [monorepo](/docs/monorepos), e.g. `apps/web`. |
 | `--all` | off | Audit every `.gribble/` in the repository. |

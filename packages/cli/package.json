@@ -49,15 +49,27 @@
 	"dependencies": {
 		"@gribble/core": "workspace:*",
 		"@gribble/skills": "workspace:*",
-		"@earendil-works/pi-ai": "catalog:",
-		"@earendil-works/pi-coding-agent": "catalog:",
 		"@clack/prompts": "1.8.0",
 		"commander": "15.0.0",
 		"picocolors": "catalog:",
 		"playwright": "catalog:",
 		"yaml": "catalog:"
 	},
+	"peerDependencies": {
+		"@earendil-works/pi-ai": "catalog:",
+		"@earendil-works/pi-coding-agent": "catalog:"
+	},
+	"peerDependenciesMeta": {
+		"@earendil-works/pi-ai": {
+			"optional": true
+		},
+		"@earendil-works/pi-coding-agent": {
+			"optional": true
+		}
+	},
 	"devDependencies": {
+		"@earendil-works/pi-ai": "catalog:",
+		"@earendil-works/pi-coding-agent": "catalog:",
 		"@types/node": "catalog:",
 		"tsdown": "catalog:",
 		"typescript": "catalog:",

@@ -47,6 +47,27 @@ describe("exit codes", () => {
 		expect(io.stderr.text).toContain("gribble init");
 	});
 
+	it("2 when the review runtime is missing, naming the packages to install", async () => {
+		const io = testIo();
+		class ReviewRuntimeMissingError extends Error {
+			override name = "ReviewRuntimeMissingError";
+		}
+		const code = await run(["audit", "--mode", "review"], {
+			...base(io),
+			createModelRuntime: async () => {
+				throw new ReviewRuntimeMissingError(
+					"The AI review runtime is not installed. Run `npm install @earendil-works/pi-ai@0.85.1 @earendil-works/pi-coding-agent@0.85.1` to add it, or use `--mode gate`, which needs no model.",
+				);
+			},
+			runAudit: async () => report([]),
+		});
+		expect(code).toBe(2);
+		expect(io.stderr.text).toContain("npm install @earendil-works/pi-ai@0.85.1");
+		expect(io.stderr.text).toContain("@earendil-works/pi-coding-agent@0.85.1");
+		expect(io.stderr.text).toContain("optional peer dependencies");
+		expect(io.stderr.text).not.toContain("Unexpected error");
+	});
+
 	it("2 on a model auth error (matched by name), with the login hint", async () => {
 		const io = testIo();
 		class ModelAuthError extends Error {

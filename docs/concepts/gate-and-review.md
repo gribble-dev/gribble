@@ -10,6 +10,8 @@ Gribble runs two kinds of check, and keeping them apart is the central design de
 
 Gate mode is ordinary code. No model is loaded, no tokens are spent, and the same commit produces the same findings every time.
 
+No model runtime is *installed* either: the pi packages behind review mode are [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional), so a gate-only project never fetches a provider SDK.
+
 What runs in gate:
 
 - **Links and network** — internal 4xx/5xx, external link checks, redirect chains, empty `href`s, failed requests, console errors, asset sizes, request counts.
@@ -97,7 +99,7 @@ A report nobody reads because it has ninety comments is worth less than five com
 | PR review comments | `review` or `all` |
 | After your coding agent fixed something | `gate` |
 | Nightly, or before a release | `all` |
-| No model credentials available | `gate` |
+| No model credentials available, or no review runtime installed | `gate` |
 
 The default for `gribble audit` and for the GitHub Action is `all`.
 

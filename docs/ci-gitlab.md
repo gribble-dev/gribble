@@ -59,7 +59,7 @@ A few choices in there worth explaining.
 
 **The baseline job also uploads a Code Quality report.** GitLab computes "new" and "fixed" by comparing the merge request's report with the most recent report from the target branch. If the default branch never produces one, the widget lists every finding as new on every merge request. Running the audit on the default branch gives GitLab its reference and refreshes the [baseline](/docs/concepts/baseline) in the same run.
 
-**`mode: gate`** in both jobs is deliberate. Gate is deterministic and needs no model, so the pipeline needs no provider key. See [Review mode in CI](#review-mode-in-ci) for the alternative.
+**`mode: gate`** in both jobs is deliberate. Gate is deterministic and needs no model, so the pipeline needs no provider key — and no model runtime: the pi packages are [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional), so a gate-only `pnpm install` never fetches them. See [Review mode in CI](#review-mode-in-ci) for the alternative.
 
 **Pushing the baseline needs a token.** `CI_JOB_TOKEN` cannot push. Create a [project access token](https://docs.gitlab.com/user/project/settings/project_access_tokens/) with the `write_repository` scope and the Developer role, store it as a masked, protected CI/CD variable named `GRIBBLE_PUSH_TOKEN`, and allow that token to push to the default branch in the branch protection settings. `[skip ci]` in the commit message keeps the push from starting another pipeline. If you would rather not let CI write to your branch, set `baseline.update: manual` in `gribble.yaml`, drop the `git` lines, and run `gribble baseline update` locally.
 
@@ -89,6 +89,8 @@ The Code Quality format was designed for linters, so a couple of translations ar
 ## Review mode in CI
 
 Gate needs no model. Review does, and it costs tokens, so it earns a separate job that is allowed to fail.
+
+It also needs the runtime on disk. Add `@earendil-works/pi-ai` and `@earendil-works/pi-coding-agent` to the audited repository's devDependencies before enabling this job; no package manager installs an optional peer for you, and the job would otherwise fail with the install command instead of a report.
 
 ```yaml
 gribble:review:

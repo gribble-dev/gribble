@@ -18,6 +18,7 @@
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
 		"docs:rules": "pnpm --filter @gribble/core docs:rules",
+		"verify:gate-only": "node scripts/verify-gate-only-install.mjs",
 		"changeset": "changeset",
 		"release": "pnpm build && changeset publish"
 	},

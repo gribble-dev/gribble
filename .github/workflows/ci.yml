@@ -44,6 +44,24 @@ jobs:
         if: matrix.os == 'windows-latest'
       - run: pnpm test
 
+  gate-only:
+    name: Gate-only install (no review runtime)
+    if: github.head_ref != 'changeset-release/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter @gribble/core exec playwright install --with-deps chromium
+      # Packs the published packages, installs them where the optional pi peers are absent, and
+      # checks that gate runs and review fails with the install command. Prints the package count.
+      - run: pnpm verify:gate-only
+
   website:
     name: Website build
     if: github.head_ref != 'changeset-release/main'

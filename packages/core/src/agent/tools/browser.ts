@@ -3,13 +3,12 @@
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, InlineExtension } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { formatSnapshot } from "../format.js";
 import { BROWSER_TOOLS } from "../names.js";
 import type { AgentState } from "../state.js";
-import { minFontPx, refOf, snapshotTokensFor, textResult } from "./common.js";
+import { minFontPx, refOf, StringEnum, snapshotTokensFor, textResult } from "./common.js";
 
 const TARGET_DESCRIPTION =
 	"`ref=e12` from the last page_snapshot, or a Playwright selector: `text=Sign in`, `role=button[name=Save]`, or CSS.";

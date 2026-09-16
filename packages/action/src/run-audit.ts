@@ -19,6 +19,12 @@ function binName(): string {
 }
 
 /**
+ * The AI review runtime `gribble` declares as optional peer dependencies. Nothing installs them
+ * implicitly, so the npx fallback has to name them or `--mode review` cannot run at all.
+ */
+const REVIEW_RUNTIME_PACKAGES = ["@earendil-works/pi-ai", "@earendil-works/pi-coding-agent"];
+
+/**
  * Locate the `gribble` binary: the audited app's own `node_modules/.bin`, then
  * the repository root's, else `npx --yes gribble`.
  */
@@ -38,6 +44,8 @@ function defaultResolvePackageBin(from: string): string | undefined {
 export function resolveGribbleCommand(opts: {
 	workingDirectory: string;
 	repoRoot: string;
+	/** Audit mode; `review` and `all` make the npx fallback fetch the review runtime too. */
+	mode?: ActionInputs["mode"];
 	exists?: (p: string) => boolean;
 	/** Injectable for tests: absolute path of the `gribble` package's bin script, resolved from `from`. */
 	resolvePackageBin?: (from: string) => string | undefined;
@@ -54,9 +62,12 @@ export function resolveGribbleCommand(opts: {
 	if (exists(local)) return { command: local, prefixArgs: [], how: "working-directory" };
 	const root = path.join(opts.repoRoot, "node_modules", ".bin", binName());
 	if (exists(root)) return { command: root, prefixArgs: [], how: "repo-root" };
+	// This path is unpinned by design (see the warning in `runAudit`), so the runtime comes from
+	// the same `latest` tags as the CLI rather than a version this action hard-codes.
+	const runtime = opts.mode && opts.mode !== "gate" ? REVIEW_RUNTIME_PACKAGES : [];
 	return {
 		command: process.platform === "win32" ? "npx.cmd" : "npx",
-		prefixArgs: ["--yes", "gribble"],
+		prefixArgs: ["--yes", ...["gribble", ...runtime].flatMap((name) => ["-p", name]), "gribble"],
 		how: "npx",
 	};
 }
@@ -117,13 +128,13 @@ export async function runAudit(
 	inputs: ActionInputs,
 	opts: { workingDirectory: string; repoRoot: string },
 ): Promise<AuditRun> {
-	const cmd = resolveGribbleCommand(opts);
+	const cmd = resolveGribbleCommand({ ...opts, mode: inputs.mode });
 	const args = [...cmd.prefixArgs, ...buildAuditArgs(inputs)];
 	const display = `${cmd.command} ${args.join(" ")}`;
 	core.info(`🐛 ${display}  (cwd: ${opts.workingDirectory}, binary via ${cmd.how})`);
 	if (cmd.how === "npx") {
 		core.warning(
-			"`gribble` is not installed in this repository; falling back to `npx --yes gribble`. Add it as a devDependency for reproducible runs.",
+			"`gribble` is not installed in this repository; falling back to npx. Add it as a devDependency for reproducible runs — plus `@earendil-works/pi-ai` and `@earendil-works/pi-coding-agent` when the mode includes review.",
 		);
 	}
 	const startedAt = Date.now();

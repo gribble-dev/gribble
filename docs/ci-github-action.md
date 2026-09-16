@@ -87,6 +87,8 @@ A few choices in there worth explaining.
 
 `fetch-depth: 0` gives the Action the git history it needs to resolve the base commit and to decide which files changed. `mode: gate` in the baseline job is deliberate — that job exists to record metrics and snapshots, and paying for an AI review that nobody will read is waste. `comment: false` for the same reason: there is no pull request to comment on.
 
+`mode: all` in the audit job needs the AI review runtime in the repository's devDependencies — `@earendil-works/pi-ai` and `@earendil-works/pi-coding-agent`, which Gribble declares as [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional) that no package manager installs on its own. `pnpm install --frozen-lockfile` then picks them up like anything else. The baseline job's `mode: gate` needs neither, which is the point: a gate-only repository installs no model runtime at all.
+
 ## Inputs
 
 | Input | Type | Default | Description |
@@ -145,7 +147,7 @@ Gribble uses `GITHUB_TOKEN` and does not require a GitHub App.
 
 ## How the Action runs the audit
 
-1. Locates the `gribble` package in your repository (`working-directory` first, then the repository root). The version in your lockfile is the version that runs. When nothing is installed it falls back to `npx --yes gribble` and logs a warning: that is slower, unpinned, and runs whatever the latest release is. Add `gribble` as a devDependency instead.
+1. Locates the `gribble` package in your repository (`working-directory` first, then the repository root). The version in your lockfile is the version that runs. When nothing is installed it falls back to npx and logs a warning: that is slower, unpinned, and runs whatever the latest release is — for `mode: review` or `all` the fallback also fetches the review runtime, at `latest` like everything else on that path. Add `gribble` as a devDependency instead.
 2. Executes `gribble audit --ci --mode <mode>` with flags derived from the inputs.
 3. Reads `.gribble/runs/latest.json`.
 4. Creates or updates a **check run** with annotations. When a finding has `location.file`, the annotation lands on that file; the line is resolved by locating the recorded symbol in the file, since Gribble stores symbol names rather than line numbers on purpose.
@@ -200,7 +202,7 @@ Reports are self-contained — they carry their own version, repo, commit and mo
 
 ## Docker image
 
-If installing a browser in CI is inconvenient, use the prebuilt image. It is based on the official Playwright image and ships Node 22, Gribble and the browsers.
+If installing a browser in CI is inconvenient, use the prebuilt image. It is based on the official Playwright image and ships Node 22, Gribble, the browsers and the AI review runtime, so every mode works out of the box.
 
 ```
 ghcr.io/gribble-dev/gribble

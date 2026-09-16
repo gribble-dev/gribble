@@ -13,6 +13,14 @@ pnpm exec gribble init        # creates .gribble/ and picks a model
 pnpm exec gribble audit       # lets the gribbles loose
 ```
 
+The AI review runtime is an **optional peer dependency**, so that install carries the deterministic gate only — which is all `--mode gate` in CI needs. Add it for `review` and `all`:
+
+```bash
+pnpm add -D gribble @earendil-works/pi-ai @earendil-works/pi-coding-agent
+```
+
+No package manager installs optional peers by itself. Without them, `--mode review` stops with the exact install command. See [Getting started](https://gribble.dev/docs/getting-started#the-review-runtime-is-optional).
+
 ## Commands
 
 | Command | Purpose |

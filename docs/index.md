@@ -13,6 +13,8 @@ pnpm exec gribble init      # creates .gribble/
 pnpm exec gribble audit     # let the gribbles chew on it
 ```
 
+`gate` mode installs no model runtime; `review` needs two more packages. See [The review runtime is optional](/docs/getting-started#the-review-runtime-is-optional).
+
 ## Why the name
 
 A gribble is a tiny marine isopod that bores holes into ship hulls from places nobody looks at. Whole piers have quietly collapsed because of them. We named the pest hunter after the pest: tiny bugs that find your bugs before you ship.

@@ -10,7 +10,8 @@ This repository is a publish mirror. The source lives in the [gribble monorepo](
 
 ## Requirements
 
-- **`gribble` installed as a devDependency** of the audited repository. The action runs the version in your lockfile. If it cannot find one it falls back to `npx --yes gribble`, logs a warning, and you get whatever the latest release is.
+- **`gribble` installed as a devDependency** of the audited repository. The action runs the version in your lockfile. If it cannot find one it falls back to npx, logs a warning, and you get whatever the latest release is.
+- **`@earendil-works/pi-ai` and `@earendil-works/pi-coding-agent`** as devDependencies too, but only for `mode: review` or `mode: all`. Gribble declares the AI review runtime as optional peer dependencies, which no package manager installs on its own; `mode: gate` needs neither. The npx fallback fetches them itself, and the [Docker image](#docker-image) ships them.
 - **A `.gribble/` directory** created with `gribble init` and committed, including `.gribble/baseline/` once you have run the first audit (see [Baseline](#baseline-write-back)).
 - **A Chromium build for Playwright**: run `gribble install` in the job, or use the [Docker image](#docker-image) that ships one.
 - **Node.js 22 or newer** on the runner for the CLI. The action itself declares the `node24` runtime.
