@@ -67,6 +67,12 @@ target:
 
 An explicit list is the fastest and most predictable option, and the one to reach for when `auto` picks up hundreds of generated routes. Bracketed segments are matched against real URLs, and one representative page per pattern is audited.
 
+`auto` normalizes framework syntax into those same bracketed patterns. SvelteKit parameter matchers
+are dropped, so `[lang=locale]` is discovered as `[lang]` and renaming a matcher in `src/params/`
+does not orphan your baseline, and optional parameters expand to both paths they serve: one
+`[[lang]]/about/+page.svelte` is discovered as `/about` **and** `/[lang]/about`, so the canonical
+pages of an i18n site are audited alongside the prefixed ones.
+
 ### `model`
 
 | Field | Type | Default | Description |

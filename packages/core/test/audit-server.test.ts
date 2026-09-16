@@ -40,6 +40,16 @@ describe("routePatternRegex", () => {
 		expect(routePatternRegex("/about").test("/about/")).toBe(true);
 		expect(routePatternRegex("/about").test("/about-us")).toBe(false);
 	});
+
+	it("matches both variants SvelteKit optional parameters expand to", () => {
+		// Discovery emits `/about` and `/[lang]/about` for `[[lang=locale]]/about/+page.svelte`,
+		// so every segment reaching here is required and both canonical and prefixed URLs match.
+		expect(routePatternRegex("/about").test("/about")).toBe(true);
+		expect(routePatternRegex("/about").test("/fr/about")).toBe(false);
+		expect(routePatternRegex("/[lang]/about").test("/fr/about")).toBe(true);
+		expect(routePatternRegex("/[lang]/about").test("/about")).toBe(false);
+		expect(routePatternRegex("/").test("/")).toBe(true);
+	});
 });
 
 describe("startDevServer", () => {

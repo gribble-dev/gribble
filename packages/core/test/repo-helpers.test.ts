@@ -107,6 +107,57 @@ describe("discoverRoutes", () => {
 		expect(remix.routes).toEqual(["/", "/login", "/settings", "/blog/[slug]"]);
 	});
 
+	it("expands SvelteKit optional parameters and drops matcher names", async () => {
+		await write({
+			"svelte.config.js": "",
+			"src/routes/[[lang=locale]]/+page.svelte": "",
+			"src/routes/[[lang=locale]]/about/+page.svelte": "",
+			"src/routes/[[lang=locale]]/ingredients/[id]/+page.svelte": "",
+			"src/routes/delete-account/+page.svelte": "",
+		});
+		const found = await discoverRoutes(dir);
+		expect(found.framework).toBe("sveltekit");
+		expect(found.routes).toEqual([
+			"/",
+			"/[lang]",
+			"/about",
+			"/delete-account",
+			"/[lang]/about",
+			"/ingredients/[id]",
+			"/[lang]/ingredients/[id]",
+		]);
+		expect(found.source["/about"]).toBe("src/routes/[[lang=locale]]/about/+page.svelte");
+		expect(found.source["/[lang]/about"]).toBe("src/routes/[[lang=locale]]/about/+page.svelte");
+	});
+
+	it("strips SvelteKit matchers from required, rest and optional catch-all parameters", async () => {
+		await write({
+			"svelte.config.js": "",
+			"src/routes/[lang=locale]/x/+page.svelte": "",
+			"src/routes/files/[...path=asset]/+page.svelte": "",
+			"src/routes/docs/[[...slug=segment]]/+page.svelte": "",
+			"src/routes/[category=slug]-[id=integer]/+page.svelte": "",
+		});
+		const found = await discoverRoutes(dir);
+		expect(found.routes).toEqual(["/[category]-[id]", "/[lang]/x", "/docs/[...slug]", "/files/[...path]"]);
+	});
+
+	it("caps the SvelteKit optional-parameter expansion at the two end variants", async () => {
+		await write({
+			"svelte.config.js": "",
+			"src/routes/[[a]]/[[b]]/[[c]]/[[d]]/deep/+page.svelte": "",
+			"src/routes/[[a]]/[[b]]/[[c]]/[[d]]/[[e]]/deeper/+page.svelte": "",
+		});
+		const found = await discoverRoutes(dir);
+		// Four optional segments are 16 variants, exactly the cap, so all of them are emitted.
+		expect(found.routes.filter((r) => r.endsWith("/deep"))).toHaveLength(16);
+		// Five would be 32, so only the all-absent and all-present variants survive.
+		expect(found.routes.filter((r) => r.endsWith("/deeper"))).toEqual([
+			"/deeper",
+			"/[a]/[b]/[c]/[d]/[e]/deeper",
+		]);
+	});
+
 	it("returns no routes for an unknown layout", async () => {
 		await write({ "README.md": "" });
 		const found = await discoverRoutes(dir);
