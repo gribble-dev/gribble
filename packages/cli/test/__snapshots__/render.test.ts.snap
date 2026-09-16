@@ -10,10 +10,13 @@ exports[`event renderer > renders a TTY stream with spinner updates and live fin
 [spinner message] nibbling on /pricing (desktop)
 [spinner clear]
 [spinner start] nibbling on /pricing (desktop)
+[spinner message] checking perf/* on /pricing
 [spinner clear]
-[spinner start] nibbling on /pricing (desktop)
+[spinner start] checking perf/* on /pricing
 [spinner clear]
-[spinner start] nibbling on /pricing (desktop)
+[spinner start] checking perf/* on /pricing
+[spinner clear]
+[spinner start] checking perf/* on /pricing
 [spinner message] walking flow smoke
 [spinner clear]
 [spinner start] walking flow smoke
@@ -49,8 +52,9 @@ route /pricing (desktop)
    ✓ links/broken /pricing 200ms · 1 findings
   error    links/broken           /pricing       /docs/plans returns 404 (src/routes/pricing.tsx#PlansLink)
    ✓ a11y/axe /pricing 900ms
+   ✗ perf/* /pricing: Lighthouse could not run: Cannot find module 'tslib'
   error    a11y/form-labels       /signup        Input #email has no associated label (#email)
-   ! lighthouse skipped: could not attach to the CDP endpoint
+   ! axe could not run on /signup: page closed
 flow smoke
    ✓ flow smoke 1.5s
 flow checkout
@@ -59,6 +63,7 @@ flow checkout
    ✓ links          2 routes · 1 findings
    ✓ seo            1 routes
    ✓ a11y           1 routes
+   ✗ perf           1 routes · not run on 1 route
 [review] reviewing
   warn     review/copy            /pricing       "Contact sales" and "Talk to sales" on the same page 82%
 [baseline] comparing with the baseline
@@ -70,6 +75,8 @@ The gribbles found 4 holes in your hull — 2 need patching before you sail.
 
   error 2 · warn 2
   3 existing · 1 fixed ✅
+  Not run: perf/* on 2 routes (Lighthouse could not run: Cannot find module 'tslib')
+  Not run: html/*, seo/* on /sitemap.xml (response is application/xml, not an HTML document)
   Report: .gribble/runs/2026-09-12T10-20-30-123Z/report.json
   12 steps · 318k tokens · $0.42 · prov/model-x · 4.2s
   The gate is closed. Patch the holes above before you sail.

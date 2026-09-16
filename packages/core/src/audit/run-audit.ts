@@ -23,7 +23,7 @@ import { discoverRoutes } from "../repo/routes.js";
 import { type DesignTokens, readDesignTokens } from "../repo/tokens.js";
 import { applyRulePolicy, dedupeFindings, sortFindings } from "../report/findings.js";
 import { normalizeRoute } from "../report/fingerprint.js";
-import type { Finding, FlowResult, Report, RouteResult } from "../report/schema.js";
+import type { Finding, FlowResult, NotRunCheck, Report, RouteResult } from "../report/schema.js";
 import { summarizeReport } from "../report/summary.js";
 import { RUNS_DIR, runDirName, writeRunReport } from "../report/write.js";
 import { getRule } from "../rules/registry.js";
@@ -123,6 +123,17 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	let reviewRan = false;
 	const flowResults: FlowResult[] = [];
 	const routeResults: RouteResult[] = [];
+	// Checks that could not run, one entry per rule and route (viewports collapse into one).
+	const notRun: NotRunCheck[] = [];
+	const notRunKeys = new Set<string>();
+	const recordNotRun = (entries: NotRunCheck[]) => {
+		for (const entry of entries) {
+			const key = `${entry.rule}\u0000${entry.route ?? ""}`;
+			if (notRunKeys.has(key)) continue;
+			notRunKeys.add(key);
+			notRun.push(entry);
+		}
+	};
 	const perRoute = new Map<string, RouteCheckResult>();
 	const screenshots = new Map<string, Buffer>();
 	const snapshots: Record<string, string> = {};
@@ -262,6 +273,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 							continue;
 						}
 						gateFindings.push(...result.findings);
+						if (result.notRun) recordNotRun(result.notRun);
 						if (result.screenshot) screenshots.set(`${route}@${viewport}`, result.screenshot);
 						if (viewport === desktop) {
 							perRoute.set(route, result);
@@ -279,6 +291,8 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 
 			if (!aborted()) {
 				emit({ type: "check:start", rule: "site/*" });
+				const siteStarted = Date.now();
+				let siteError: string | undefined;
 				try {
 					gateFindings.push(
 						...(await checkSiteWide({
@@ -293,9 +307,16 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 						})),
 					);
 				} catch (err) {
-					log("warn", `Site-wide checks failed: ${(err as Error).message}`);
+					siteError = `failed: ${(err as Error).message}`;
+					recordNotRun([{ rule: "site/*", reason: siteError }]);
 				}
-				emit({ type: "check:end", rule: "site/*" });
+				emit({
+					type: "check:end",
+					rule: "site/*",
+					durationMs: Date.now() - siteStarted,
+					ok: !siteError,
+					...(siteError ? { error: siteError } : {}),
+				});
 			}
 
 			// Replay recorded flows.
@@ -336,6 +357,8 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 			// Regressions against the baseline.
 			if (!aborted() && baseline && !bootstrap) {
 				emit({ type: "check:start", rule: "regression/*" });
+				const regressionStarted = Date.now();
+				let regressionError: string | undefined;
 				try {
 					gateFindings.push(
 						...(await checkRegressions({
@@ -352,9 +375,16 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 						})),
 					);
 				} catch (err) {
-					log("warn", `Regression checks failed: ${(err as Error).message}`);
+					regressionError = `failed: ${(err as Error).message}`;
+					recordNotRun([{ rule: "regression/*", reason: regressionError }]);
 				}
-				emit({ type: "check:end", rule: "regression/*" });
+				emit({
+					type: "check:end",
+					rule: "regression/*",
+					durationMs: Date.now() - regressionStarted,
+					ok: !regressionError,
+					...(regressionError ? { error: regressionError } : {}),
+				});
 			}
 		}
 
@@ -504,6 +534,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 			route: f.route,
 		}));
 	}
+	if (notRun.length > 0) report.notRun = notRun;
 
 	if ((options.updateBaseline || bootstrap) && !aborted()) {
 		const screenshotsMode = project.config.baseline.screenshots;

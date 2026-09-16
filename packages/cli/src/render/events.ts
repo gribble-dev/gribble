@@ -9,6 +9,7 @@ import {
 	formatDuration,
 	formatFinding,
 	formatTokens,
+	groupNotRun,
 	modelLabel,
 } from "./format.js";
 
@@ -42,6 +43,9 @@ interface CategoryStats {
 	checks: number;
 	findings: number;
 	routes: Set<string>;
+	/** Checks that ended with `ok: false`, and the routes they did not run on. */
+	notRun: number;
+	notRunRoutes: Set<string>;
 }
 
 const PHASE_LABEL: Record<string, string> = {
@@ -120,7 +124,15 @@ export function createEventRenderer(opts: RendererOptions): EventRenderer {
 		for (const [category, stats] of categories) {
 			const what = stats.routes.size > 0 ? `${stats.routes.size} routes` : `${stats.checks} checks`;
 			const holes = stats.findings > 0 ? c.dim(` · ${stats.findings} findings`) : "";
-			ui.line(`   ${c.green("✓")} ${category.padEnd(14)} ${what}${holes}`);
+			const missing =
+				stats.notRunRoutes.size > 0
+					? c.yellow(` · ${copy.audit.notRunOn(stats.notRunRoutes.size)}`)
+					: stats.notRun > 0
+						? c.yellow(" · not run")
+						: "";
+			const mark =
+				stats.notRun === 0 ? c.green("✓") : stats.notRun < stats.checks ? c.yellow("!") : c.red("✗");
+			ui.line(`   ${mark} ${category.padEnd(14)} ${what}${holes}${missing}`);
 		}
 		resume();
 	}
@@ -180,15 +192,30 @@ export function createEventRenderer(opts: RendererOptions): EventRenderer {
 				}
 				case "check:end": {
 					const category = event.rule.split("/")[0] ?? event.rule;
-					const stats = categories.get(category) ?? { checks: 0, findings: 0, routes: new Set<string>() };
+					const stats = categories.get(category) ?? {
+						checks: 0,
+						findings: 0,
+						routes: new Set<string>(),
+						notRun: 0,
+						notRunRoutes: new Set<string>(),
+					};
 					stats.checks++;
 					stats.findings += event.findings ?? 0;
 					if (event.route) stats.routes.add(event.route);
+					const where = event.route ? ` ${event.route}` : "";
+					if (event.ok === false) {
+						// A check that did not run is never a ✓: print it live, the way a failed flow prints.
+						stats.notRun++;
+						if (event.route) stats.notRunRoutes.add(event.route);
+						categories.set(category, stats);
+						line(`   ${c.red("✗")} ${event.rule}${where}${event.error ? `: ${event.error}` : ""}`);
+						return;
+					}
 					categories.set(category, stats);
 					if (ui.verbose || mode === "plain") {
 						const took = event.durationMs !== undefined ? ` ${formatDuration(event.durationMs)}` : "";
 						const found = event.findings ? ` · ${event.findings} findings` : "";
-						plain(`   ✓ ${event.rule}${event.route ? ` ${event.route}` : ""}${took}${found}`);
+						plain(`   ✓ ${event.rule}${where}${took}${found}`);
 					}
 					return;
 				}
@@ -258,6 +285,9 @@ export function createEventRenderer(opts: RendererOptions): EventRenderer {
 				if (counts) ui.line(`  ${counts}`);
 				const ledger = copy.audit.ledger(summary.existingCount, summary.fixedCount);
 				if (ledger) ui.line(`  ${c.dim(ledger)}`);
+			}
+			for (const group of groupNotRun(report.notRun ?? [])) {
+				ui.line(`  ${c.yellow(copy.audit.notRun(group.rules, group.routes, group.reason))}`);
 			}
 			if (finishOpts.baselineUpdated && !report.baseline.bootstrap)
 				ui.line(`  ${copy.audit.baselineUpdated}`);

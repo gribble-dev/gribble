@@ -136,6 +136,18 @@ export const fixedFindingSchema = Type.Object(
 	{ additionalProperties: false, description: "A baseline finding that is no longer present." },
 );
 
+export const notRunCheckSchema = Type.Object(
+	{
+		rule: Type.String({ description: "Rule id or family that did not run, e.g. perf/* or html/*." }),
+		route: Type.Optional(Type.String({ description: "Normalized route path. Absent for site-wide checks." })),
+		reason: Type.String({ description: "Why the check could not run, dry." }),
+	},
+	{
+		additionalProperties: false,
+		description: "A check that did not execute, so its absence from `findings` says nothing about the page.",
+	},
+);
+
 export const reportSchema = Type.Object(
 	{
 		version: Type.Literal(1),
@@ -200,6 +212,12 @@ export const reportSchema = Type.Object(
 		fixed: Type.Optional(
 			Type.Array(fixedFindingSchema, { description: "Baseline findings that disappeared." }),
 		),
+		notRun: Type.Optional(
+			Type.Array(notRunCheckSchema, {
+				description:
+					"Checks that could not run (Lighthouse failed, non-HTML response). Omitted when every check ran.",
+			}),
+		),
 		durationMs: Type.Number(),
 	},
 	{ additionalProperties: false, title: "Gribble report", description: "Output of one `gribble audit` run." },
@@ -213,4 +231,5 @@ export type RouteResult = Static<typeof routeResultSchema>;
 export type FlowResult = Static<typeof flowResultSchema>;
 export type ReportSummary = Static<typeof reportSummarySchema>;
 export type FixedFinding = Static<typeof fixedFindingSchema>;
+export type NotRunCheck = Static<typeof notRunCheckSchema>;
 export type Report = Static<typeof reportSchema>;

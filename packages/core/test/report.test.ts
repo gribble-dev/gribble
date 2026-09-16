@@ -376,6 +376,17 @@ describe("report schema + writeRunReport", () => {
 		expect((reportJsonSchema() as { $id: string }).$id).toBe("https://gribble.dev/schema/report.json");
 	});
 
+	it("accepts the optional notRun list and rejects malformed entries", () => {
+		const withNotRun = report([], {
+			notRun: [
+				{ rule: "perf/*", route: "/", reason: "Lighthouse could not run: no CDP port" },
+				{ rule: "site/*", reason: "failed: boom" },
+			],
+		});
+		expect(Value.Check(reportSchema, withNotRun)).toBe(true);
+		expect(Value.Check(reportSchema, report([], { notRun: [{ rule: "perf/*" }] } as never))).toBe(false);
+	});
+
 	it("writes runs/<timestamp>/report.json, latest.json and prunes", async () => {
 		await withTempDir(async (dir) => {
 			const stamps = ["2026-09-01T00:00:00.000Z", "2026-09-02T00:00:00.000Z", "2026-09-03T00:00:00.000Z"];

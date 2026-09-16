@@ -73,6 +73,8 @@ does not orphan your baseline, and optional parameters expand to both paths they
 `[[lang]]/about/+page.svelte` is discovered as `/about` **and** `/[lang]/about`, so the canonical
 pages of an i18n site are audited alongside the prefixed ones.
 
+List HTML pages only. Sitemaps, feeds, JSON endpoints and other non-HTML responses do not belong in `target.routes`: the page rules (`html/*`, `seo/*`, `links/*`, `ui/*`, `i18n/*`, `a11y/*`, `perf/*`) have nothing to judge there, so Gribble skips them for any route whose `Content-Type` is not HTML and records the skip under `notRun` in the report. Nothing is lost by leaving the sitemap out: `seo/sitemap` is a site-wide rule that fetches `/sitemap.xml` itself and compares it with the audited routes.
+
 ### `model`
 
 | Field | Type | Default | Description |
