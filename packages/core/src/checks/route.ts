@@ -1,7 +1,7 @@
 /**
  * Runs every enabled deterministic per-route check on one page/viewport.
  */
-import type { Finding, RouteMetrics } from "../report/schema.js";
+import type { Finding, NotRunCheck, RouteMetrics } from "../report/schema.js";
 import { runAxe } from "./axe.js";
 import { ruleEnabled, ruleOptions } from "./finding.js";
 import { checkHtml } from "./html.js";
@@ -9,7 +9,7 @@ import { checkI18n } from "./i18n.js";
 import { lighthouseWanted, runLighthouse } from "./lighthouse.js";
 import { checkLinks } from "./links.js";
 import { checkNetwork } from "./network.js";
-import { setSnapshot } from "./page-data.js";
+import { documentMediaType, isHtmlMediaType, setSnapshot } from "./page-data.js";
 import { checkSecurity } from "./security.js";
 import { checkSeo, readHead } from "./seo.js";
 import type { CheckContext, RouteCheckResult } from "./types.js";
@@ -26,17 +26,30 @@ export interface RunRouteChecksOptions {
 	skipNavigation?: boolean;
 }
 
-type Check = { id: string; run: (ctx: CheckContext) => Promise<Finding[]> };
+type Check = {
+	id: string;
+	run: (ctx: CheckContext) => Promise<Finding[]>;
+	/**
+	 * True for rule families that judge an HTML document (doctype, headings, anchors, layout,
+	 * copy, accessibility tree). They are skipped when the response is not HTML: a sitemap,
+	 * a feed or a JSON endpoint has no title, viewport meta or h1 to miss.
+	 */
+	htmlOnly: boolean;
+};
 
 const CHECKS: Check[] = [
-	{ id: "network/*", run: checkNetwork },
-	{ id: "html/*", run: checkHtml },
-	{ id: "seo/*", run: checkSeo },
-	{ id: "links/*", run: checkLinks },
-	{ id: "ui/*", run: checkUi },
-	{ id: "i18n/*", run: checkI18n },
-	{ id: "security/*", run: checkSecurity },
-	{ id: "a11y/*", run: runAxe },
+	// Status, failed requests and console output describe the response, whatever its type.
+	{ id: "network/*", run: checkNetwork, htmlOnly: false },
+	{ id: "html/*", run: checkHtml, htmlOnly: true },
+	{ id: "seo/*", run: checkSeo, htmlOnly: true },
+	// Anchors, images, scripts and stylesheets are collected from the DOM, so there is nothing
+	// to probe on a non-HTML response.
+	{ id: "links/*", run: checkLinks, htmlOnly: true },
+	{ id: "ui/*", run: checkUi, htmlOnly: true },
+	{ id: "i18n/*", run: checkI18n, htmlOnly: true },
+	// Transport, response headers and leaked credentials apply to any response.
+	{ id: "security/*", run: checkSecurity, htmlOnly: false },
+	{ id: "a11y/*", run: runAxe, htmlOnly: true },
 ];
 
 function tokensForSnapshot(ctx: CheckContext) {
@@ -73,12 +86,14 @@ export async function runRouteChecks(
 	const nav = ctx.cache.navigation;
 	const loaded = !!nav && nav.ok && (nav.status ?? 0) < 400;
 
+	const notRun: NotRunCheck[] = [];
 	const result: RouteCheckResult = {
 		findings,
 		metrics: {},
 		ariaSnapshot: "",
 		status: nav?.status,
 		finalUrl: nav?.finalUrl,
+		notRun,
 	};
 
 	if (!loaded) {
@@ -115,19 +130,48 @@ export async function runRouteChecks(
 		// head extraction is best effort
 	}
 
+	// A non-HTML document (sitemap, feed, JSON) cannot fail html/*, seo/*, a11y/* and friends
+	// honestly, so those families are recorded as not run instead of producing false positives.
+	// A missing content-type header is treated as HTML (see isHtmlMediaType).
+	const mediaType = documentMediaType(ctx);
+	const html = isHtmlMediaType(mediaType);
+	const skipReason = html ? undefined : `response is ${mediaType}, not an HTML document; page rules skipped`;
+	if (skipReason) {
+		const skipped = CHECKS.filter((c) => c.htmlOnly).map((c) => c.id);
+		ctx.onEvent?.({
+			type: "log",
+			level: "info",
+			message: `${ctx.route} is ${mediaType}; ${skipped.join(", ")} skipped.`,
+		});
+	}
+
+	const skip = (rule: string, reason: string, startedCheck: number) => {
+		notRun.push({ rule, route: ctx.route, reason });
+		ctx.onEvent?.({
+			type: "check:end",
+			rule,
+			route: ctx.route,
+			durationMs: Date.now() - startedCheck,
+			findings: 0,
+			ok: false,
+			error: reason,
+		});
+	};
+
 	for (const check of CHECKS) {
 		if (ctx.signal?.aborted) break;
 		const startedCheck = Date.now();
 		ctx.onEvent?.({ type: "check:start", rule: check.id, route: ctx.route });
-		let produced: Finding[] = [];
+		if (skipReason && check.htmlOnly) {
+			skip(check.id, skipReason, startedCheck);
+			continue;
+		}
+		let produced: Finding[];
 		try {
 			produced = await check.run(ctx);
 		} catch (err) {
-			ctx.onEvent?.({
-				type: "log",
-				level: "warn",
-				message: `${check.id} failed on ${ctx.route} (${ctx.viewport}): ${(err as Error).message}`,
-			});
+			skip(check.id, `failed on ${ctx.viewport}: ${(err as Error).message}`, startedCheck);
+			continue;
 		}
 		findings.push(...produced);
 		ctx.onEvent?.({
@@ -136,22 +180,33 @@ export async function runRouteChecks(
 			route: ctx.route,
 			durationMs: Date.now() - startedCheck,
 			findings: produced.length,
+			ok: true,
 		});
 	}
 
 	if (opts.lighthouse && lighthouseWanted(ctx) && !ctx.signal?.aborted) {
 		ctx.onEvent?.({ type: "check:start", rule: "perf/*", route: ctx.route });
 		const startedLh = Date.now();
-		const lh = await runLighthouse(ctx, { port: opts.cdpPort });
-		findings.push(...lh.findings);
-		result.metrics = { ...result.metrics, ...lh.metrics };
-		ctx.onEvent?.({
-			type: "check:end",
-			rule: "perf/*",
-			route: ctx.route,
-			durationMs: Date.now() - startedLh,
-			findings: lh.findings.length,
-		});
+		if (skipReason) {
+			// Lighthouse scores a page load; a sitemap has no LCP worth gating on.
+			skip("perf/*", skipReason, startedLh);
+		} else {
+			const lh = await runLighthouse(ctx, { port: opts.cdpPort });
+			findings.push(...lh.findings);
+			result.metrics = { ...result.metrics, ...lh.metrics };
+			if (lh.error) {
+				skip("perf/*", lh.error, startedLh);
+			} else {
+				ctx.onEvent?.({
+					type: "check:end",
+					rule: "perf/*",
+					route: ctx.route,
+					durationMs: Date.now() - startedLh,
+					findings: lh.findings.length,
+					ok: true,
+				});
+			}
+		}
 	}
 
 	if (opts.screenshot !== false) {

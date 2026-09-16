@@ -11,6 +11,7 @@ export {
 export { checkHtml } from "./html.js";
 export { checkI18n } from "./i18n.js";
 export {
+	type LighthouseResult,
 	lighthouseWanted,
 	metricsFromLighthouse,
 	PERF_RULES,
@@ -20,7 +21,17 @@ export {
 export { LinkCache, type LinkCacheOptions, type LinkProbe } from "./link-cache.js";
 export { checkLinks } from "./links.js";
 export { checkNetwork, normalizeConsoleText } from "./network.js";
-export { getBodyText, getHtml, getSnapshot, isLoopbackHost, sameOrigin, targetOrigin } from "./page-data.js";
+export {
+	documentMediaType,
+	getBodyText,
+	getHtml,
+	getSnapshot,
+	isHtmlMediaType,
+	isLoopbackHost,
+	mediaTypeOf,
+	sameOrigin,
+	targetOrigin,
+} from "./page-data.js";
 export {
 	checkRegressions,
 	compareScreenshots,

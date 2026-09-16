@@ -47,7 +47,16 @@ export type AuditEvent =
 	| { type: "route:start"; route: string; viewport?: string }
 	| { type: "route:end"; route: string; viewport?: string; durationMs?: number }
 	| { type: "check:start"; rule: string; route?: string }
-	| { type: "check:end"; rule: string; route?: string; durationMs?: number; findings?: number }
+	| {
+			type: "check:end";
+			rule: string;
+			route?: string;
+			durationMs?: number;
+			findings?: number;
+			/** False when the check could not run; `error` says why. Absent means it ran. */
+			ok?: boolean;
+			error?: string;
+	  }
 	| { type: "flow:start"; flow: string }
 	| { type: "flow:end"; flow: string; ok: boolean; durationMs?: number; error?: string }
 	| { type: "finding"; finding: Finding }

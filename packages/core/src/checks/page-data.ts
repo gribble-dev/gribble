@@ -9,6 +9,31 @@ function cache(ctx: CheckContext): NonNullable<CheckContext["cache"]> {
 	return ctx.cache;
 }
 
+/** HTML media types; everything else is a document the page rules cannot judge. */
+const HTML_MEDIA_TYPES = new Set(["text/html", "application/xhtml+xml"]);
+
+/** `text/html; charset=utf-8` -> `text/html`. Undefined when the header is missing or empty. */
+export function mediaTypeOf(contentType: string | undefined): string | undefined {
+	const type = contentType?.split(";")[0]?.trim().toLowerCase();
+	return type || undefined;
+}
+
+/**
+ * True when the document response is HTML. A missing content-type header counts as HTML so a
+ * server that forgets the header keeps the existing behaviour.
+ */
+export function isHtmlMediaType(contentType: string | undefined): boolean {
+	const type = mediaTypeOf(contentType);
+	return type === undefined || HTML_MEDIA_TYPES.has(type);
+}
+
+/** Media type of the navigation response, from the cached navigation or the page's last one. */
+export function documentMediaType(ctx: CheckContext): string | undefined {
+	return mediaTypeOf(
+		ctx.cache?.navigation?.headers?.["content-type"] ?? ctx.page.lastNavigation()?.headers?.["content-type"],
+	);
+}
+
 export async function getSnapshot(ctx: CheckContext): Promise<PageSnapshot> {
 	const c = cache(ctx);
 	if (!c.snapshot) c.snapshot = await ctx.page.snapshot({ includeDom: false });

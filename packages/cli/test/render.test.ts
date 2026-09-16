@@ -48,10 +48,20 @@ const stream: AuditEvent[] = [
 	{ type: "route:start", route: "/pricing", viewport: "desktop" },
 	{ type: "check:end", rule: "links/broken", route: "/pricing", durationMs: 200, findings: 1 },
 	{ type: "finding", finding: brokenLink },
-	{ type: "check:end", rule: "a11y/axe", route: "/pricing", durationMs: 900 },
+	{ type: "check:end", rule: "a11y/axe", route: "/pricing", durationMs: 900, ok: true },
+	{ type: "check:start", rule: "perf/*", route: "/pricing" },
+	{
+		type: "check:end",
+		rule: "perf/*",
+		route: "/pricing",
+		durationMs: 30,
+		findings: 0,
+		ok: false,
+		error: "Lighthouse could not run: Cannot find module 'tslib'",
+	},
 	{ type: "route:end", route: "/pricing", viewport: "desktop" },
 	{ type: "finding", finding: label },
-	{ type: "log", level: "warn", message: "lighthouse skipped: could not attach to the CDP endpoint" },
+	{ type: "log", level: "warn", message: "axe could not run on /signup: page closed" },
 	{ type: "flow:start", flow: "smoke" },
 	{ type: "flow:end", flow: "smoke", ok: true, durationMs: 1500 },
 	{ type: "flow:start", flow: "checkout" },
@@ -82,6 +92,12 @@ const finalReport = report([brokenLink, label, copyFinding, notStreamed], {
 		gate: "fail",
 		headline: "The gribbles found 4 holes in your hull — 2 need patching before you sail.",
 	},
+	notRun: [
+		{ rule: "perf/*", route: "/pricing", reason: "Lighthouse could not run: Cannot find module 'tslib'" },
+		{ rule: "perf/*", route: "/", reason: "Lighthouse could not run: Cannot find module 'tslib'" },
+		{ rule: "html/*", route: "/sitemap.xml", reason: "response is application/xml, not an HTML document" },
+		{ rule: "seo/*", route: "/sitemap.xml", reason: "response is application/xml, not an HTML document" },
+	],
 });
 
 describe("event renderer", () => {
@@ -100,6 +116,16 @@ describe("event renderer", () => {
 		renderer.finish(finalReport, { reportPath: ".gribble/runs/2026-09-12T10-20-30-123Z/report.json" });
 		expect(io.stdout.text).toBe("");
 		expect(io.stderr.text).not.toMatch(/\[[0-9;]*m/);
+		expect(io.stderr.text).toContain(
+			"   ✗ perf/* /pricing: Lighthouse could not run: Cannot find module 'tslib'",
+		);
+		expect(io.stderr.text).toContain("   ✗ perf           1 routes · not run on 1 route");
+		expect(io.stderr.text).toContain(
+			"  Not run: perf/* on 2 routes (Lighthouse could not run: Cannot find module 'tslib')",
+		);
+		expect(io.stderr.text).toContain(
+			"  Not run: html/*, seo/* on /sitemap.xml (response is application/xml, not an HTML document)",
+		);
 		expect(io.stderr.text).toMatchSnapshot();
 	});
 
@@ -124,6 +150,8 @@ describe("event renderer", () => {
 		expect(text).toContain("src/routes/pricing.tsx#PlansLink");
 		expect(text).toContain("seo/meta-description"); // printed at the end because it never streamed
 		expect(text).toContain("3 existing · 1 fixed ✅");
+		expect(text).toContain("perf/* /pricing: Lighthouse could not run"); // printed live, like a failed flow
+		expect(text).toContain("Not run: perf/* on 2 routes");
 		expect(text).toContain("12 steps · 318k tokens · $0.42 · prov/model-x");
 		expect(spinnerLog.some((l) => l.includes("nibbling on /pricing"))).toBe(true);
 		expect(spinnerLog.some((l) => l.includes("reviewing: page_snapshot"))).toBe(true);

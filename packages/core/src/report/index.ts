@@ -30,6 +30,8 @@ export {
 	findingSeveritySchema,
 	fixedFindingSchema,
 	flowResultSchema,
+	type NotRunCheck,
+	notRunCheckSchema,
 	type Report,
 	type ReportSummary,
 	type RouteMetrics,

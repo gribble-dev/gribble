@@ -1,4 +1,4 @@
-import type { Finding, Report } from "@gribble/core";
+import type { Finding, NotRunCheck, Report } from "@gribble/core";
 import type { Colors } from "../ui.js";
 
 export const SEVERITY_ORDER = ["critical", "error", "warn", "info"] as const;
@@ -97,4 +97,21 @@ export function formatCounts(counts: Report["summary"]["counts"], c: Colors): st
 export function modelLabel(model: Report["model"]): string | undefined {
 	if (!model) return undefined;
 	return `${model.provider}/${model.id}${model.thinking ? `:${model.thinking}` : ""}`;
+}
+
+/**
+ * Collapse the report's not-run checks into one group per reason: the distinct rules that share it
+ * and the distinct routes they were skipped on. Site-wide checks carry no route.
+ */
+export function groupNotRun(
+	entries: NotRunCheck[],
+): Array<{ rules: string[]; routes: string[]; reason: string }> {
+	const groups = new Map<string, { rules: Set<string>; routes: Set<string>; reason: string }>();
+	for (const entry of entries) {
+		const group = groups.get(entry.reason) ?? { rules: new Set(), routes: new Set(), reason: entry.reason };
+		group.rules.add(entry.rule);
+		if (entry.route) group.routes.add(entry.route);
+		groups.set(entry.reason, group);
+	}
+	return [...groups.values()].map((g) => ({ rules: [...g.rules], routes: [...g.routes], reason: g.reason }));
 }

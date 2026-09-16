@@ -141,6 +141,11 @@ Every audit produces one JSON document. It is the single source of truth: the te
       "error": "Step 8 (expect_text \"Order summary\"): timed out after 5000ms" }
   ],
 
+  "notRun": [
+    { "rule": "perf/*", "route": "/pricing",
+      "reason": "Lighthouse could not run: Cannot find module 'tslib'" }
+  ],
+
   "durationMs": 94210
 }
 ```
@@ -164,6 +169,7 @@ Every audit produces one JSON document. It is the single source of truth: the te
 | `findings` | Finding[] | All findings, deduped and sorted. |
 | `routes` | RouteResult[] | One entry per audited route. |
 | `flows` | FlowResult[] | One entry per flow that ran. |
+| `notRun` | NotRunCheck[]? | Checks that could not run. Absent when every check ran. |
 | `durationMs` | number | Wall-clock duration of the audit. |
 
 `baseline.bootstrap` is `true` when there was no baseline and this run created one. Consumers should suppress comments and pass the gate in that case.
@@ -210,6 +216,16 @@ These are the numbers `perf/regression` compares against `baseline/metrics.json`
 | `error` | string? | For a failure: which step, which action, what was expected. |
 
 A failed flow also produces a `flows/replay` finding. `flows[]` is the execution record; `findings[]` is the thing you act on.
+
+### `notRun[]`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `rule` | string | The rule family that did not run, e.g. `perf/*` or `html/*`. |
+| `route` | string? | The route it was skipped on. Absent for site-wide checks such as `site/*`. |
+| `reason` | string | Why: Lighthouse failed to start, the response was not HTML, a check threw. |
+
+A check that never ran contributes no findings, so a clean `findings[]` alone cannot tell "perf passed" from "perf never executed". `notRun[]` records the difference: Lighthouse that could not start on a route, the page rules skipped on a non-HTML response such as a sitemap, or a check that threw. The list is omitted when everything ran. It does not affect `summary.gate`; whether an unexecuted check should fail the gate is a policy decision tracked separately.
 
 ## Versioning
 

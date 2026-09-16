@@ -12,9 +12,11 @@ import type {
 import {
 	checkSiteWide,
 	compilePatterns,
+	isHtmlMediaType,
 	LinkCache,
 	launchBrowser,
 	makeFinding,
+	mediaTypeOf,
 	normalizeConsoleText,
 	parseRobots,
 	parseSitemapLocs,
@@ -61,6 +63,19 @@ describe("check helpers", () => {
 		});
 	});
 
+	it("mediaTypeOf and isHtmlMediaType read the document content type", () => {
+		expect(mediaTypeOf("text/html; charset=utf-8")).toBe("text/html");
+		expect(mediaTypeOf("Application/XML")).toBe("application/xml");
+		expect(mediaTypeOf("")).toBeUndefined();
+		expect(mediaTypeOf(undefined)).toBeUndefined();
+		expect(isHtmlMediaType("text/html; charset=utf-8")).toBe(true);
+		expect(isHtmlMediaType("application/xhtml+xml")).toBe(true);
+		expect(isHtmlMediaType(undefined)).toBe(true); // no header: keep treating the page as HTML
+		expect(isHtmlMediaType("application/xml")).toBe(false);
+		expect(isHtmlMediaType("application/json; charset=utf-8")).toBe(false);
+		expect(isHtmlMediaType("text/plain")).toBe(false);
+	});
+
 	it("structureKeys counts landmarks and headings", () => {
 		const keys = structureKeys(
 			'- navigation "Main":\n  - link "Home"\n- main:\n  - heading "Hi" [level=1]\n- form "Login"',
@@ -104,6 +119,8 @@ describe("makeFinding", () => {
 	});
 });
 
+type CheckEnd = Extract<AuditEvent, { type: "check:end" }>;
+
 describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 	let site: FixtureSite;
 	let browser: BrowserSession;
@@ -111,7 +128,11 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 	let project: ProjectContext;
 	const events: AuditEvent[] = [];
 
-	async function run(path: string, viewport = "desktop"): Promise<RouteCheckResult & { ctx: CheckContext }> {
+	async function run(
+		path: string,
+		viewport = "desktop",
+		opts: { lighthouse?: boolean; cdpPort?: number } = {},
+	): Promise<RouteCheckResult & { ctx: CheckContext }> {
 		const page = await browser.newPage({ viewport });
 		const ctx: CheckContext = {
 			project,
@@ -125,7 +146,7 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 			onEvent: (e) => events.push(e),
 		};
 		try {
-			const result = await runRouteChecks(ctx, { lighthouse: false, screenshot: true });
+			const result = await runRouteChecks(ctx, { lighthouse: false, screenshot: true, ...opts });
 			return { ...result, ctx };
 		} finally {
 			await page.close();
@@ -200,6 +221,53 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		expect(rules).toContain("html/viewport-meta");
 		expect(rules).toContain("seo/meta-description");
 		expect(rules).toContain("a11y/form-labels");
+	}, 60_000);
+
+	it("skips the page rules on a non-HTML response and records them as not run", async () => {
+		events.length = 0;
+		const result = await run("/sitemap.xml");
+		expect(result.status).toBe(200);
+		const rules = result.findings.map((f) => f.rule);
+		expect(rules.filter((r) => /^(html|seo|a11y|links|ui|i18n)\//.test(r))).toEqual([]);
+		const notRun = result.notRun ?? [];
+		expect(notRun.map((n) => n.rule)).toEqual(["html/*", "seo/*", "links/*", "ui/*", "i18n/*", "a11y/*"]);
+		for (const entry of notRun) {
+			expect(entry.route).toBe("/sitemap.xml");
+			expect(entry.reason).toBe("response is application/xml, not an HTML document; page rules skipped");
+		}
+		const ended = events.filter(
+			(e): e is CheckEnd => e.type === "check:end" && e.route === "/sitemap.xml",
+		);
+		expect(ended.filter((e) => e.ok === false).map((e) => e.rule)).toEqual(notRun.map((n) => n.rule));
+		expect(ended.filter((e) => e.ok === true).map((e) => e.rule)).toEqual(["network/*", "security/*"]);
+		expect(
+			events.some(
+				(e) =>
+					e.type === "log" && e.level === "info" && e.message.startsWith("/sitemap.xml is application/xml;"),
+			),
+		).toBe(true);
+	}, 60_000);
+
+	it("records perf/* as not run when Lighthouse cannot start", async () => {
+		events.length = 0;
+		const result = await run("/about.html", "desktop", { lighthouse: true, cdpPort: undefined });
+		expect(result.findings.map((f) => f.rule).filter((r) => r.startsWith("perf/"))).toEqual([]);
+		expect(result.notRun).toEqual([
+			{
+				rule: "perf/*",
+				route: "/about.html",
+				reason: "Lighthouse could not run: no CDP port for the browser session",
+			},
+		]);
+		const perf = events.find((e) => e.type === "check:end" && e.rule === "perf/*");
+		expect(perf).toMatchObject({
+			ok: false,
+			route: "/about.html",
+			error: "Lighthouse could not run: no CDP port for the browser session",
+		});
+		const html = events.filter((e): e is CheckEnd => e.type === "check:end" && e.rule === "html/*");
+		expect(html.length).toBeGreaterThan(0);
+		expect(html.every((e) => e.ok === true)).toBe(true);
 	}, 60_000);
 
 	it("reports a broken route as network/page-error and nothing else", async () => {

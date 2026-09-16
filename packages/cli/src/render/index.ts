@@ -11,6 +11,7 @@ export {
 	formatDuration,
 	formatFinding,
 	formatTokens,
+	groupNotRun,
 	locationLabel,
 	modelLabel,
 	severityBadge,

@@ -1,6 +1,7 @@
 /**
  * perf/* — Lighthouse (performance category, desktop preset) over the session's CDP port.
- * Any failure is logged and yields no findings; the audit never crashes because of Lighthouse.
+ * Any failure yields no findings plus an `error` the caller records as a check that did not run;
+ * the audit never crashes because of Lighthouse.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -66,21 +67,23 @@ export function metricsFromLighthouse(lhr: LhResult): RouteMetrics {
 	return metrics;
 }
 
+export interface LighthouseResult {
+	findings: Finding[];
+	metrics: RouteMetrics;
+	/** Set when Lighthouse did not produce a result; `findings` and `metrics` are then empty. */
+	error?: string;
+}
+
 /** perf/lighthouse-performance, perf/lcp, perf/cls, perf/tbt, perf/page-weight, perf/unsized-images, perf/image-format, perf/render-blocking. */
 export async function runLighthouse(
 	ctx: CheckContext,
 	opts: RunLighthouseOptions = {},
-): Promise<{ findings: Finding[]; metrics: RouteMetrics }> {
+): Promise<LighthouseResult> {
 	const findings: Finding[] = [];
 	if (!lighthouseWanted(ctx)) return { findings, metrics: {} };
 	const port = opts.port;
 	if (!port) {
-		ctx.onEvent?.({
-			type: "log",
-			level: "warn",
-			message: "Lighthouse skipped: no CDP port for the browser session.",
-		});
-		return { findings, metrics: {} };
+		return { findings, metrics: {}, error: "Lighthouse could not run: no CDP port for the browser session" };
 	}
 	const desktop = ctx.project.config.viewports.desktop ?? { width: 1366, height: 768 };
 	let lhr: LhResult | undefined;
@@ -120,14 +123,13 @@ export async function runLighthouse(
 			if (json) await writeFile(join(dir, `${routeSlug(ctx.route)}.json`), json, "utf8");
 		}
 	} catch (err) {
-		ctx.onEvent?.({
-			type: "log",
-			level: "warn",
-			message: `Lighthouse could not audit ${ctx.route}: ${truncate((err as Error).message, 200)}`,
-		});
-		return { findings, metrics: {} };
+		return {
+			findings,
+			metrics: {},
+			error: `Lighthouse could not run: ${truncate((err as Error).message, 200)}`,
+		};
 	}
-	if (!lhr) return { findings, metrics: {} };
+	if (!lhr) return { findings, metrics: {}, error: "Lighthouse could not run: it returned no result" };
 
 	const metrics = metricsFromLighthouse(lhr);
 	const location = { path: "document" };

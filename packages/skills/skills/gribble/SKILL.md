@@ -44,6 +44,7 @@ The newest report is `.gribble/runs/latest.json` (same content as `.gribble/runs
   "findings": [ /* Finding[] */ ],
   "routes": [ /* per-route status, metrics, snapshot and screenshot paths */ ],
   "flows": [ /* per-flow ok/kind/durationMs/error */ ],
+  "notRun": [ /* optional: checks that could not run, { rule, route?, reason } */ ],
   "durationMs": 48211
 }
 ```

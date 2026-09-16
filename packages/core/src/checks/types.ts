@@ -3,7 +3,7 @@ import type { Baseline } from "../baseline/schema.js";
 import type { AuditPage, BrowserSession, GotoResult, PageSnapshot } from "../browser/types.js";
 import type { ProjectContext } from "../project/types.js";
 import type { DesignTokens } from "../repo/tokens.js";
-import type { Finding, RouteMetrics } from "../report/schema.js";
+import type { Finding, NotRunCheck, RouteMetrics } from "../report/schema.js";
 import type { LinkCache } from "./link-cache.js";
 
 /** State shared by every check in one audit run (link cache, one-time site checks). */
@@ -46,6 +46,8 @@ export interface RouteCheckResult {
 	faviconHref?: string;
 	/** hreflang values declared on the page. */
 	hreflangs?: string[];
+	/** Checks that did not run on this route (Lighthouse failure, non-HTML response, a check that threw). */
+	notRun?: NotRunCheck[];
 	durationMs?: number;
 }
 

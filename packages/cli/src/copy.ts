@@ -94,6 +94,16 @@ export const copy = {
 			return parts.join(" · ");
 		},
 		reportPath: (path: string) => `Report: ${path}`,
+		notRun: (rules: string[], routes: string[], reason: string) => {
+			const where =
+				routes.length === 1
+					? ` on ${routes[0]}`
+					: routes.length > 1
+						? ` on ${plural(routes.length, "route")}`
+						: "";
+			return `Not run: ${rules.join(", ")}${where} (${reason})`;
+		},
+		notRunOn: (count: number) => `not run on ${plural(count, "route")}`,
 		usage: (steps: number, tokens: string, cost: string) => `${steps} steps · ${tokens} tokens · ${cost}`,
 		gateFailed: "The gate is closed. Patch the holes above before you sail.",
 		interrupted: "Interrupted. The gribbles are swimming back to port…",
