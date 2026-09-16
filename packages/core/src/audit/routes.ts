@@ -58,15 +58,18 @@ function isDynamic(route: string): boolean {
 
 /** Regex for a framework route pattern: `[param]` -> one segment, `[...rest]` -> the remainder. */
 export function routePatternRegex(pattern: string): RegExp {
-	const source = pattern
-		.split("/")
-		.map((seg) => {
-			if (/^\[\.\.\..+\]$/.test(seg)) return ".+";
-			if (/^\[.+\]$/.test(seg)) return "[^/]+";
-			return seg.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-		})
-		.join("/");
-	return new RegExp(`^${source}/?$`, "i");
+	let source = "";
+	for (const seg of pattern.split("/")) {
+		if (seg === "") continue;
+		// A rest parameter matches zero or more segments (`/docs/[...slug]` serves `/docs` too), so it
+		// swallows its own leading separator instead of being joined with one.
+		if (/^\[\.\.\..+\]$/.test(seg)) {
+			source += "(?:/[^/]+)*";
+			continue;
+		}
+		source += `/${/^\[.+\]$/.test(seg) ? "[^/]+" : seg.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`;
+	}
+	return new RegExp(`^${source || "/"}/?$`, "i");
 }
 
 /** BFS crawl of same-origin links starting at `startUrls`. Returns normalized route -> URL. */

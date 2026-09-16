@@ -65,20 +65,66 @@ async function glob(cwd: string, patterns: string[]): Promise<string[]> {
 	return found.map((f) => f.replace(/\\/g, "/")).sort();
 }
 
+/** One path segment of a route, as it appears in a route pattern. */
+interface Segment {
+	/** The segment itself: `about`, `[slug]`, `[...rest]`. */
+	value: string;
+	/** True when the URL may omit this segment entirely (SvelteKit `[[lang]]`, Remix `($lang)`). */
+	optional?: boolean;
+}
+
 /** Normalize a directory-derived route: drop route groups, parallel slots and index segments. */
-function cleanSegments(segments: string[]): string[] | undefined {
-	const out: string[] = [];
+function cleanSegments(segments: string[]): Segment[] | undefined {
+	const out: Segment[] = [];
 	for (const raw of segments) {
 		if (!raw) continue;
 		if (raw.startsWith("(") && raw.endsWith(")")) continue; // route group
+		// Next.js intercepting routes (`(.)photo`, `(..)(..)photo`) re-render a route that already
+		// exists elsewhere in the tree; they add no URL of their own, so they are nothing to audit.
+		if (/^(?:\(\.{1,3}\))+/.test(raw)) return undefined;
 		if (raw.startsWith("@")) continue; // parallel route slot
 		if (raw.startsWith("_")) return undefined; // private folder
-		let seg = raw;
-		const optionalCatchAll = seg.match(/^\[\[\.\.\.(.+)\]\]$/);
-		if (optionalCatchAll) seg = `[...${optionalCatchAll[1]}]`;
-		out.push(seg);
+		// `[[lang]]` and `[[...rest]]` may both be absent from the URL; expandOptional() emits both forms.
+		const optional = raw.match(/^\[\[(.+)\]\]$/);
+		out.push(optional ? { value: `[${optional[1]}]`, optional: true } : { value: raw });
 	}
 	return out;
+}
+
+/**
+ * Upper bound on the variants a single route expands to. `n` optional segments yield `2 ** n`
+ * variants, so a route with a handful of them would flood discovery. Past the cap we keep the two
+ * ends deterministically (every optional segment absent, which is the canonical path, and every one
+ * present) and drop the combinations in between.
+ */
+const MAX_OPTIONAL_VARIANTS = 16;
+
+/**
+ * Expand optional segments into every path the route actually serves: `[[lang]]/about` answers both
+ * `/about` and `/fr/about`. Bit `k` of the mask marks the k-th optional segment as present, so mask
+ * `0` is the all-absent (canonical) variant and it comes first: `/about` wins the `source` mapping
+ * over `/[lang]/about`.
+ */
+function expandOptional(segments: Segment[]): string[][] {
+	const optional = segments.flatMap((seg, i) => (seg.optional ? [i] : []));
+	if (optional.length === 0) return [segments.map((seg) => seg.value)];
+	const total = 2 ** optional.length;
+	const masks =
+		total <= MAX_OPTIONAL_VARIANTS ? Array.from({ length: total }, (_unused, mask) => mask) : [0, total - 1];
+	return masks.map((mask) =>
+		segments
+			.filter((_seg, i) => {
+				const bit = optional.indexOf(i);
+				return bit === -1 || (mask & (1 << bit)) !== 0;
+			})
+			.map((seg) => seg.value),
+	);
+}
+
+/** Clean a directory-derived route and expand it: one segment list per path it serves. */
+function routeVariants(segments: string[]): string[][] {
+	const cleaned = cleanSegments(segments);
+	return cleaned ? expandOptional(cleaned) : [];
 }
 
 function toRoute(segments: string[]): string {
@@ -96,9 +142,9 @@ function addRoute(result: DiscoveredRoutes, route: string, file: string): void {
 async function nextApp(dir: string, appDir: string, result: DiscoveredRoutes): Promise<void> {
 	const files = await glob(join(dir, appDir), ["**/page.{tsx,jsx,js,ts,mdx,md}"]);
 	for (const file of files) {
-		const segments = cleanSegments(file.split("/").slice(0, -1));
-		if (!segments) continue;
-		addRoute(result, toRoute(segments), `${appDir}/${file}`);
+		for (const variant of routeVariants(file.split("/").slice(0, -1))) {
+			addRoute(result, toRoute(variant), `${appDir}/${file}`);
+		}
 	}
 }
 
@@ -117,21 +163,16 @@ async function pagesDir(
 		const parts = file.split("/");
 		const base = parts.pop()!.replace(/\.[^.]+$/, "");
 		if (!opts.nuxt && (base.startsWith("_") || parts[0] === "api")) continue;
-		const segments = cleanSegments(parts);
-		if (!segments) continue;
-		if (base !== "index") segments.push(base);
-		const mapped = opts.nuxt ? segments.map((s) => (s.startsWith("_") ? `[${s.slice(1)}]` : s)) : segments;
-		addRoute(result, toRoute(mapped), `${pages}/${file}`);
+		// The file name carries the same syntax as a directory (`docs/[[...slug]].tsx`), so it joins
+		// the segment list before cleaning rather than being appended raw afterwards.
+		const raw = base === "index" ? parts : [...parts, base];
+		// Nuxt 2 spells dynamic segments `_id`, which would otherwise read as a private folder.
+		const named = opts.nuxt ? raw.map((s) => (s.startsWith("_") ? `[${s.slice(1)}]` : s)) : raw;
+		for (const variant of routeVariants(named)) {
+			addRoute(result, toRoute(variant), `${pages}/${file}`);
+		}
 	}
 }
-
-/**
- * Upper bound on the variants a single SvelteKit route expands to. `n` optional parameters yield
- * `2 ** n` variants, so a route with a handful of them would flood discovery. Past the cap we keep
- * the two ends deterministically (every optional segment absent, which is the canonical path, and
- * every one present) and drop the combinations in between.
- */
-const MAX_OPTIONAL_VARIANTS = 16;
 
 /**
  * Drop the `=matcher` suffix from SvelteKit parameters: in `[lang=locale]` the `=locale` names a
@@ -143,70 +184,50 @@ function stripMatchers(segment: string): string {
 	return segment.replace(/\[([^[\]]*)\]/g, (_full, inner: string) => `[${inner.split("=")[0]}]`);
 }
 
-/** `[[lang]]` -> `[lang]`; undefined for anything else, rest parameters included. */
-function optionalParam(segment: string): string | undefined {
-	const match = segment.match(/^\[\[(.+)\]\]$/);
-	if (!match || match[1]!.startsWith("...")) return undefined; // `[[...rest]]` is cleanSegments' job
-	return `[${match[1]}]`;
-}
-
-/**
- * Expand SvelteKit optional parameters into every path the route actually serves:
- * `[[lang]]/about/+page.svelte` answers both `/about` and `/fr/about`. Bit `k` of the mask marks
- * the k-th optional segment as present, so mask `0` is the all-absent (canonical) variant and it
- * comes first: `/about` wins the `source` mapping over `/[lang]/about`.
- */
-function expandOptional(segments: string[]): string[][] {
-	const optional = segments.flatMap((seg, i) => (optionalParam(seg) ? [i] : []));
-	if (optional.length === 0) return [segments];
-	const total = 2 ** optional.length;
-	const masks =
-		total <= MAX_OPTIONAL_VARIANTS ? Array.from({ length: total }, (_unused, mask) => mask) : [0, total - 1];
-	return masks.map((mask) =>
-		segments
-			.filter((_seg, i) => {
-				const bit = optional.indexOf(i);
-				return bit === -1 || (mask & (1 << bit)) !== 0;
-			})
-			.map((seg) => optionalParam(seg) ?? seg),
-	);
-}
-
 async function sveltekit(dir: string, result: DiscoveredRoutes): Promise<void> {
 	const files = await glob(join(dir, "src/routes"), ["**/+page.{svelte,md,svx}"]);
 	for (const file of files) {
 		const raw = file.split("/").slice(0, -1).map(stripMatchers);
-		for (const variant of expandOptional(raw)) {
-			const segments = cleanSegments(variant);
-			if (!segments) continue;
-			addRoute(result, toRoute(segments), `src/routes/${file}`);
+		for (const variant of routeVariants(raw)) {
+			addRoute(result, toRoute(variant), `src/routes/${file}`);
 		}
 	}
 }
 
-function remixRoute(name: string): string | undefined {
-	// Flat routes: `_index` -> "/", `blog.$slug` -> "/blog/[slug]", `_layout.child` -> "/child", `($lang).about` -> "/about".
+/** `$slug` -> `[slug]`, `$` -> `[...splat]`; anything else is literal, where `[.]` escapes a dot. */
+function remixParam(part: string): string {
+	if (part === "$") return "[...splat]";
+	if (part.startsWith("$")) return `[${part.slice(1)}]`;
+	return part.replace(/\[\./g, "[");
+}
+
+function remixSegments(name: string): Segment[] {
+	// Flat routes: `_index` -> "/", `blog.$slug` -> "/blog/[slug]", `_layout.child` -> "/child".
 	const raw = name.replace(/\.route$/, "");
-	if (raw === "_index" || raw === "index") return "/";
-	const segments: string[] = [];
-	for (const partRaw of raw.split(".")) {
-		let part = partRaw;
+	if (raw === "_index" || raw === "index") return [];
+	const segments: Segment[] = [];
+	for (const part of raw.split(".")) {
 		if (part === "_index" || part === "") continue;
 		if (part.startsWith("_")) continue; // pathless layout
-		part = part.replace(/^\((.*)\)$/, "$1"); // optional segment
-		if (part === "") continue;
-		if (part.startsWith("$")) part = part === "$" ? "[...splat]" : `[${part.slice(1)}]`;
-		segments.push(part.replace(/\[\./g, "["));
+		// `($lang).about` serves both `/about` and `/en/about`, so the segment is optional, not dropped.
+		const optional = part.match(/^\((.*)\)$/);
+		if (optional) {
+			if (optional[1] === "") continue;
+			segments.push({ value: remixParam(optional[1]!), optional: true });
+			continue;
+		}
+		segments.push({ value: remixParam(part) });
 	}
-	return toRoute(segments);
+	return segments;
 }
 
 async function remix(dir: string, result: DiscoveredRoutes): Promise<void> {
 	const files = await glob(join(dir, "app/routes"), ["*.{tsx,jsx,ts,js,mdx}", "*/route.{tsx,jsx,ts,js}"]);
 	for (const file of files) {
 		const name = file.includes("/") ? file.split("/")[0]! : file.replace(/\.[^.]+$/, "");
-		const route = remixRoute(name);
-		if (route !== undefined) addRoute(result, route, `app/routes/${file}`);
+		for (const variant of expandOptional(remixSegments(name))) {
+			addRoute(result, toRoute(variant), `app/routes/${file}`);
+		}
 	}
 }
 

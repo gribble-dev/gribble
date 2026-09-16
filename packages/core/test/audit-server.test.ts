@@ -41,6 +41,17 @@ describe("routePatternRegex", () => {
 		expect(routePatternRegex("/about").test("/about-us")).toBe(false);
 	});
 
+	it("lets rest parameters match zero segments", () => {
+		// `/docs/[...slug]` is what an optional catch-all compiles to, and it serves `/docs` itself.
+		expect(routePatternRegex("/docs/[...path]").test("/docs")).toBe(true);
+		expect(routePatternRegex("/docs/[...path]").test("/docs/")).toBe(true);
+		expect(routePatternRegex("/docs/[...path]").test("/docs/a")).toBe(true);
+		expect(routePatternRegex("/docs/[...path]").test("/docsy")).toBe(false);
+		expect(routePatternRegex("/docs/[...path]").test("/other")).toBe(false);
+		expect(routePatternRegex("/[...all]").test("/")).toBe(true);
+		expect(routePatternRegex("/[...all]").test("/a/b")).toBe(true);
+	});
+
 	it("matches both variants SvelteKit optional parameters expand to", () => {
 		// Discovery emits `/about` and `/[lang]/about` for `[[lang=locale]]/about/+page.svelte`,
 		// so every segment reaching here is required and both canonical and prefixed URLs match.

@@ -67,11 +67,22 @@ target:
 
 An explicit list is the fastest and most predictable option, and the one to reach for when `auto` picks up hundreds of generated routes. Bracketed segments are matched against real URLs, and one representative page per pattern is audited.
 
-`auto` normalizes framework syntax into those same bracketed patterns. SvelteKit parameter matchers
-are dropped, so `[lang=locale]` is discovered as `[lang]` and renaming a matcher in `src/params/`
-does not orphan your baseline, and optional parameters expand to both paths they serve: one
-`[[lang]]/about/+page.svelte` is discovered as `/about` **and** `/[lang]/about`, so the canonical
-pages of an i18n site are audited alongside the prefixed ones.
+`auto` normalizes framework syntax into those same bracketed patterns.
+
+**Optional segments expand to every path they serve.** A segment the URL may omit is discovered in
+both forms, absent first: SvelteKit `[[lang]]/about/+page.svelte` and Remix `($lang).about.tsx` are
+both discovered as `/about` **and** `/[lang]/about`, and an optional catch-all such as Next.js
+`app/docs/[[...slug]]/page.tsx` as `/docs` **and** `/docs/[...slug]`. The canonical pages of an i18n
+site are audited alongside the prefixed ones. A route with many optional segments is capped rather
+than expanded combinatorially: past the cap only the all-absent and all-present forms are kept.
+
+**Framework-specific syntax is dropped.** SvelteKit parameter matchers go, so `[lang=locale]` is
+discovered as `[lang]` and renaming a matcher in `src/params/` does not orphan your baseline.
+Next.js intercepting routes (`(.)photo`) are skipped: they re-render a route that already exists
+elsewhere in the tree rather than adding a URL of their own.
+
+Rest parameters match zero or more segments, matching how the frameworks route them, so a
+configured `/docs/[...slug]` also covers `/docs` itself.
 
 List HTML pages only. Sitemaps, feeds, JSON endpoints and other non-HTML responses do not belong in `target.routes`: the page rules (`html/*`, `seo/*`, `links/*`, `ui/*`, `i18n/*`, `a11y/*`, `perf/*`) have nothing to judge there, so Gribble skips them for any route whose `Content-Type` is not HTML and records the skip under `notRun` in the report. Nothing is lost by leaving the sitemap out: `seo/sitemap` is a site-wide rule that fetches `/sitemap.xml` itself and compares it with the audited routes.
 
