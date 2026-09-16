@@ -15,9 +15,13 @@ export {
 	validateAgainst,
 } from "./parse.js";
 export {
+	describeRuleSource,
 	type ResolvedRuleEntry,
 	type ResolvedRuleSetting,
 	type ResolvedRules,
+	type ResolveRulesOptions,
+	type RuleSource,
+	type RulesEnvironmentOverride,
 	resolveRules,
 } from "./resolve.js";
 export {

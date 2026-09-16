@@ -27,6 +27,7 @@ import type { Finding, FlowResult, Report, RouteResult } from "../report/schema.
 import { summarizeReport } from "../report/summary.js";
 import { RUNS_DIR, runDirName, writeRunReport } from "../report/write.js";
 import { getRule } from "../rules/registry.js";
+import { formatUnimplementedRulesWarning, unimplementedEnabledRules } from "../rules/unimplemented.js";
 import { GRIBBLE_CORE_VERSION } from "../version.js";
 import { startDevServer } from "./dev-server.js";
 import { resolveRoutes } from "./routes.js";
@@ -113,6 +114,9 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 				? "Bootstrap requested: rebuilding the baseline from this run."
 				: "No baseline yet: this run bootstraps one.",
 		);
+	// Enabled rules with no checker resolve like any other rule and then do nothing; say so up front.
+	const unimplementedWarning = formatUnimplementedRulesWarning(unimplementedEnabledRules(project.rules));
+	if (unimplementedWarning) log("warn", unimplementedWarning);
 
 	const gateFindings: Finding[] = [];
 	const aiFindings: Finding[] = [];

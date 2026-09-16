@@ -93,6 +93,10 @@ overrides:
 
 Nobody needs Open Graph tags on an internal admin dashboard, and everybody needs them on a blog post. This is where that lives.
 
+### Per-environment settings
+
+Something that is wrong for one deployment and right for another — a preview that sends `noindex` on purpose, say — is not a route thing, so it does not go in `overrides`. It goes in [`environments.<name>.rules`](/docs/configuration/gribble-yaml#environments-name-rules) in `gribble.yaml`, which takes this same `rules` map and is applied on top of everything here when that environment is selected with `--env`.
+
 ## Severity semantics
 
 There are five values, and no implicit escalation anywhere. A rule set to `warn` produces `warn` findings, always.
@@ -268,7 +272,11 @@ overrides:
 
 ## Not every rule is implemented yet
 
-The registry contains the whole catalogue above, but the first release implements a subset. Rules that are registered but not yet implemented are marked in the [rules reference](/docs/configuration/rules-reference) and are silently inert — configuring one is valid YAML and costs you nothing, it just does not produce findings yet.
+The registry contains the whole catalogue above, but the first release implements a subset. Rules that are registered but not yet implemented are marked in the [rules reference](/docs/configuration/rules-reference) and are inert — configuring one is valid YAML and costs you nothing, it just does not produce findings yet. So that this cannot pass for "on and clean", `gribble audit` prints one warning at startup naming every enabled rule that has no checker:
+
+```
+3 enabled rules have no checker yet and will not run: a11y/skip-link, html/valid, i18n/mixed-language. Planned (accepted in rules.yaml, no checker yet); see gribble explain <rule>.
+```
 
 Implemented today: all of `links/*` and `network/*`, all of `seo/*`, `a11y/axe` with `img-alt`, `form-labels` and `accessible-name` derived from it, `perf/lighthouse-performance`, `perf/lcp`, `perf/cls`, `perf/tbt`, `perf/page-weight`, `perf/regression`, `ui/placeholder-text`, `visual/regression`, `structure/regression`, all of `html/doctype|charset|viewport-meta|duplicate-ids`, `security/https-only`, `security/mixed-content`, `security/exposed-secrets`, `i18n/untranslated-keys`, `flows/replay`, `flows/max-duration` and all of `review/*`.
 
