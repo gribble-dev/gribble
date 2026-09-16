@@ -190,7 +190,7 @@ environments:
       seo/robots-noindex: off
 ```
 
-`gribble audit --env preview` now skips that rule; `gribble audit` against production keeps it on. Everything else in `rules.yaml` still applies to both. A rule an environment switches off stays off on every route, even where a route override in `rules.yaml` turns it on; a rule it switches on is reported the same way as any other.
+`gribble audit --env preview` now skips that rule; `gribble audit` against production keeps it on. `gribble explain seo/robots-noindex --env preview` prints the effective severity and names what set it, so a rule you cannot account for is one command away. Everything else in `rules.yaml` still applies to both. A rule an environment switches off stays off on every route, even where a route override in `rules.yaml` turns it on; a rule it switches on is reported the same way as any other.
 
 ### `auth`
 
