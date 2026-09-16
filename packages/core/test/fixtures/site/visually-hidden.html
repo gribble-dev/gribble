@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Hidden in plain sight – Fixture Harbor</title>
+	<meta name="description" content="Skip links in both visually-hidden idioms, moored next to a genuinely tiny target and a genuinely clipped line of text.">
+	<style>
+		/* Bootstrap's .visually-hidden: a 1px box clipped with the legacy `clip` rect. */
+		.sr-only-clip {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			padding: 0;
+			margin: -1px;
+			overflow: hidden;
+			clip: rect(0, 0, 0, 0);
+			white-space: nowrap;
+			border: 0;
+		}
+		/* Tailwind's .sr-only: the same box, clipped with `clip-path` instead. */
+		.sr-only-clip-path {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			padding: 0;
+			margin: -1px;
+			overflow: hidden;
+			clip-path: inset(50%);
+			white-space: nowrap;
+			border: 0;
+		}
+	</style>
+</head>
+<body>
+	<a href="#main" class="sr-only-clip" data-testid="skip-clip">Skip to content</a>
+	<a href="#main" class="sr-only-clip-path" data-testid="skip-clip-path">Skip to navigation</a>
+	<main id="main">
+		<h1>Visibility</h1>
+		<button type="button" data-testid="tiny" style="display: block; width: 12px; height: 12px; padding: 0;">×</button>
+		<div data-testid="clipped" style="width: 40px; overflow: hidden; white-space: nowrap;">A sentence far too long for this narrow box</div>
+	</main>
+</body>
+</html>

@@ -121,6 +121,45 @@ describe.skipIf(!hasChromium())(`page snapshot (${SKIP_BROWSER_REASON})`, () => 
 		await page.close();
 	});
 
+	it("keeps the contents of a closed <details> out of the overlap pass", async () => {
+		const page = await browser.newPage();
+		await page.goto(`${site.url}/details-overlap.html`);
+		const closed = await page.snapshot({ includeDom: false });
+		expect(closed.interactive.map((e) => e.testId)).not.toContain("locale-ko");
+		expect(closed.layout.filter((l) => l.kind === "overlap")).toEqual([]);
+
+		await page.raw.click('[data-testid="switcher"] > summary');
+		const open = await page.snapshot({ includeDom: false });
+		expect(open.interactive.map((e) => e.testId)).toContain("locale-ko");
+		const overlap = open.layout.find((l) => l.kind === "overlap");
+		expect(overlap?.selectors).toContain('[data-testid="beneath"]');
+		expect(overlap?.selectors).toContain('[data-testid="locale-ko"]');
+		await page.close();
+	});
+
+	it("exempts the visually-hidden idiom from touch-target and clipped-text checks", async () => {
+		const page = await browser.newPage();
+		await page.goto(`${site.url}/visually-hidden.html`);
+		const snapshot = await page.snapshot({ includeDom: false, minTouchPx: 44 });
+		// Both skip links are real links and stay in the snapshot; they are simply not measured.
+		expect(snapshot.interactive.map((e) => e.testId)).toEqual(
+			expect.arrayContaining(["skip-clip", "skip-clip-path"]),
+		);
+		const measured = snapshot.layout
+			.filter((l) => l.kind === "small-touch-target" || l.kind === "text-clipped")
+			.flatMap((l) => l.selectors ?? []);
+		expect(measured).not.toContain('[data-testid="skip-clip"]');
+		expect(measured).not.toContain('[data-testid="skip-clip-path"]');
+		// The genuine defects on the same page are still reported.
+		expect(
+			snapshot.layout.filter((l) => l.kind === "small-touch-target").map((l) => l.selectors?.[0]),
+		).toEqual(['[data-testid="tiny"]']);
+		expect(snapshot.layout.filter((l) => l.kind === "text-clipped").map((l) => l.selectors?.[0])).toEqual([
+			'[data-testid="clipped"]',
+		]);
+		await page.close();
+	});
+
 	it("detects horizontal overflow, small fonts and touch targets on mobile", async () => {
 		const page = await browser.newPage({ viewport: "mobile" });
 		expect(page.viewportSize.width).toBe(390);
