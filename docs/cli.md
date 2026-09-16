@@ -211,9 +211,17 @@ Copy an id into `model` in `gribble.yaml`. Gribble hardcodes no model name; the 
 ```bash
 gribble explain a11y/touch-target
 gribble explain links/broken
+gribble explain seo/robots-noindex --env preview
 ```
 
 Prints a rule's description, option schema with defaults, severity in each preset, a bad and a good example, and the fix hint — the same registry metadata that generates the [rules reference](/docs/configuration/rules-reference) and the `docsUrl` on every finding.
+
+Run inside a project (any directory at or below the one holding `.gribble/`) it also resolves the rule against that project and appends what it found: the effective severity, the `Source:` that settled it — a preset, a `rules.yaml` in the cascade, or [`environments.<name>.rules`](/docs/configuration/gribble-yaml#environments-name-rules) — the options when they differ from the registry defaults, and the route globs an `overrides` block re-settles it on. `--env <name>` resolves it the way `audit --env <name>` would, and fails the same way on an environment that does not exist. Outside a project nothing is appended: `explain` stays a plain reference.
+
+```
+  Effective: off
+  Source: environments.preview.rules.seo/robots-noindex
+```
 
 ---
 

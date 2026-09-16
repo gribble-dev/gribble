@@ -95,7 +95,7 @@ Nobody needs Open Graph tags on an internal admin dashboard, and everybody needs
 
 ### Per-environment settings
 
-Something that is wrong for one deployment and right for another — a preview that sends `noindex` on purpose, say — is not a route thing, so it does not go in `overrides`. It goes in [`environments.<name>.rules`](/docs/configuration/gribble-yaml#environments-name-rules) in `gribble.yaml`, which takes this same `rules` map and is applied on top of everything here when that environment is selected with `--env`.
+Something that is wrong for one deployment and right for another — a preview that sends `noindex` on purpose, say — is not a route thing, so it does not go in `overrides`. It goes in [`environments.<name>.rules`](/docs/configuration/gribble-yaml#environments-name-rules) in `gribble.yaml`, which takes this same `rules` map and is applied on top of everything here when that environment is selected with `--env`. `gribble explain <rule> --env <name>` shows the effective severity for that environment and where it came from.
 
 ## Severity semantics
 

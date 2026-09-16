@@ -173,6 +173,11 @@ export const copy = {
 
 	explain: {
 		description: "Describe a rule: what it checks, options, presets, fix hint.",
+		effective: (severity: string) => `  Effective: ${severity}`,
+		effectivePlanned: (severity: string) => `  Effective: ${severity} (no checker yet, so it will not run)`,
+		effectiveSource: (source: string) => `  Source: ${source}`,
+		effectiveOptions: (options: string) => `  Effective options: ${options}`,
+		effectiveRoutes: (routes: string[]) => `  Routes overriding it: ${routes.join(", ")}`,
 	},
 
 	baseline: {

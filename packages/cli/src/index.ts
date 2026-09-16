@@ -25,6 +25,7 @@ import {
 } from "./errors.js";
 
 export type { AuditCommandOptions } from "./commands/audit.js";
+export type { ExplainCommandOptions } from "./commands/explain.js";
 export { addIgnoredFingerprint } from "./commands/ignore.js";
 export type { InitOptions } from "./commands/init.js";
 export { copy } from "./copy.js";
@@ -149,8 +150,9 @@ function buildProgram(deps: CliDeps, setExit: (code: number) => void): Command {
 		.command("explain")
 		.description(copy.explain.description)
 		.argument("<rule>", "Rule id, e.g. links/broken.")
-		.action(function (this: Command, rule: string) {
-			setExit(runExplain(rule, ctxFor(this)));
+		.option("--env <name>", copy.audit.envOption)
+		.action(async function (this: Command, rule: string, options) {
+			setExit(await runExplain(rule, options, ctxFor(this)));
 		});
 
 	const baseline = program.command("baseline").description(copy.baseline.description);
