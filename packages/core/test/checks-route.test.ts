@@ -235,9 +235,7 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 			expect(entry.route).toBe("/sitemap.xml");
 			expect(entry.reason).toBe("response is application/xml, not an HTML document; page rules skipped");
 		}
-		const ended = events.filter(
-			(e): e is CheckEnd => e.type === "check:end" && e.route === "/sitemap.xml",
-		);
+		const ended = events.filter((e): e is CheckEnd => e.type === "check:end" && e.route === "/sitemap.xml");
 		expect(ended.filter((e) => e.ok === false).map((e) => e.rule)).toEqual(notRun.map((n) => n.rule));
 		expect(ended.filter((e) => e.ok === true).map((e) => e.rule)).toEqual(["network/*", "security/*"]);
 		expect(
