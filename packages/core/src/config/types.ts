@@ -102,6 +102,8 @@ export interface EnvironmentOverride {
 	viewports?: Record<string, Viewport>;
 	output?: Partial<OutputConfig>;
 	reusePiAuth?: boolean;
+	/** Rule settings applied after the whole rules.yaml cascade when this environment is selected. */
+	rules?: Record<string, RuleSetting>;
 }
 
 /** Validated gribble.yaml with defaults applied. */

@@ -76,6 +76,12 @@ export function parseGribbleConfig(
 	const file = opts.file ?? GRIBBLE_CONFIG_FILE;
 	const env = opts.env ?? process.env;
 	const raw = parseYamlMapping(yamlText, file);
+	// Unknown rule ids under `environments.<name>.rules` get the same dedicated message as rules.yaml.
+	if (isPlainObject(raw.environments)) {
+		for (const [name, override] of Object.entries(raw.environments)) {
+			if (isPlainObject(override)) assertKnownRuleKeys(override.rules, file, `environments.${name}.rules`);
+		}
+	}
 
 	let merged: Record<string, unknown> = raw;
 	if (opts.environment) {
@@ -90,7 +96,9 @@ export function parseGribbleConfig(
 				path: "environments",
 			});
 		}
-		merged = deepMerge(raw, override);
+		// `rules` is not a gribble.yaml setting: the rules resolver reads it from `environments` itself.
+		const { rules: _rules, ...settings } = override;
+		merged = deepMerge(raw, settings);
 	}
 
 	const { environments, ...rest } = merged;

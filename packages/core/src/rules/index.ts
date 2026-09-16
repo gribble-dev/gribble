@@ -21,3 +21,4 @@ export {
 	rulesByCategory,
 } from "./registry.js";
 export { explainRule, formatRuleSetting, renderRulesReference, ruleAnchor } from "./render.js";
+export { formatUnimplementedRulesWarning, unimplementedEnabledRules } from "./unimplemented.js";
