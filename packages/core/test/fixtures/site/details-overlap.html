@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Language switcher – Fixture Harbor</title>
+	<meta name="description" content="A locale switcher parked inside a collapsed details element, sitting right on top of an unrelated link.">
+</head>
+<body>
+	<main>
+		<h1>Switcher</h1>
+		<div style="position: relative; height: 200px;">
+			<a href="/about.html" data-testid="beneath" style="position: absolute; left: 20px; top: 40px; display: block; width: 200px; height: 44px; background: #eee;">Try the demo</a>
+			<details data-testid="switcher" style="position: absolute; left: 20px; top: 0;">
+				<summary>Language</summary>
+				<a href="/about.html" data-testid="locale-ko" style="display: block; width: 200px; height: 44px;">한국어</a>
+				<a href="/about.html" data-testid="locale-ja" style="display: block; width: 200px; height: 44px;">日本語</a>
+			</details>
+		</div>
+	</main>
+</body>
+</html>

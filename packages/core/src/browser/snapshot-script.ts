@@ -61,13 +61,49 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 	const cssEscape = (value: string): string =>
 		typeof CSS !== "undefined" && CSS.escape ? CSS.escape(value) : value.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
 
-	const isVisible = (el: Element): boolean => {
+	/**
+	 * Is the element actually rendered? `checkVisibility` knows about things a computed style does
+	 * not — most importantly `content-visibility`, which is how Chromium hides the contents of a
+	 * closed `<details>` (through the `::details-content` pseudo-element, so the descendant's own
+	 * computed `content-visibility` still reads `visible`). The options matter: the bare call
+	 * ignores both `visibility` and `opacity`.
+	 */
+	const isRendered = (el: Element): boolean => {
+		const rect = el.getBoundingClientRect();
+		if (rect.width <= 0 || rect.height <= 0) return false;
+		const check = (el as Element & { checkVisibility?: (options?: unknown) => boolean }).checkVisibility;
+		if (typeof check === "function") {
+			return check.call(el, {
+				contentVisibilityAuto: true,
+				opacityProperty: true,
+				visibilityProperty: true,
+			});
+		}
 		const style = win.getComputedStyle(el);
 		if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse")
 			return false;
-		if (style.opacity === "0") return false;
+		return style.opacity !== "0";
+	};
+
+	// The visually-hidden idiom (Tailwind `sr-only`, Bootstrap `.visually-hidden`): a real 1px box
+	// that is clipped away and restored on focus. `checkVisibility` calls it visible, because it is —
+	// it is simply not meant to be perceived, so measuring its box is meaningless.
+	const CLIP_ZERO_RECT =
+		/^rect\(\s*0(?:px)?(?:\s*,\s*|\s+)0(?:px)?(?:\s*,\s*|\s+)0(?:px)?(?:\s*,\s*|\s+)0(?:px)?\s*\)$/;
+	const CLIP_PATH_INSET_HALF = /^inset\(\s*50%(?:\s+50%){0,3}\s*\)$/;
+
+	const isVisuallyHidden = (el: Element, precomputed?: CSSStyleDeclaration): boolean => {
 		const rect = el.getBoundingClientRect();
-		return rect.width > 0 && rect.height > 0;
+		if (rect.width > 1 || rect.height > 1) return false;
+		const style = precomputed ?? win.getComputedStyle(el);
+		if (CLIP_ZERO_RECT.test(style.clip.trim())) return true;
+		if (CLIP_PATH_INSET_HALF.test(style.clipPath.trim())) return true;
+		return (
+			style.overflow === "hidden" &&
+			style.position === "absolute" &&
+			style.width === "1px" &&
+			style.height === "1px"
+		);
 	};
 
 	const implicitRole = (el: Element): string => {
@@ -236,7 +272,7 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 	let counter = 0;
 	for (const el of Array.from(doc.body?.querySelectorAll("*") ?? [])) {
 		if (!isInteractive(el)) continue;
-		if (!isVisible(el)) continue;
+		if (!isRendered(el)) continue;
 		const rect = el.getBoundingClientRect();
 		counter += 1;
 		const ref = `e${counter}`;
@@ -275,9 +311,29 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 	// covers the whole line block; comparing those boxes yields phantom overlaps.
 	const wrapsLines = (el: Element): boolean =>
 		win.getComputedStyle(el).display === "inline" && el.getClientRects().length > 1;
-	const candidates = interactive.filter(
-		(e) => e.box.width > 0 && e.box.height > 0 && !wrapsLines(elementByRef.get(e.ref)!),
-	);
+	// An element buried under an overlay (a modal backdrop, a cookie curtain) cannot overlap
+	// anything anyone can see. The probe is one `elementFromPoint` per candidate, and only counts as
+	// covered when the thing on top is not interactive itself: in a genuine overlap the element on
+	// top *is* one of the candidates, and that pair is precisely what we want to report.
+	const coveredByOverlay = (el: Element): boolean => {
+		if (typeof doc.elementFromPoint !== "function") return false;
+		const rect = el.getBoundingClientRect();
+		const cx = rect.left + rect.width / 2;
+		const cy = rect.top + rect.height / 2;
+		// A partially off-screen element has no centre worth probing; elementFromPoint would say null.
+		if (cx < 0 || cy < 0 || cx >= viewport.width || cy >= viewport.height) return false;
+		const hit = doc.elementFromPoint(cx, cy);
+		if (!hit || hit === el || el.contains(hit) || hit.contains(el)) return false;
+		for (let node: Element | null = hit; node; node = node.parentElement) {
+			if (node.hasAttribute(REF_ATTR)) return false;
+		}
+		return true;
+	};
+	const candidates = interactive.filter((e) => {
+		if (e.box.width <= 0 || e.box.height <= 0) return false;
+		const el = elementByRef.get(e.ref)!;
+		return !wrapsLines(el) && !coveredByOverlay(el);
+	});
 	for (let i = 0; i < candidates.length && i < 400; i++) {
 		const a = candidates[i]!;
 		const elA = elementByRef.get(a.ref)!;
@@ -350,7 +406,9 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 			const el = elementByRef.get(e.ref);
 			if (!el) continue;
 			if (e.tag === "input" && ["checkbox", "radio"].includes(el.getAttribute("type") ?? "")) continue;
-			if (win.getComputedStyle(el).display === "inline") continue;
+			const style = win.getComputedStyle(el);
+			if (style.display === "inline") continue;
+			if (isVisuallyHidden(el, style)) continue;
 			const smaller = Math.min(e.box.width, e.box.height);
 			const bothTooSmall = e.box.width < min && e.box.height < min;
 			if (bothTooSmall || smaller < Math.min(min, HARD_FLOOR)) {
@@ -384,8 +442,9 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 			(n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? "").trim().length > 0,
 		);
 		if (!hasDirectText) continue;
+		if (!isRendered(el)) continue;
 		const style = win.getComputedStyle(el);
-		if (style.display === "none" || style.visibility === "hidden") continue;
+		if (isVisuallyHidden(el, style)) continue;
 		const overflowHidden =
 			style.overflowX === "hidden" || style.overflow === "hidden" || style.overflowX === "clip";
 		if (!overflowHidden) continue;
@@ -433,7 +492,7 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 				(n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? "").trim().length > 0,
 			);
 			if (!hasDirectText) continue;
-			if (!isVisible(el)) continue;
+			if (!isRendered(el)) continue;
 			sampled += 1;
 			const style = win.getComputedStyle(el);
 			const ref = el.getAttribute(REF_ATTR) ?? "";
