@@ -2,7 +2,6 @@
  * Report pack: structured findings and the terminating summary. Fingerprints and locations are
  * computed here, never by the model.
  */
-import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, InlineExtension } from "@earendil-works/pi-coding-agent";
 import { type Static, Type } from "typebox";
 import { locationFor, mapDomToSource } from "../../repo/index.js";
@@ -18,7 +17,7 @@ import { isRuleId, RULE_IDS } from "../../rules/ids.js";
 import { RULES_DOCS_BASE_URL } from "../../rules/registry.js";
 import { REPORT_TOOLS } from "../names.js";
 import type { AgentState } from "../state.js";
-import { textResult } from "./common.js";
+import { StringEnum, textResult } from "./common.js";
 import { discoveredRoutesFor } from "./repo.js";
 
 export const REVIEW_RULE_IDS = RULE_IDS.filter((id) => id.startsWith("review/"));

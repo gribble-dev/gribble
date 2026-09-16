@@ -32,9 +32,6 @@
 		"docs:rules": "node --import tsx/esm scripts/generate-rules-docs.ts"
 	},
 	"dependencies": {
-		"@earendil-works/pi-agent-core": "catalog:",
-		"@earendil-works/pi-ai": "catalog:",
-		"@earendil-works/pi-coding-agent": "catalog:",
 		"typebox": "catalog:",
 		"yaml": "catalog:",
 		"playwright": "catalog:",
@@ -46,7 +43,26 @@
 		"minimatch": "10.2.6",
 		"fast-glob": "3.3.3"
 	},
+	"peerDependencies": {
+		"@earendil-works/pi-agent-core": "catalog:",
+		"@earendil-works/pi-ai": "catalog:",
+		"@earendil-works/pi-coding-agent": "catalog:"
+	},
+	"peerDependenciesMeta": {
+		"@earendil-works/pi-agent-core": {
+			"optional": true
+		},
+		"@earendil-works/pi-ai": {
+			"optional": true
+		},
+		"@earendil-works/pi-coding-agent": {
+			"optional": true
+		}
+	},
 	"devDependencies": {
+		"@earendil-works/pi-agent-core": "catalog:",
+		"@earendil-works/pi-ai": "catalog:",
+		"@earendil-works/pi-coding-agent": "catalog:",
 		"@types/node": "catalog:",
 		"tsdown": "catalog:",
 		"tsx": "^4.20.0",

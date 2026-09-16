@@ -16,6 +16,12 @@ pnpm exec gribble init      # creates .gribble/ and (optionally) a skill for you
 pnpm exec gribble audit     # let the gribbles chew on it
 ```
 
+`gate` mode installs no model runtime. `review` and `all` need pi, which ships as optional peer dependencies no package manager installs on its own:
+
+```bash
+pnpm add -D gribble @earendil-works/pi-ai @earendil-works/pi-coding-agent
+```
+
 ## How it works
 
 - **gate** mode runs deterministic checks (links, network, SEO, axe, Lighthouse thresholds, UI hard rules, replay of fixed flows). Fast, reproducible, can block a merge.

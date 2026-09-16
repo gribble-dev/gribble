@@ -71,8 +71,30 @@ describe("resolveGribbleCommand", () => {
 			resolveGribbleCommand({ workingDirectory: wd, repoRoot: "/repo", exists: () => false }),
 		).toMatchObject({
 			how: "npx",
-			prefixArgs: ["--yes", "gribble"],
+			prefixArgs: ["--yes", "-p", "gribble", "gribble"],
 		});
+	});
+
+	it("adds the optional review runtime to the npx fallback, but not for gate", () => {
+		const npx = (mode: "gate" | "review" | "all") =>
+			resolveGribbleCommand({
+				workingDirectory: "/repo",
+				repoRoot: "/repo",
+				mode,
+				exists: () => false,
+			}).prefixArgs;
+		expect(npx("gate")).toEqual(["--yes", "-p", "gribble", "gribble"]);
+		expect(npx("review")).toEqual([
+			"--yes",
+			"-p",
+			"gribble",
+			"-p",
+			"@earendil-works/pi-ai",
+			"-p",
+			"@earendil-works/pi-coding-agent",
+			"gribble",
+		]);
+		expect(npx("all")).toEqual(npx("review"));
 	});
 });
 

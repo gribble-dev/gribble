@@ -4,18 +4,10 @@
  * guardrails, and a read-only set of built-in tools.
  */
 import { join } from "node:path";
-import {
-	type AgentSession,
-	createAgentSession,
-	createEventBus,
-	DefaultResourceLoader,
-	type InlineExtension,
-	type ModelRuntime,
-	SessionManager,
-	SettingsManager,
-} from "@earendil-works/pi-coding-agent";
+import type { AgentSession, InlineExtension, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { createModelRuntime } from "../models/runtime.js";
 import type { ModelResolution } from "../models/types.js";
+import { loadPiCodingAgent } from "../pi.js";
 import { buildSystemPrompt } from "../prompt/system.js";
 import { guardrails } from "./guardrails.js";
 import { ALL_PACK_TOOLS, BROWSER_TOOLS, BUILTIN_TOOLS, CORE_TOOLS } from "./names.js";
@@ -93,6 +85,9 @@ export async function createGribbleSession(opts: CreateGribbleSessionOptions): P
 			config: opts.project.config,
 			vision: state.vision,
 		});
+
+	const { createAgentSession, createEventBus, DefaultResourceLoader, SessionManager, SettingsManager } =
+		await loadPiCodingAgent();
 
 	const settingsManager = SettingsManager.create(repoRoot, opts.agentDir);
 	settingsManager.applyOverrides({ compaction: { enabled: true } });

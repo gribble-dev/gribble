@@ -156,12 +156,6 @@ importers:
       '@clack/prompts':
         specifier: 1.8.0
         version: 1.8.0
-      '@earendil-works/pi-ai':
-        specifier: 'catalog:'
-        version: 0.85.1(supports-color@10.2.2)(ws@8.21.3)(zod@3.25.76)
-      '@earendil-works/pi-coding-agent':
-        specifier: 'catalog:'
-        version: 0.85.1(supports-color@10.2.2)(ws@8.21.3)(zod@3.25.76)
       '@gribble/core':
         specifier: workspace:*
         version: link:../core
@@ -181,6 +175,12 @@ importers:
         specifier: 'catalog:'
         version: 2.9.0
     devDependencies:
+      '@earendil-works/pi-ai':
+        specifier: 'catalog:'
+        version: 0.85.1(supports-color@10.2.2)(ws@8.21.3)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: 'catalog:'
+        version: 0.85.1(supports-color@10.2.2)(ws@8.21.3)(zod@3.25.76)
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.2
@@ -199,15 +199,6 @@ importers:
       '@axe-core/playwright':
         specifier: 4.13.0
         version: 4.13.0(playwright-core@1.63.0)
-      '@earendil-works/pi-agent-core':
-        specifier: 'catalog:'
-        version: 0.85.1(supports-color@10.2.2)(ws@8.21.3)(zod@3.25.76)
-      '@earendil-works/pi-ai':
-        specifier: 'catalog:'
-        version: 0.85.1(supports-color@10.2.2)(ws@8.21.3)(zod@3.25.76)
-      '@earendil-works/pi-coding-agent':
-        specifier: 'catalog:'
-        version: 0.85.1(supports-color@10.2.2)(ws@8.21.3)(zod@3.25.76)
       fast-glob:
         specifier: 3.3.3
         version: 3.3.3
@@ -236,6 +227,15 @@ importers:
         specifier: 'catalog:'
         version: 2.9.0
     devDependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: 'catalog:'
+        version: 0.85.1(supports-color@10.2.2)(ws@8.21.3)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: 'catalog:'
+        version: 0.85.1(supports-color@10.2.2)(ws@8.21.3)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: 'catalog:'
+        version: 0.85.1(supports-color@10.2.2)(ws@8.21.3)(zod@3.25.76)
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.2

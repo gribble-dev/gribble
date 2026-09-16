@@ -4,7 +4,8 @@
  */
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { Api, AuthInteraction, AuthPrompt, Model } from "@earendil-works/pi-ai";
-import { ModelRuntime, resolveCliModel } from "@earendil-works/pi-coding-agent";
+import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { loadPiCodingAgent } from "../pi.js";
 import { agentDirFiles } from "./agent-dir.js";
 import { rankModels } from "./rank.js";
 import { parseModelSpec } from "./spec.js";
@@ -85,6 +86,7 @@ export function providerEnvVar(providerId: string): string {
  */
 export const createModelRuntime: CreateModelRuntime = async (opts: CreateModelRuntimeOptions) => {
 	const files = agentDirFiles(opts.agentDir);
+	const { ModelRuntime } = await loadPiCodingAgent();
 	const runtime = await ModelRuntime.create({
 		authPath: files.auth,
 		modelsPath: files.models,
@@ -113,10 +115,10 @@ async function requireAuth(runtime: ModelRuntime, model: Model<Api>, spec: strin
 	);
 }
 
-function findModel(
+async function findModel(
 	runtime: ModelRuntime,
 	spec: string,
-): { model: Model<Api>; thinking?: ModelResolution["thinking"]; warning?: string } {
+): Promise<{ model: Model<Api>; thinking?: ModelResolution["thinking"]; warning?: string }> {
 	const parsed = parseModelSpec(spec);
 	if (parsed) {
 		const exact = runtime.getModel(parsed.provider, parsed.id);
@@ -124,6 +126,7 @@ function findModel(
 	}
 	// Fuzzy match with pi's own CLI rules (partial ids, names). pi also accepts unknown ids for a
 	// known provider as "custom models"; Gribble does not, so a typo in gribble.yaml fails early.
+	const { resolveCliModel } = await loadPiCodingAgent();
 	const resolved = resolveCliModel({ cliModel: spec, modelRuntime: runtime });
 	if (resolved.model && runtime.getModel(resolved.model.provider, resolved.model.id)) {
 		const thinking =
@@ -142,14 +145,14 @@ export const resolveModel: ResolveModel = async (opts) => {
 	const { runtime } = opts;
 	if (opts.configured?.trim()) {
 		const spec = opts.configured.trim();
-		const found = findModel(runtime, spec);
+		const found = await findModel(runtime, spec);
 		await requireAuth(runtime, found.model, spec);
 		return { model: found.model, thinking: found.thinking, warning: found.warning };
 	}
 	if (opts.settingsModel?.trim()) {
 		const spec = opts.settingsModel.trim();
 		try {
-			const found = findModel(runtime, spec);
+			const found = await findModel(runtime, spec);
 			await requireAuth(runtime, found.model, spec);
 			return { model: found.model, thinking: found.thinking, warning: found.warning };
 		} catch (err) {

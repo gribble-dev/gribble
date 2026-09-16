@@ -3,11 +3,30 @@
  * design-token bridge for snapshots.
  */
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
+import { type TUnsafe, Type } from "typebox";
 import type { AuditPage, SnapshotTokens } from "../../browser/types.js";
 import type { CheckContext } from "../../checks/types.js";
 import { readDesignTokens } from "../../repo/index.js";
 import type { Finding } from "../../report/schema.js";
 import type { AgentState } from "../state.js";
+
+/**
+ * A string-enum schema: `{ type: "string", enum: [...] }`, the shape Google's API and other
+ * providers accept where `anyOf`/`const` is not understood. pi exports the same four lines as
+ * `StringEnum`, but the tool packs are reachable from the core entry point, so importing it would
+ * make the optional review runtime a hard requirement of `--mode gate`. See `../../pi.ts`.
+ */
+export function StringEnum<T extends readonly string[]>(
+	values: T,
+	options: { description?: string; default?: T[number] } = {},
+): TUnsafe<T[number]> {
+	return Type.Unsafe<T[number]>({
+		type: "string",
+		enum: [...values],
+		...(options.description ? { description: options.description } : {}),
+		...(options.default ? { default: options.default } : {}),
+	});
+}
 
 export function textResult<T>(
 	text: string,

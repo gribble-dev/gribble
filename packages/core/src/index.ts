@@ -7,6 +7,13 @@ export * from "./config/index.js";
 export * from "./flows/index.js";
 export * from "./gate/index.js";
 export * from "./models/index.js";
+export {
+	loadPiCodingAgent,
+	PI_RUNTIME_VERSION,
+	REVIEW_RUNTIME_INSTALL_COMMAND,
+	REVIEW_RUNTIME_PACKAGES,
+	ReviewRuntimeMissingError,
+} from "./pi.js";
 export * from "./project/index.js";
 export * from "./prompt/index.js";
 export * from "./repo/index.js";

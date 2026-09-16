@@ -172,9 +172,10 @@ Install Gribble **once, at the repository root**:
 
 ```bash
 pnpm add -D -w gribble
+# add @earendil-works/pi-ai and @earendil-works/pi-coding-agent too for review mode
 ```
 
-Not per app. The `gribble` binary finds the right `.gribble/` from your working directory or from `--target`.
+The AI review runtime is an [optional peer dependency](/docs/getting-started#the-review-runtime-is-optional); at the root, once, like Gribble itself. Not per app. The `gribble` binary finds the right `.gribble/` from your working directory or from `--target`.
 
 Install the [coding-agent skill](/docs/skills) once too, at the root `.agents/skills/` (or `.claude/skills/`, depending on your agent). The skill reads `.gribble/runs/latest.json` relative to whichever app it is working on, so one installation serves every app.
 

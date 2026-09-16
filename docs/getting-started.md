@@ -11,7 +11,7 @@ This page takes you from an empty project to a first audit and a committed basel
 - **Node.js >= 22.** Gribble is ESM-only and pi requires it.
 - **A package manager** — pnpm, npm or yarn all work.
 - **A dev server or a preview URL.** Gribble can start your dev server for you (`target.start`) or point at a URL that is already up.
-- **A model provider credential** for `review` mode — an API key, or a subscription you log in to. `gate` mode runs without any model at all.
+- **A model provider credential** for `review` mode — an API key, or a subscription you log in to. `gate` mode runs without any model at all, and without the packages that would talk to one.
 
 ## Install
 
@@ -22,6 +22,20 @@ pnpm add -D gribble
 # npm install --save-dev gribble
 # yarn add --dev gribble
 ```
+
+### The review runtime is optional
+
+That install gives you the deterministic half and nothing else. The AI half — pi's agent loop, model catalog and the provider SDKs behind it — ships as **optional peer dependencies**, so `--mode gate` in CI installs no model runtime at all: no provider SDKs, no cloud credential chain, roughly 120 fewer packages.
+
+For `review` or `all`, add the two runtime packages next to Gribble:
+
+```bash
+pnpm add -D gribble @earendil-works/pi-ai @earendil-works/pi-coding-agent
+# npm install --save-dev gribble @earendil-works/pi-ai @earendil-works/pi-coding-agent
+# yarn add --dev gribble @earendil-works/pi-ai @earendil-works/pi-coding-agent
+```
+
+No package manager installs an optional peer on its own — npm, pnpm, yarn and bun all skip it — so this step is always explicit. Gribble pins one exact pi version and both packages must match it; reach `review` without them and the CLI stops with the exact `npm install` line, version included, instead of a module-resolution stack trace.
 
 Then fetch the browser binary:
 

@@ -11,6 +11,8 @@ There are two unrelated authentication questions in Gribble, and mixing them up 
 
 The first is configured per project in `gribble.yaml`. The second is a machine-level credential in `~/.gribble/`. They share nothing.
 
+Part 2 also needs code that a gate-only install does not have: the provider catalog lives in `@earendil-works/pi-ai` and `@earendil-works/pi-coding-agent`, which Gribble declares as [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional). `gribble login`, `gribble logout` and `gribble models` all stop with the install command until they are present.
+
 ---
 
 ## Part 1: target-site auth
@@ -288,7 +290,7 @@ Some providers let you sign in with a consumer subscription instead of an API ke
 - OAuth tokens refresh and expire on a cadence designed for an interactive session, so a CI job will break at an unpredictable time, usually during a release.
 - Copying the credential into a shared secret store hands your whole personal account to anyone who can read repository secrets or open a pull request that prints environment variables.
 
-Use an API key in CI. If the cost of one is the blocker, run `--mode gate` in CI, which needs no model at all, and run review locally where your subscription belongs.
+Use an API key in CI. If the cost of one is the blocker, run `--mode gate` in CI, which needs no model at all — and no model runtime, so the job installs neither a provider SDK nor a credential chain — and run review locally where your subscription belongs.
 
 ### If you genuinely cannot use a model in CI
 

@@ -21,6 +21,7 @@ import {
 	isAuthError,
 	isConfigError,
 	isNoModelError,
+	isReviewRuntimeMissingError,
 } from "./errors.js";
 
 export type { AuditCommandOptions } from "./commands/audit.js";
@@ -194,6 +195,11 @@ function reportError(err: unknown, deps: CliDeps, verbose: boolean): number {
 	if (isConfigError(err)) {
 		write(`error: ${errorMessage(err)}`);
 		write(copy.errors.configHint);
+		return EXIT.config;
+	}
+	if (isReviewRuntimeMissingError(err)) {
+		write(`error: ${errorMessage(err)}`);
+		write(copy.errors.reviewRuntimeHint);
 		return EXIT.config;
 	}
 	if (isAuthError(err)) {

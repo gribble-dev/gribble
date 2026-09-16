@@ -190,6 +190,8 @@ export const copy = {
 		auth: "Model authentication problem.",
 		authHint: "Run `gribble login <provider>` or set the provider's API key environment variable.",
 		noModelHint: "Run `gribble login`, then `gribble models` to pick one for gribble.yaml.",
+		reviewRuntimeHint:
+			"The AI review runtime ships as optional peer dependencies, so `--mode gate` installs none of it. No package manager adds them on its own.",
 		unexpected: "Unexpected error.",
 		unexpectedHint:
 			"Re-run with --verbose for a stack trace, and report it at https://github.com/gribble-dev/gribble/issues.",
