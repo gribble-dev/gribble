@@ -494,7 +494,8 @@ const defs: RuleDef[] = [
 		summary: "Focused elements must be visibly focused.",
 		description:
 			"Tabs through interactive elements and reports those whose computed style does not change on focus (outline removed with no replacement).",
-		recommended: "warn",
+		// No checker yet, so it is off by default; restore `warn` when the checker lands.
+		recommended: "off",
 		implemented: false,
 		fix: "Do not remove `outline` without providing a `:focus-visible` style.",
 	},
@@ -503,7 +504,8 @@ const defs: RuleDef[] = [
 		summary: "Every interactive element must be reachable with Tab.",
 		description:
 			"Compares the set of clickable elements with the set reached by tabbing through the page; elements that are only mouse-reachable are reported.",
-		recommended: "warn",
+		// No checker yet, so it is off by default; restore `warn` when the checker lands.
+		recommended: "off",
 		implemented: false,
 		fix: 'Use native buttons and links, or add tabindex="0" and key handlers to custom controls.',
 	},
@@ -909,7 +911,8 @@ const defs: RuleDef[] = [
 		id: "html/deprecated-elements",
 		summary: "No deprecated HTML elements.",
 		description: "Reports `<center>`, `<font>`, `<marquee>`, `<frame>` and other obsolete elements.",
-		recommended: "warn",
+		// No checker yet, so it is off by default; restore `warn` when the checker lands.
+		recommended: "off",
 		implemented: false,
 		fix: "Replace the element with semantic HTML and CSS.",
 	},
@@ -1136,6 +1139,13 @@ function withSeverity(setting: RuleSetting, severity: Severity): RuleSetting {
 }
 
 function derivePresets(def: RuleDef): RuleMeta["presets"] {
+	// A rule with no checker is never on in a built-in preset: it would only make the audit warn that
+	// it will not run. `gribble explain` still documents it, and the severity below comes back once the
+	// checker lands and `implemented` flips to true.
+	if (!def.implemented) {
+		const off = withSeverity(def.recommended, "off");
+		return { recommended: off, strict: off, seo: off, a11y: off };
+	}
 	const category = ruleCategory(def.id);
 	const recommended = def.recommended;
 	const recommendedSeverity = severityOf(recommended);

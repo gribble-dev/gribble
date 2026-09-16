@@ -122,7 +122,7 @@ Two things qualify it:
 
 The default, and what `gribble init` writes. It aims at "a reasonable team would agree this is a bug": broken internal links are `error`, a route that 5xxs is `critical`, serious and critical axe violations are `error`, missing alt text and unlabelled form fields are `error`, LCP and CLS have `error` thresholds, placeholder text shipped to production is `error`, exposed secrets are `critical`, flow replay failures are `critical`.
 
-Softer things are `warn`: external link problems, meta description length, heading order, canonical, colour contrast, touch target size, Lighthouse score, page weight, design-token deviations, and every `review/*` rule. Genuinely subjective or noisy rules — `seo/twitter-card`, `a11y/skip-link`, `html/valid`, `security/form-without-csrf`, `ui/spacing-from-tokens`, `i18n/mixed-language` — ship `off`.
+Softer things are `warn`: external link problems, meta description length, heading order, canonical, colour contrast, touch target size, Lighthouse score, page weight, design-token deviations, and every `review/*` rule. Genuinely subjective or noisy rules — `seo/twitter-card`, `a11y/skip-link`, `html/valid`, `security/form-without-csrf`, `ui/spacing-from-tokens`, `i18n/mixed-language` — ship `off`, and so does every rule that has no checker yet, so that a fresh install has nothing to warn about.
 
 The expanded form is printed in full below.
 
@@ -142,7 +142,7 @@ extends:
 
 ### `gribble:a11y`
 
-The accessibility overlay. Widens the axe run to more tag sets and impact levels, and promotes contrast, focus visibility, keyboard reachability and touch target size from `warn` to `error`. Reach for it when you have a WCAG commitment to meet rather than a general quality bar.
+The accessibility overlay. Widens the axe run to more tag sets and impact levels, and keeps contrast and touch target size on. Rules with no checker yet stay `off` here too. Reach for it when you have a WCAG commitment to meet rather than a general quality bar.
 
 Presets are data, not magic. A preset is just a map of rule id to setting, layered in order, and anything you write in your own `rules` block wins.
 
@@ -194,8 +194,8 @@ rules:
   a11y/form-labels: error
   a11y/accessible-name: error                           # buttons/links with no name
   a11y/color-contrast: [warn, { level: AA }]
-  a11y/focus-visible: warn
-  a11y/keyboard-reachable: warn                         # every interactive element reachable via Tab
+  a11y/focus-visible: off                               # no checker yet
+  a11y/keyboard-reachable: off                          # no checker yet; reachable via Tab
   a11y/touch-target: [warn, { minPx: 44 }]
   a11y/skip-link: off
   a11y/reduced-motion: off
@@ -231,7 +231,7 @@ rules:
   html/charset: error
   html/viewport-meta: error
   html/duplicate-ids: error
-  html/deprecated-elements: warn
+  html/deprecated-elements: off                         # no checker yet
   html/valid: [off, { ignore: [] }]                     # noisy by default
 
   # --- Security ---
@@ -277,6 +277,8 @@ The registry contains the whole catalogue above, but the first release implement
 ```
 3 enabled rules have no checker yet and will not run: a11y/skip-link, html/valid, i18n/mixed-language. Planned (accepted in rules.yaml, no checker yet); see gribble explain <rule>.
 ```
+
+No built-in preset switches such a rule on, so a configuration that only extends `gribble:recommended` never prints that line; it appears once you enable one yourself.
 
 Implemented today: all of `links/*` and `network/*`, all of `seo/*`, `a11y/axe` with `img-alt`, `form-labels` and `accessible-name` derived from it, `perf/lighthouse-performance`, `perf/lcp`, `perf/cls`, `perf/tbt`, `perf/page-weight`, `perf/regression`, `ui/placeholder-text`, `visual/regression`, `structure/regression`, all of `html/doctype|charset|viewport-meta|duplicate-ids`, `security/https-only`, `security/mixed-content`, `security/exposed-secrets`, `i18n/untranslated-keys`, `flows/replay`, `flows/max-duration` and all of `review/*`.
 

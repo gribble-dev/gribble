@@ -23,8 +23,10 @@ function buildPreset(name: PresetName): Record<string, RuleSetting> {
  * Built-in presets, fully expanded (every rule id present).
  * - `gribble:recommended`: the defaults from the product brief; `gribble init` uses it.
  * - `gribble:strict`: recommended with `warn` promoted to `error` for links, network, seo, a11y, html and security, plus `visual/regression` on.
- * - `gribble:seo`: every `seo/*` rule on, everything else off.
- * - `gribble:a11y`: every `a11y/*` rule on, everything else off.
+ * - `gribble:seo`: every implemented `seo/*` rule on, everything else off.
+ * - `gribble:a11y`: every implemented `a11y/*` rule on, everything else off.
+ *
+ * A rule with no checker yet (`implemented: false`) is off in all of them; see `derivePresets`.
  */
 export const PRESETS: Record<PresetId, Record<string, RuleSetting>> = {
 	"gribble:recommended": buildPreset("recommended"),

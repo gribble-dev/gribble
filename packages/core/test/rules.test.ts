@@ -4,6 +4,7 @@ import {
 	explainRule,
 	formatUnimplementedRulesWarning,
 	getRule,
+	PRESET_IDS,
 	PRESETS,
 	parseRulesConfig,
 	RULE_IDS,
@@ -36,6 +37,22 @@ describe("registry", () => {
 		expect(getRule("ui/empty-state")?.implemented).toBe(false);
 		expect(getRule("review/ux")?.implemented).toBe(true);
 	});
+
+	it("keeps rules without a checker off in every built-in preset", () => {
+		const unimplemented = RULES.filter((rule) => !rule.implemented);
+		expect(unimplemented.length).toBeGreaterThan(0);
+		for (const preset of PRESET_IDS) {
+			for (const rule of unimplemented) {
+				const setting = PRESETS[preset][rule.id];
+				const severity = typeof setting === "string" ? setting : setting?.[0];
+				expect({ preset, rule: rule.id, severity }).toEqual({
+					preset,
+					rule: rule.id,
+					severity: "off",
+				});
+			}
+		}
+	});
 });
 
 describe("presets", () => {
@@ -52,6 +69,10 @@ describe("presets", () => {
 		expect(rec["perf/regression"]).toEqual(["warn", { score: -5, lcpMs: 500, cls: 0.05, weightKb: 300 }]);
 		expect(rec["flows/replay"]).toBe("critical");
 		expect(rec["review/guidelines"]).toBe("warn");
+		// No checker yet, so the default install has nothing to warn about.
+		expect(rec["a11y/focus-visible"]).toBe("off");
+		expect(rec["a11y/keyboard-reachable"]).toBe("off");
+		expect(rec["html/deprecated-elements"]).toBe("off");
 		expect(Object.keys(rec)).toHaveLength(RULE_IDS.length);
 	});
 
@@ -62,6 +83,13 @@ describe("presets", () => {
 		expect(strict["seo/twitter-card"]).toBe("off");
 		expect(strict["perf/tbt"]).toEqual(["warn", { maxMs: 200 }]);
 		expect(strict["review/ux"]).toBe("warn");
+		// `off` stays `off`, so a rule without a checker is not promoted either.
+		expect(strict["html/deprecated-elements"]).toBe("off");
+		expect(strict["a11y/focus-visible"]).toBe("off");
+		expect(strict["visual/regression"]).toEqual([
+			"warn",
+			{ threshold: 0.01, viewports: ["mobile", "desktop"] },
+		]);
 	});
 
 	it("seo and a11y presets focus on one category", () => {
@@ -70,7 +98,13 @@ describe("presets", () => {
 		expect(seo["seo/twitter-card"]).toBe("warn");
 		expect(seo["links/broken"]).toBe("off");
 		const a11y = PRESETS["gribble:a11y"];
-		expect(a11y["a11y/skip-link"]).toBe("warn");
+		expect(a11y["a11y/axe"]).toEqual([
+			"error",
+			{ impact: ["critical", "serious"], tags: ["wcag2a", "wcag2aa"], disable: [] },
+		]);
+		expect(a11y["a11y/touch-target"]).toEqual(["warn", { minPx: 44 }]);
+		// Focusing on a category does not switch on a rule that has no checker yet.
+		expect(a11y["a11y/skip-link"]).toBe("off");
 		expect(a11y["seo/title"]).toBe("off");
 	});
 });
@@ -236,7 +270,9 @@ describe("unimplemented rules", () => {
 				[
 					"extends: [gribble:recommended]",
 					"rules:",
+					"  a11y/keyboard-reachable: warn",
 					"  a11y/skip-link: error",
+					"  html/deprecated-elements: warn",
 					"  html/valid: [error, { ignore: [] }]",
 					"  i18n/mixed-language: warn",
 					"  a11y/focus-visible: off",
@@ -261,15 +297,22 @@ describe("unimplemented rules", () => {
 		);
 	});
 
+	it("is silent for a default install", () => {
+		// What `gribble init` writes: no rule of its own, so the audit must have nothing to warn about.
+		for (const preset of PRESET_IDS) {
+			expect(unimplementedEnabledRules(resolveRules([parseRulesConfig(`extends: [${preset}]`)]))).toEqual([]);
+		}
+		expect(formatUnimplementedRulesWarning([])).toBeUndefined();
+		expect(unimplementedEnabledRules(resolveRules([]))).toEqual([]);
+	});
+
 	it("is silent when every enabled rule has a checker", () => {
 		const rules = resolveRules([
 			parseRulesConfig(
-				"extends: [gribble:recommended]\nrules:\n  a11y/focus-visible: off\n  a11y/keyboard-reachable: off\n  html/deprecated-elements: off\n",
+				"extends: [gribble:recommended]\nrules:\n  a11y/skip-link: off\n  html/valid: off\n  i18n/*: off\n",
 			),
 		]);
 		expect(unimplementedEnabledRules(rules)).toEqual([]);
-		expect(formatUnimplementedRulesWarning([])).toBeUndefined();
-		expect(unimplementedEnabledRules(resolveRules([]))).toEqual([]);
 	});
 
 	it("counts route overrides and lets the environment have the last word", () => {
