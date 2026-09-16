@@ -120,11 +120,9 @@ describe.skipIf(!hasChromium())(`runAudit gate mode (${SKIP_BROWSER_REASON})`, (
 			events.some((e) => e.type === "route:start" && e.route === "/holes.html" && e.viewport === "mobile"),
 		).toBe(true);
 		expect(events.some((e) => e.type === "flow:end" && e.flow === "login" && e.ok)).toBe(true);
-		// gribble:recommended switches on three rules that have no checker yet; the audit says so once.
+		// gribble:recommended switches on no rule that lacks a checker, so a default audit stays quiet.
 		const warnings = events.flatMap((e) => (e.type === "log" && e.level === "warn" ? [e.message] : []));
-		expect(warnings.filter((m) => m.includes("no checker yet"))).toEqual([
-			"3 enabled rules have no checker yet and will not run: a11y/focus-visible, a11y/keyboard-reachable, html/deprecated-elements. Planned (accepted in rules.yaml, no checker yet); see gribble explain <rule>.",
-		]);
+		expect(warnings.filter((m) => m.includes("no checker yet"))).toEqual([]);
 		expect(events.at(-1)?.type).toBe("done");
 
 		const latest = JSON.parse(await readFile(join(dir, ".gribble/runs/latest.json"), "utf8"));

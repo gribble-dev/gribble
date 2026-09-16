@@ -768,10 +768,10 @@ Tabs through interactive elements and reports those whose computed style does no
 
 | Preset | Setting |
 | --- | --- |
-| `gribble:recommended` | `warn` |
-| `gribble:strict` | `error` |
+| `gribble:recommended` | `off` |
+| `gribble:strict` | `off` |
 | `gribble:seo` | `off` |
-| `gribble:a11y` | `warn` |
+| `gribble:a11y` | `off` |
 
 **Fix:** Do not remove `outline` without providing a `:focus-visible` style.
 
@@ -787,10 +787,10 @@ Compares the set of clickable elements with the set reached by tabbing through t
 
 | Preset | Setting |
 | --- | --- |
-| `gribble:recommended` | `warn` |
-| `gribble:strict` | `error` |
+| `gribble:recommended` | `off` |
+| `gribble:strict` | `off` |
 | `gribble:seo` | `off` |
-| `gribble:a11y` | `warn` |
+| `gribble:a11y` | `off` |
 
 **Fix:** Use native buttons and links, or add tabindex="0" and key handlers to custom controls.
 
@@ -834,7 +834,7 @@ Reports pages whose first focusable element is not a link to the main content. O
 | `gribble:recommended` | `off` |
 | `gribble:strict` | `off` |
 | `gribble:seo` | `off` |
-| `gribble:a11y` | `warn` |
+| `gribble:a11y` | `off` |
 
 **Fix:** Add <a href="#main" class="skip-link">Skip to content</a> as the first element in `<body>`.
 
@@ -853,7 +853,7 @@ Reports CSS animations and transitions longer than a threshold that still run un
 | `gribble:recommended` | `off` |
 | `gribble:strict` | `off` |
 | `gribble:seo` | `off` |
-| `gribble:a11y` | `warn` |
+| `gribble:a11y` | `off` |
 
 **Fix:** Wrap animations in `@media (prefers-reduced-motion: no-preference)`.
 
@@ -1461,8 +1461,8 @@ Reports `<center>`, `<font>`, `<marquee>`, `<frame>` and other obsolete elements
 
 | Preset | Setting |
 | --- | --- |
-| `gribble:recommended` | `warn` |
-| `gribble:strict` | `error` |
+| `gribble:recommended` | `off` |
+| `gribble:strict` | `off` |
 | `gribble:seo` | `off` |
 | `gribble:a11y` | `off` |
 
@@ -1482,8 +1482,8 @@ Runs an HTML validator on each document. Noisy on most real sites, so it is off 
 | --- | --- |
 | `gribble:recommended` | `[off, {"ignore":[]}]` |
 | `gribble:strict` | `[off, {"ignore":[]}]` |
-| `gribble:seo` | `off` |
-| `gribble:a11y` | `off` |
+| `gribble:seo` | `[off, {"ignore":[]}]` |
+| `gribble:a11y` | `[off, {"ignore":[]}]` |
 
 **Options**
 
