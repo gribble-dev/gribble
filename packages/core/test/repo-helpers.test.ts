@@ -45,7 +45,7 @@ describe("discoverRoutes", () => {
 		});
 		const found = await discoverRoutes(dir);
 		expect(found.framework).toBe("next-app");
-		expect(found.routes).toEqual(["/", "/login", "/pricing", "/blog/[slug]", "/docs/[...path]"]);
+		expect(found.routes).toEqual(["/", "/docs", "/login", "/pricing", "/blog/[slug]", "/docs/[...path]"]);
 		expect(found.source["/pricing"]).toBe("app/(marketing)/pricing/page.tsx");
 	});
 
@@ -139,7 +139,13 @@ describe("discoverRoutes", () => {
 			"src/routes/[category=slug]-[id=integer]/+page.svelte": "",
 		});
 		const found = await discoverRoutes(dir);
-		expect(found.routes).toEqual(["/[category]-[id]", "/[lang]/x", "/docs/[...slug]", "/files/[...path]"]);
+		expect(found.routes).toEqual([
+			"/[category]-[id]",
+			"/docs",
+			"/[lang]/x",
+			"/docs/[...slug]",
+			"/files/[...path]",
+		]);
 	});
 
 	it("caps the SvelteKit optional-parameter expansion at the two end variants", async () => {
@@ -156,6 +162,53 @@ describe("discoverRoutes", () => {
 			"/deeper",
 			"/[a]/[b]/[c]/[d]/[e]/deeper",
 		]);
+	});
+
+	it("expands optional catch-alls and skips Next.js intercepting routes", async () => {
+		await write({
+			"package.json": JSON.stringify({ dependencies: { next: "15.0.0" } }),
+			"app/feed/page.tsx": "",
+			"app/feed/(.)photo/[id]/page.tsx": "",
+			"app/photo/[id]/page.tsx": "",
+			"app/shop/(..)(..)cart/page.tsx": "",
+		});
+		const found = await discoverRoutes(dir);
+		// `(.)photo` re-renders `/photo/[id]` as a modal; it is not a URL of its own.
+		expect(found.routes).toEqual(["/feed", "/photo/[id]"]);
+	});
+
+	it("cleans the Next.js and Nuxt page file name, not just its directories", async () => {
+		await write({
+			"next.config.js": "",
+			"pages/index.tsx": "",
+			"pages/docs/[[...slug]].tsx": "",
+			"pages/shop/[...cat].tsx": "",
+		});
+		const next = await discoverRoutes(dir);
+		expect(next.routes).toEqual(["/", "/docs", "/docs/[...slug]", "/shop/[...cat]"]);
+		await rm(join(dir, "next.config.js"));
+		await rm(join(dir, "pages"), { recursive: true });
+
+		await write({
+			"nuxt.config.ts": "",
+			"pages/index.vue": "",
+			"pages/[[slug]].vue": "",
+			"pages/_id/edit.vue": "",
+		});
+		const nuxt = await discoverRoutes(dir);
+		expect(nuxt.routes).toEqual(["/", "/[slug]", "/[id]/edit"]);
+	});
+
+	it("keeps Remix optional segments and splats intact", async () => {
+		await write({
+			"package.json": JSON.stringify({ dependencies: { "@remix-run/react": "2.0.0" } }),
+			"app/routes/($lang).about.tsx": "",
+			"app/routes/(en).help.tsx": "",
+			"app/routes/blog.$.tsx": "",
+		});
+		const found = await discoverRoutes(dir);
+		expect(found.routes).toEqual(["/about", "/help", "/[lang]/about", "/blog/[...splat]", "/en/help"]);
+		expect(found.source["/about"]).toBe("app/routes/($lang).about.tsx");
 	});
 
 	it("returns no routes for an unknown layout", async () => {
