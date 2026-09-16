@@ -67,8 +67,36 @@ export function fitSpinnerMessage(message: string, columns: number | undefined):
 	return `${message.slice(0, width - 1)}…`;
 }
 
-const SPINNER_FRAMES = clack.unicode ? ["◒", "◐", "◓", "◑"] : ["•", "o", "O", "0"];
-const SPINNER_DELAY = clack.unicode ? 80 : 120;
+/** Glyphs and cadence for one rendering mode of {@link rowSpinner}. */
+export interface SpinnerStyle {
+	/** Frames cycled while spinning, in order. */
+	readonly frames: readonly string[];
+	/** Milliseconds between frames. */
+	readonly delay: number;
+	/** Symbol the row left behind by `stop()` opens with; clack's `S_STEP_SUBMIT` in this mode. */
+	readonly submit: string;
+	/** Symbol the row left behind by `error()` opens with; clack's `S_STEP_ERROR` in this mode. */
+	readonly error: string;
+}
+
+export const UNICODE_SPINNER_STYLE: SpinnerStyle = {
+	frames: ["◒", "◐", "◓", "◑"],
+	delay: 80,
+	submit: "◇",
+	error: "▲",
+};
+
+/** Fallback for terminals clack deems unable to render the unicode frames; slower, because the frames read less well. */
+export const ASCII_SPINNER_STYLE: SpinnerStyle = {
+	frames: ["•", "o", "O", "0"],
+	delay: 120,
+	submit: "o",
+	error: "x",
+};
+
+/** The style this terminal gets. clack decides; the tests cover both styles regardless. */
+export const SPINNER_STYLE: SpinnerStyle = clack.unicode ? UNICODE_SPINNER_STYLE : ASCII_SPINNER_STYLE;
+
 const HIDE_CURSOR = "\x1b[?25l";
 const SHOW_CURSOR = "\x1b[?25h";
 const ERASE_ROW = "\r\x1b[2K";
@@ -81,7 +109,7 @@ const ERASE_ROW = "\r\x1b[2K";
  * re-fits the message to the live width on every frame, so the row never wraps and erasing it
  * is just `\r` plus clear-line.
  */
-export function rowSpinner(output: Writable): PromptSpinner {
+export function rowSpinner(output: Writable, style: SpinnerStyle = SPINNER_STYLE): PromptSpinner {
 	const stream = output as Writable & { columns?: number };
 	let timer: NodeJS.Timeout | undefined;
 	let text = "";
@@ -90,10 +118,10 @@ export function rowSpinner(output: Writable): PromptSpinner {
 	const showCursor = () => output.write(SHOW_CURSOR);
 
 	const render = () => {
-		const glyph = pc.magenta(SPINNER_FRAMES[frame] ?? "");
+		const glyph = pc.magenta(style.frames[frame] ?? "");
 		const trail = ".".repeat(Math.min(3, Math.floor(dots)));
 		output.write(`${ERASE_ROW}${glyph}  ${fitSpinnerMessage(text, stream.columns)}${trail}`);
-		frame = (frame + 1) % SPINNER_FRAMES.length;
+		frame = (frame + 1) % style.frames.length;
 		dots = dots < 4 ? dots + 0.125 : 0;
 	};
 
@@ -116,16 +144,16 @@ export function rowSpinner(output: Writable): PromptSpinner {
 			process.once("exit", showCursor);
 			output.write(HIDE_CURSOR);
 			render();
-			timer = setInterval(render, SPINNER_DELAY);
+			timer = setInterval(render, style.delay);
 		},
 		message(message = "") {
 			text = message.replace(/\.+$/, "");
 		},
 		stop(message = "") {
-			finish(`${pc.green(clack.S_STEP_SUBMIT)}  ${message || text}`);
+			finish(`${pc.green(style.submit)}  ${message || text}`);
 		},
 		error(message = "") {
-			finish(`${pc.red(clack.S_STEP_ERROR)}  ${message || text}`);
+			finish(`${pc.red(style.error)}  ${message || text}`);
 		},
 		clear() {
 			finish();
