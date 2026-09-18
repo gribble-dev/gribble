@@ -434,6 +434,12 @@ describe.skipIf(!hasChromium())(`formerly planned rules (${SKIP_BROWSER_REASON})
 			shared: { links: new LinkCache(), reportedOnce: new Set() },
 			onEvent: (e) => events.push(e),
 		};
+		// The OS decides the default (Windows runners already prefer reduced motion), so the check
+		// must hand back whatever it found, not a fixed value.
+		const reducedMotion = () =>
+			page.raw.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
+		await page.goto(ctx.url);
+		const reducedBefore = await reducedMotion();
 		const result = await runRouteChecks(ctx, { lighthouse: false, screenshot: false });
 		expect(result.notRun).toEqual([]);
 		const ended = events.filter((e): e is CheckEnd => e.type === "check:end");
@@ -441,7 +447,7 @@ describe.skipIf(!hasChromium())(`formerly planned rules (${SKIP_BROWSER_REASON})
 		expect(ended.every((e) => e.ok)).toBe(true);
 		// focus-visible moves focus and reduced-motion emulates media; both are undone afterwards.
 		expect(await page.raw.evaluate(() => document.activeElement === document.body)).toBe(true);
-		expect(await page.raw.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(false);
+		expect(await reducedMotion()).toBe(reducedBefore);
 		await page.close();
 	}, 60_000);
 
