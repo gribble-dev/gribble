@@ -568,9 +568,11 @@ export async function checkA11y(ctx: CheckContext): Promise<Finding[]> {
 		} catch {
 			hits = [];
 		} finally {
-			// Back to whatever the session emulated before, so later checks and the screenshot see the
-			// page the way the user does.
-			if (!alreadyReduced) await page.emulateMedia({ reducedMotion: null }).catch(() => {});
+			// Back to what the page reported before, so later checks and the screenshot see the page the
+			// way the user does. Re-emulating "no-preference" rather than clearing the override matters:
+			// Playwright contexts emulate "no-preference" by default, and clearing it would let the
+			// host's own setting through (Windows CI runners prefer reduced motion at the OS level).
+			if (!alreadyReduced) await page.emulateMedia({ reducedMotion: "no-preference" }).catch(() => {});
 		}
 		for (const hit of hits) {
 			report(ctx, out, "a11y/reduced-motion", {
