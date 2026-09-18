@@ -762,16 +762,16 @@ Reports text whose contrast against its background is below 4.5:1 (AA) or 7:1 (A
 
 Focused elements must be visibly focused.
 
-Tabs through interactive elements and reports those whose computed style does not change on focus (outline removed with no replacement).
+Focuses each visible interactive element and reports those whose computed style (outline, box-shadow, border, background, color, text-decoration, pseudo-elements) does not change at all on focus. Off by default; elements the browser would not paint a focus ring for anyway are skipped.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
 | `gribble:recommended` | `off` |
 | `gribble:strict` | `off` |
 | `gribble:seo` | `off` |
-| `gribble:a11y` | `off` |
+| `gribble:a11y` | `warn` |
 
 **Fix:** Do not remove `outline` without providing a `:focus-visible` style.
 
@@ -781,16 +781,16 @@ Tabs through interactive elements and reports those whose computed style does no
 
 Every interactive element must be reachable with Tab.
 
-Compares the set of clickable elements with the set reached by tabbing through the page; elements that are only mouse-reachable are reported.
+Reports controls that cannot be reached with Tab: elements with `onclick` or `role="button"`/`role="link"` on a non-focusable tag without `tabindex`, native controls forced to `tabindex="-1"` outside a roving-tabindex widget, and positive `tabindex` values that break document order. Off by default.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
 | `gribble:recommended` | `off` |
 | `gribble:strict` | `off` |
 | `gribble:seo` | `off` |
-| `gribble:a11y` | `off` |
+| `gribble:a11y` | `warn` |
 
 **Fix:** Use native buttons and links, or add tabindex="0" and key handlers to custom controls.
 
@@ -825,16 +825,16 @@ Measures bounding boxes of interactive elements in the mobile viewport; anything
 
 Pages need a skip-to-content link.
 
-Reports pages whose first focusable element is not a link to the main content. Off by default.
+Reports pages whose first tabbable element is not a same-page link to an existing target, when at least five tabbable elements come before the main content (`<main>`, `[role="main"]` or the first `<h1>`). Off by default.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
 | `gribble:recommended` | `off` |
 | `gribble:strict` | `off` |
 | `gribble:seo` | `off` |
-| `gribble:a11y` | `off` |
+| `gribble:a11y` | `warn` |
 
 **Fix:** Add <a href="#main" class="skip-link">Skip to content</a> as the first element in `<body>`.
 
@@ -844,16 +844,16 @@ Reports pages whose first focusable element is not a link to the main content. O
 
 Animations must respect prefers-reduced-motion.
 
-Reports CSS animations and transitions longer than a threshold that still run under `prefers-reduced-motion: reduce`. Off by default.
+Emulates `prefers-reduced-motion: reduce` and reports visible elements whose CSS animation is infinite or runs for at least one second in total, and transitions of at least one second on motion properties (`transform`, `translate`, offsets, `all`), that are still active under it. Off by default.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
 | `gribble:recommended` | `off` |
 | `gribble:strict` | `off` |
 | `gribble:seo` | `off` |
-| `gribble:a11y` | `off` |
+| `gribble:a11y` | `warn` |
 
 **Fix:** Wrap animations in `@media (prefers-reduced-motion: no-preference)`.
 
@@ -1121,9 +1121,9 @@ Compares computed font sizes with the sizes defined in the project's tokens.
 
 Margins and paddings must come from the spacing scale.
 
-Compares computed margin and padding values with the project's spacing tokens. Off by default because it is noisy.
+Compares computed margin and padding values with the project's spacing tokens (Tailwind `spacing`, `@theme` lengths, `--spacing-*`/`--space-*`/`--gap*`/`--size-*` custom properties). Zero, `auto` and the browser's own default margins for an element are always allowed; quiet when the project declares no spacing tokens. Off by default because it is noisy.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1291,9 +1291,9 @@ Reports a missing or non-loading `<link rel="icon">` (and `/favicon.ico` fallbac
 
 Lists and tables with zero rows need an empty state.
 
-Reports list and table containers that render no rows and no explanatory text. Off by default.
+Reports visible `<table>`, `<ul>`, `<ol>`, `[role="list"]`, `[role="grid"]` and `[role="table"]` containers that render zero rows or items and no explanatory text inside or next to them. Navigation and menu lists, hidden and `aria-busy` containers are skipped. Off by default.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1455,9 +1455,9 @@ Good:
 
 No deprecated HTML elements.
 
-Reports `<center>`, `<font>`, `<marquee>`, `<frame>` and other obsolete elements.
+Reports `<center>`, `<font>`, `<marquee>`, `<frame>` and other obsolete elements, and obsolete presentational attributes such as `align`, `bgcolor`, `cellpadding` and `valign`.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1474,16 +1474,16 @@ Reports `<center>`, `<font>`, `<marquee>`, `<frame>` and other obsolete elements
 
 Markup must validate.
 
-Runs an HTML validator on each document. Noisy on most real sites, so it is off by default; `ignore` takes validator message patterns.
+Runs a structural check over the served document source (no network validator): stray and mismatched end tags, unclosed elements, duplicate attributes, self-closing syntax on non-void elements, nested links, list children that are not `<li>` and block content inside `<p>`. Noisy on most real sites, so it is off by default; `ignore` takes message patterns.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
 | `gribble:recommended` | `[off, {"ignore":[]}]` |
 | `gribble:strict` | `[off, {"ignore":[]}]` |
-| `gribble:seo` | `[off, {"ignore":[]}]` |
-| `gribble:a11y` | `[off, {"ignore":[]}]` |
+| `gribble:seo` | `off` |
+| `gribble:a11y` | `off` |
 
 **Options**
 
@@ -1602,9 +1602,9 @@ Reports `//# sourceMappingURL` comments whose map file is publicly reachable.
 
 State-changing forms need CSRF protection.
 
-Reports POST forms without a hidden token field or a same-site cookie policy. Off by default because frameworks differ.
+Reports same-origin POST forms without a hidden token field (`csrf`, `xsrf`, `authenticity_token`, `_token`, `__RequestVerificationToken`, `antiforgery`) and no CSRF `<meta>` tag, unless every cookie the browser holds for the target is `SameSite=Lax` or `Strict`. Off by default because frameworks differ.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1648,9 +1648,9 @@ Reports visible text matching any of the `patterns`, which by default catches do
 
 A page must not mix languages.
 
-Detects the language of text blocks and reports pages with a significant share in a second language. Off by default.
+Groups the visible text by Unicode script family and reports pages where a second script holds at least a fifth of the letters. Short strings, code, numerals and subtrees with their own `lang` are ignored; two languages in the same script (English inside German) are not detected. Off by default.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |
@@ -1667,9 +1667,9 @@ Detects the language of text blocks and reports pages with a significant share i
 
 The declared html lang must match the content language.
 
-Compares the `lang` attribute with the detected language of the visible text. Off by default.
+Reports a locale segment in the URL (`/de/…`, `/zh-CN/…`) that disagrees with `<html lang>`, and a `lang` attribute (on `<html>` or a subtree) whose visible text is almost entirely in another Unicode script family. Off by default.
 
-**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic
+**Status:** implemented · **Kind:** deterministic
 
 | Preset | Setting |
 | --- | --- |

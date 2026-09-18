@@ -481,6 +481,9 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 	const fontTokens = tokens?.fontSizes
 		? new Set(tokens.fontSizes.map((f) => f.replace(/px$/, "").trim()))
 		: undefined;
+	const spacingTokens = tokens?.spacing
+		? new Set(tokens.spacing.map((v) => String(Math.round(Number.parseFloat(v) * 100) / 100)))
+		: undefined;
 	const needStyles = !!colorTokens || !!fontTokens || !!opts.minFontPx;
 	if (needStyles) {
 		let sampled = 0;
@@ -528,6 +531,106 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 					seenColor.add(key);
 					styles.push({ kind: "color", ref, selector, property: prop, value: norm, text });
 				}
+			}
+		}
+	}
+
+	// Spacing: every rendered element, not only text carriers, because margins and paddings live
+	// on containers. The browser's own default margins (a <p>'s 1em, a <ul>'s 40px padding) are
+	// not the author's choice, so they are allowed even when they are not tokens.
+	if (spacingTokens && spacingTokens.size > 0) {
+		const UA_EM: Record<string, Partial<Record<string, number>>> = {
+			p: { mt: 1, mb: 1 },
+			h1: { mt: 0.67, mb: 0.67 },
+			h2: { mt: 0.83, mb: 0.83 },
+			h3: { mt: 1, mb: 1 },
+			h4: { mt: 1.33, mb: 1.33 },
+			h5: { mt: 1.67, mb: 1.67 },
+			h6: { mt: 2.33, mb: 2.33 },
+			ul: { mt: 1, mb: 1 },
+			ol: { mt: 1, mb: 1 },
+			menu: { mt: 1, mb: 1 },
+			dl: { mt: 1, mb: 1 },
+			blockquote: { mt: 1, mb: 1 },
+			figure: { mt: 1, mb: 1 },
+			pre: { mt: 1, mb: 1 },
+			hr: { mt: 0.5, mb: 0.5 },
+			fieldset: { pt: 0.35, pr: 0.75, pb: 0.625, pl: 0.75 },
+		};
+		const UA_PX: Record<string, Partial<Record<string, number>>> = {
+			body: { mt: 8, mr: 8, mb: 8, ml: 8 },
+			ul: { pl: 40 },
+			ol: { pl: 40 },
+			menu: { pl: 40 },
+			dd: { ml: 40 },
+			blockquote: { ml: 40, mr: 40 },
+			figure: { ml: 40, mr: 40 },
+			fieldset: { ml: 2, mr: 2 },
+			legend: { pl: 2, pr: 2 },
+			button: { pt: 1, pb: 1, pl: 6, pr: 6 },
+			input: { pt: 1, pb: 1, pl: 2, pr: 2 },
+			textarea: { pt: 2, pb: 2, pl: 2, pr: 2 },
+			select: { pl: 2, pr: 2 },
+			td: { pt: 1, pb: 1, pl: 1, pr: 1 },
+			th: { pt: 1, pb: 1, pl: 1, pr: 1 },
+			details: { ml: 0 },
+			summary: { ml: 0 },
+		};
+		const PROPS: Array<[key: string, property: string]> = [
+			["mt", "margin-top"],
+			["mr", "margin-right"],
+			["mb", "margin-bottom"],
+			["ml", "margin-left"],
+			["pt", "padding-top"],
+			["pr", "padding-right"],
+			["pb", "padding-bottom"],
+			["pl", "padding-left"],
+		];
+		const SKIP_TAGS = new Set([
+			"html",
+			"body",
+			"script",
+			"style",
+			"template",
+			"noscript",
+			"svg",
+			"br",
+			"wbr",
+		]);
+		const seenSpacing = new Set<string>();
+		let spacingSampled = 0;
+		for (const el of Array.from(doc.body?.querySelectorAll("*") ?? [])) {
+			if (spacingSampled >= opts.styleSampleLimit) break;
+			const tag = el.tagName.toLowerCase();
+			if (SKIP_TAGS.has(tag) || el.closest("svg, math")) continue;
+			if (!isRendered(el)) continue;
+			const style = win.getComputedStyle(el);
+			// The visually-hidden idiom sets margin: -1px to clip a 1px box; that is not spacing.
+			if (isVisuallyHidden(el, style)) continue;
+			spacingSampled += 1;
+			const fontPx = Number.parseFloat(style.fontSize) || 16;
+			const em = UA_EM[tag] ?? {};
+			const px = UA_PX[tag] ?? {};
+			const text = collapse(el.textContent ?? "").slice(0, 60);
+			for (const [key, property] of PROPS) {
+				const raw = style.getPropertyValue(property);
+				const value = Number.parseFloat(raw);
+				if (!Number.isFinite(value) || Math.abs(value) < 0.5) continue;
+				const rounded = Math.round(Math.abs(value) * 100) / 100;
+				if (spacingTokens.has(String(rounded))) continue;
+				const uaDefault = em[key] !== undefined ? em[key]! * fontPx : px[key];
+				if (uaDefault !== undefined && Math.abs(uaDefault - Math.abs(value)) < 0.5) continue;
+				const dedupe = `${property}:${rounded}`;
+				if (seenSpacing.has(dedupe)) continue;
+				seenSpacing.add(dedupe);
+				styles.push({
+					kind: "spacing",
+					ref: el.getAttribute(REF_ATTR) ?? "",
+					selector: stableSelector(el),
+					property,
+					value: `${rounded}px`,
+					text,
+				});
 			}
 		}
 	}

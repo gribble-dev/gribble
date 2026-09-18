@@ -124,8 +124,8 @@ function renderRule(rule: RuleMeta): string {
 	return lines.join("\n");
 }
 
-/** Markdown body for docs/configuration/rules-reference.md (without frontmatter). */
-export function renderRulesReference(): string {
+/** Markdown body for docs/configuration/rules-reference.md (without frontmatter). `rules` defaults to the registry. */
+export function renderRulesReference(rules: readonly RuleMeta[] = RULES): string {
 	const out: string[] = [];
 	out.push("Every rule has an id of the form `category/name`. Set it in `.gribble/rules.yaml` to a severity");
 	out.push(
@@ -144,16 +144,17 @@ export function renderRulesReference(): string {
 	out.push("## Contents");
 	out.push("");
 	for (const category of RULE_CATEGORIES) {
-		const rules = RULES.filter((r) => r.category === category);
+		const inCategory = rules.filter((r) => r.category === category);
+		if (inCategory.length === 0) continue;
 		out.push(
-			`- **${CATEGORY_TITLES[category]}**: ${rules.map((r) => `[${r.id}](#${ruleAnchor(r.id)})`).join(", ")}`,
+			`- **${CATEGORY_TITLES[category]}**: ${inCategory.map((r) => `[${r.id}](#${ruleAnchor(r.id)})`).join(", ")}`,
 		);
 	}
 	out.push("");
-	for (const { category, rules } of rulesByCategory()) {
+	for (const { category, rules: inCategory } of rulesByCategory(rules)) {
 		out.push(`## ${CATEGORY_TITLES[category]}`);
 		out.push("");
-		for (const rule of rules) {
+		for (const rule of inCategory) {
 			out.push(renderRule(rule));
 		}
 	}

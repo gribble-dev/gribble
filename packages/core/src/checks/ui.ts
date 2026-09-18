@@ -1,6 +1,6 @@
 /**
  * ui/* and the layout-derived a11y/touch-target — placeholder copy, broken images, favicon,
- * overlap, horizontal overflow, clipped text, font sizes and design-token deviations.
+ * overlap, horizontal overflow, clipped text, font sizes, design-token deviations and empty lists.
  */
 import type { Finding } from "../report/schema.js";
 import { compilePatterns, report, ruleEnabled, ruleOptions, truncate } from "./finding.js";
@@ -89,7 +89,120 @@ function findBrokenImages(): BrokenImage[] {
 	return out;
 }
 
-/** ui/placeholder-text, ui/broken-images, ui/favicon, ui/overlap, ui/horizontal-overflow, ui/text-clipped, ui/min-font-size, ui/*-from-tokens, a11y/touch-target. */
+interface EmptyContainer {
+	tag: string;
+	role: string;
+	label: string;
+	selector: string;
+}
+
+/**
+ * Lists, tables and grids that render no items and carry no explanatory text inside or next to
+ * them. Anything hidden, loading, navigational or ambiguous is left alone. Runs in the page.
+ */
+function findEmptyContainers(input: { limit: number }): EmptyContainer[] {
+	const selectorFor = (el: Element): string => {
+		const testId = el.getAttribute("data-testid");
+		if (testId) return `[data-testid="${testId}"]`;
+		const id = el.getAttribute("id");
+		if (id) return `#${CSS.escape(id)}`;
+		const parts: string[] = [];
+		let node: Element | null = el;
+		while (node && node.tagName.toLowerCase() !== "body" && parts.length < 6) {
+			const parent: Element | null = node.parentElement;
+			if (!parent) break;
+			const same = Array.from(parent.children).filter((c) => c.tagName === node!.tagName);
+			parts.unshift(
+				same.length > 1
+					? `${node.tagName.toLowerCase()}:nth-of-type(${same.indexOf(node) + 1})`
+					: node.tagName.toLowerCase(),
+			);
+			node = parent;
+		}
+		return parts.join(" > ");
+	};
+	const isRendered = (el: Element): boolean => {
+		const rect = el.getBoundingClientRect();
+		if (rect.width <= 0 || rect.height <= 0) return false;
+		const check = (el as Element & { checkVisibility?: (options?: unknown) => boolean }).checkVisibility;
+		if (typeof check === "function") {
+			return check.call(el, { contentVisibilityAuto: true, opacityProperty: true, visibilityProperty: true });
+		}
+		const style = getComputedStyle(el);
+		return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+	};
+	/**
+	 * Visible text under `root`, skipping `except`, headings and header cells: a heading or a column
+	 * header names the list, it does not explain its emptiness.
+	 */
+	const visibleText = (root: Element, except?: Element): string => {
+		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+		let out = "";
+		let node = walker.nextNode();
+		while (node) {
+			const parent = node.parentElement;
+			const text = (node.textContent ?? "").replace(/\s+/g, " ").trim();
+			if (
+				text &&
+				parent &&
+				!except?.contains(parent) &&
+				!parent.closest(
+					'script, style, template, noscript, h1, h2, h3, h4, h5, h6, thead, th, caption, [role="columnheader"], [role="rowheader"]',
+				) &&
+				isRendered(parent)
+			) {
+				out += `${text} `;
+			}
+			node = walker.nextNode();
+		}
+		return out.trim();
+	};
+	const labelOf = (el: Element): string => {
+		const labelledBy = el.getAttribute("aria-labelledby");
+		const byId = labelledBy ? document.getElementById(labelledBy)?.textContent : undefined;
+		const caption = el.querySelector(":scope > caption")?.textContent;
+		return (el.getAttribute("aria-label") || byId || caption || "").replace(/\s+/g, " ").trim().slice(0, 60);
+	};
+	const itemsOf = (el: Element, tag: string, role: string): number => {
+		if (tag === "table") {
+			return Array.from(el.querySelectorAll("tr")).filter((tr) => !tr.closest("thead, tfoot")).length;
+		}
+		if (role === "grid" || role === "table") {
+			// Header rows hold column headers only; a data row has at least one cell.
+			return Array.from(el.querySelectorAll('[role="row"]')).filter((row) =>
+				row.querySelector('[role="gridcell"], [role="cell"], td'),
+			).length;
+		}
+		if (role === "list") return el.querySelectorAll('[role="listitem"], li').length;
+		return Array.from(el.children).filter((c) => c.tagName.toLowerCase() === "li").length;
+	};
+
+	const out: EmptyContainer[] = [];
+	const candidates = document.querySelectorAll('table, ul, ol, [role="list"], [role="grid"], [role="table"]');
+	for (const el of Array.from(candidates)) {
+		if (out.length >= input.limit) break;
+		const tag = el.tagName.toLowerCase();
+		const role = el.getAttribute("role") ?? "";
+		if ((tag === "ul" || tag === "ol") && role && role !== "list") continue;
+		if (
+			el.closest(
+				'nav, header, footer, [role="navigation"], [role="menu"], [role="menubar"], [role="tablist"], [aria-hidden="true"], [aria-busy="true"], template, [inert]',
+			)
+		)
+			continue;
+		if (!isRendered(el)) continue;
+		if (itemsOf(el, tag, role) > 0) continue;
+		// Text inside the container is its own empty state; text next to it (a sibling paragraph)
+		// counts as explanation too, headings excluded.
+		if (visibleText(el)) continue;
+		const parent = el.parentElement;
+		if (parent && parent !== document.body && visibleText(parent, el)) continue;
+		out.push({ tag, role, label: labelOf(el), selector: selectorFor(el) });
+	}
+	return out;
+}
+
+/** ui/placeholder-text, ui/broken-images, ui/favicon, ui/overlap, ui/horizontal-overflow, ui/text-clipped, ui/min-font-size, ui/*-from-tokens, ui/empty-state, a11y/touch-target. */
 export async function checkUi(ctx: CheckContext): Promise<Finding[]> {
 	const out: Finding[] = [];
 	const rules = [
@@ -102,9 +215,31 @@ export async function checkUi(ctx: CheckContext): Promise<Finding[]> {
 		"ui/min-font-size",
 		"ui/colors-from-tokens",
 		"ui/font-sizes-from-tokens",
+		"ui/spacing-from-tokens",
+		"ui/empty-state",
 		"a11y/touch-target",
 	];
 	if (!rules.some((r) => ruleEnabled(ctx, r))) return out;
+
+	if (ruleEnabled(ctx, "ui/empty-state")) {
+		const empty = await ctx.page.raw
+			.evaluate(findEmptyContainers, { limit: 10 })
+			.catch(() => [] as EmptyContainer[]);
+		for (const container of empty) {
+			const what = container.role ? `<${container.tag} role="${container.role}">` : `<${container.tag}>`;
+			const named = container.label ? `${what} "${truncate(container.label, 40)}"` : what;
+			const noun =
+				container.tag === "table" || container.role === "grid" || container.role === "table"
+					? "rows"
+					: "items";
+			report(ctx, out, "ui/empty-state", {
+				title: `${named} renders zero ${noun} and no empty state`,
+				message: `${named} on ${ctx.route} is visible, contains no ${noun}, and neither it nor its parent shows any text explaining why.`,
+				subject: container.selector,
+				location: { selector: container.selector },
+			});
+		}
+	}
 
 	if (ruleEnabled(ctx, "ui/placeholder-text")) {
 		const patterns = compilePatterns(
@@ -195,6 +330,7 @@ export async function checkUi(ctx: CheckContext): Promise<Finding[]> {
 		"ui/min-font-size",
 		"ui/colors-from-tokens",
 		"ui/font-sizes-from-tokens",
+		"ui/spacing-from-tokens",
 		"a11y/touch-target",
 	].some((r) => ruleEnabled(ctx, r));
 	if (!needsLayout) return out;
@@ -286,6 +422,18 @@ export async function checkUi(ctx: CheckContext): Promise<Finding[]> {
 				title: `font-size ${v.value} is not in the type scale`,
 				message: `"${truncate(v.text ?? v.selector, 40)}" renders at ${v.value}, which is not one of the project's font-size tokens.`,
 				subject: `font-size:${v.value}`,
+				location: { selector: v.selector },
+				evidence: { snippet: v.text },
+			});
+		}
+	}
+
+	if (ruleEnabled(ctx, "ui/spacing-from-tokens")) {
+		for (const v of snapshot.styles.filter((s) => s.kind === "spacing").slice(0, 15)) {
+			report(ctx, out, "ui/spacing-from-tokens", {
+				title: `${v.property} ${v.value} is not a spacing token`,
+				message: `"${truncate(v.text ?? v.selector, 40)}" renders with ${v.property}: ${v.value}, which is not in the project's spacing tokens.`,
+				subject: `${v.property}:${v.value}`,
 				location: { selector: v.selector },
 				evidence: { snippet: v.text },
 			});

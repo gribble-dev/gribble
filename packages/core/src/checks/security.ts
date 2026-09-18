@@ -1,5 +1,6 @@
 /**
- * security/* — transport, mixed content, leaked credentials, response headers, exposed source maps.
+ * security/* — transport, mixed content, leaked credentials, response headers, exposed source maps,
+ * POST forms without CSRF protection.
  */
 import type { Finding } from "../report/schema.js";
 import { report, ruleEnabled, ruleOptions, truncate } from "./finding.js";
@@ -35,7 +36,82 @@ export function maskSecret(value: string): string {
 	return `${value.slice(0, 6)}…${value.slice(-3)}`;
 }
 
-/** security/https-only, security/mixed-content, security/exposed-secrets, security/headers, security/sourcemaps-exposed. */
+interface PostForm {
+	selector: string;
+	action: string;
+	label: string;
+	hasToken: boolean;
+}
+
+interface FormScan {
+	metaToken: boolean;
+	forms: PostForm[];
+}
+
+/** Rendered POST forms and whether they carry a CSRF token. Runs in the page. */
+function collectPostForms(): FormScan {
+	const TOKEN = /csrf|xsrf|authenticity_token|_token\b|requestverificationtoken|antiforgery/i;
+	const selectorFor = (el: Element): string => {
+		const testId = el.getAttribute("data-testid");
+		if (testId) return `[data-testid="${testId}"]`;
+		const id = el.getAttribute("id");
+		if (id) return `#${CSS.escape(id)}`;
+		const parts: string[] = [];
+		let node: Element | null = el;
+		while (node && node.tagName.toLowerCase() !== "body" && parts.length < 6) {
+			const parent: Element | null = node.parentElement;
+			if (!parent) break;
+			const same = Array.from(parent.children).filter((c) => c.tagName === node!.tagName);
+			parts.unshift(
+				same.length > 1
+					? `${node.tagName.toLowerCase()}:nth-of-type(${same.indexOf(node) + 1})`
+					: node.tagName.toLowerCase(),
+			);
+			node = parent;
+		}
+		return parts.join(" > ") || "form";
+	};
+	const isRendered = (el: Element): boolean => {
+		const rect = el.getBoundingClientRect();
+		if (rect.width <= 0 || rect.height <= 0) return false;
+		const style = getComputedStyle(el);
+		return style.display !== "none" && style.visibility !== "hidden";
+	};
+	const metaToken = Array.from(document.querySelectorAll("meta[name][content]")).some(
+		(m) => TOKEN.test(m.getAttribute("name") ?? "") && (m.getAttribute("content") ?? "").trim().length > 0,
+	);
+	const forms: PostForm[] = [];
+	for (const form of Array.from(document.querySelectorAll("form"))) {
+		if ((form.getAttribute("method") ?? "get").trim().toLowerCase() !== "post") continue;
+		if (!isRendered(form)) continue;
+		// `form.action` can be shadowed by a field named "action"; read the attribute instead.
+		let action = "";
+		try {
+			action = new URL(form.getAttribute("action") ?? "", location.href).toString();
+		} catch {
+			continue;
+		}
+		const hasToken = Array.from(form.querySelectorAll('input[type="hidden"][name]')).some((input) =>
+			TOKEN.test(input.getAttribute("name") ?? ""),
+		);
+		const submit = form.querySelector('button[type="submit"], input[type="submit"], button:not([type])');
+		const label =
+			form.getAttribute("aria-label") ||
+			form.getAttribute("name") ||
+			form.getAttribute("id") ||
+			(submit instanceof HTMLInputElement ? submit.value : submit?.textContent) ||
+			"";
+		forms.push({
+			selector: selectorFor(form),
+			action,
+			label: label.replace(/\s+/g, " ").trim().slice(0, 60),
+			hasToken,
+		});
+	}
+	return { metaToken, forms };
+}
+
+/** security/https-only, security/mixed-content, security/exposed-secrets, security/headers, security/sourcemaps-exposed, security/form-without-csrf. */
 export async function checkSecurity(ctx: CheckContext): Promise<Finding[]> {
 	const out: Finding[] = [];
 	const rules = [
@@ -44,6 +120,7 @@ export async function checkSecurity(ctx: CheckContext): Promise<Finding[]> {
 		"security/exposed-secrets",
 		"security/headers",
 		"security/sourcemaps-exposed",
+		"security/form-without-csrf",
 	];
 	if (!rules.some((r) => ruleEnabled(ctx, r))) return out;
 
@@ -150,6 +227,35 @@ export async function checkSecurity(ctx: CheckContext): Promise<Finding[]> {
 					evidence: { url: mapUrl },
 					viewport: null,
 				});
+			}
+		}
+	}
+
+	if (ruleEnabled(ctx, "security/form-without-csrf")) {
+		const scan = await ctx.page.raw
+			.evaluate(collectPostForms)
+			.catch((): FormScan => ({ metaToken: false, forms: [] }));
+		if (scan.forms.length > 0 && !scan.metaToken) {
+			// Cookies that never travel with a cross-site POST make a token redundant.
+			const cookies = await ctx.page.raw
+				.context()
+				.cookies(ctx.page.url())
+				.catch(() => []);
+			const sameSite =
+				cookies.length > 0 && cookies.every((c) => c.sameSite === "Lax" || c.sameSite === "Strict");
+			const origin = targetOrigin(ctx);
+			if (!sameSite) {
+				for (const form of scan.forms.slice(0, 10)) {
+					if (form.hasToken || !sameOrigin(form.action, origin)) continue;
+					const path = new URL(form.action).pathname;
+					const what = form.label ? `Form "${truncate(form.label, 40)}"` : "Form";
+					report(ctx, out, "security/form-without-csrf", {
+						title: `${what} posts to ${truncate(path, 50)} without a CSRF token`,
+						message: `<form method="post"> on ${ctx.route} has no hidden token field (csrf, xsrf, authenticity_token, _token), the page has no CSRF meta tag, and ${cookies.length === 0 ? "no cookies were observed for the target" : "not every cookie for the target is SameSite=Lax or Strict"}.`,
+						subject: form.action,
+						location: { selector: form.selector },
+					});
+				}
 			}
 		}
 	}

@@ -141,6 +141,8 @@ export interface AuditPage {
 	resolveRef(ref: string): Promise<InteractiveElement | undefined>;
 	/** Document status and headers of the last `goto`. */
 	lastNavigation(): GotoResult | undefined;
+	/** Body of the last document response as served, undefined when there is none. Optional for fakes. */
+	documentSource?(): Promise<string | undefined>;
 	close(): Promise<void>;
 }
 

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Mixed cargo – Fixture Harbor</title>
+	<meta name="description" content="An English page with a large untranslated Chinese block and a subtree whose lang attribute lies.">
+	<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+	<nav aria-label="Main"><a href="/">Home</a> <a href="/about.html">About</a></nav>
+	<main>
+		<h1>Mixed cargo</h1>
+		<p>The harbor keeps a ledger of every crate that arrives, and the crew reads it aloud each morning before the tide turns.</p>
+		<p>Half of the ledger was never translated: the clerk copied it straight from the shipping manifest as it came in.</p>
+		<p data-testid="untranslated">港口的记录簿记载了每一个到达的板条箱，船员每天早上在潮水转向之前都会大声朗读。这一段从未被翻译过，书记员直接从货运清单上抄了下来。三只木蠹和一位非常有耐心的港务长一起守着这个小小的港口，每天清点货物，记录潮汐，等待下一艘船进港。</p>
+		<p>A short brand name like GitHub or iPhone inside a sentence does not count, and neither does 2024.</p>
+		<blockquote lang="ja" data-testid="wrong-lang">This quotation claims to be Japanese but is written entirely in English, which is exactly the kind of mistake the rule should notice.</blockquote>
+		<p><code>npm.run.build</code> and <span translate="no">日本語テキストは無視</span> are ignored.</p>
+	</main>
+</body>
+</html>

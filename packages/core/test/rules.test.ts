@@ -14,6 +14,21 @@ import {
 	unimplementedEnabledRules,
 } from "../src/index.js";
 
+/** Rules that shipped as `implemented: false` first and got their checkers later, with their severity untouched. */
+const FORMERLY_PLANNED = [
+	"a11y/focus-visible",
+	"a11y/keyboard-reachable",
+	"a11y/skip-link",
+	"a11y/reduced-motion",
+	"ui/spacing-from-tokens",
+	"ui/empty-state",
+	"html/deprecated-elements",
+	"html/valid",
+	"security/form-without-csrf",
+	"i18n/mixed-language",
+	"i18n/lang-mismatch",
+] as const;
+
 describe("registry", () => {
 	it("has every rule id exactly once", () => {
 		expect(RULES.map((r) => r.id)).toEqual([...RULE_IDS]);
@@ -30,28 +45,29 @@ describe("registry", () => {
 		}
 	});
 
-	it("implements the first-version set", () => {
+	it("has a checker for every rule, the formerly planned set included", () => {
 		expect(getRule("links/broken")?.implemented).toBe(true);
 		expect(getRule("a11y/axe")?.implemented).toBe(true);
-		expect(getRule("a11y/focus-visible")?.implemented).toBe(false);
-		expect(getRule("ui/empty-state")?.implemented).toBe(false);
 		expect(getRule("review/ux")?.implemented).toBe(true);
+		for (const id of FORMERLY_PLANNED)
+			expect({ id, implemented: getRule(id)?.implemented }).toEqual({ id, implemented: true });
+		expect(RULES.filter((rule) => !rule.implemented).map((rule) => rule.id)).toEqual([]);
 	});
 
-	it("keeps rules without a checker off in every built-in preset", () => {
-		const unimplemented = RULES.filter((rule) => !rule.implemented);
-		expect(unimplemented.length).toBeGreaterThan(0);
-		for (const preset of PRESET_IDS) {
-			for (const rule of unimplemented) {
-				const setting = PRESETS[preset][rule.id];
+	it("keeps the formerly planned rules off by default even though they run now", () => {
+		// The decision was to land the checkers without changing anyone's defaults: `off` in
+		// recommended and strict, and only the focused preset switches its own category on.
+		for (const id of FORMERLY_PLANNED) {
+			for (const preset of ["gribble:recommended", "gribble:strict", "gribble:seo"] as const) {
+				const setting = PRESETS[preset][id];
 				const severity = typeof setting === "string" ? setting : setting?.[0];
-				expect({ preset, rule: rule.id, severity }).toEqual({
-					preset,
-					rule: rule.id,
-					severity: "off",
-				});
+				expect({ preset, rule: id, severity }).toEqual({ preset, rule: id, severity: "off" });
 			}
+			const a11y = PRESETS["gribble:a11y"][id];
+			const severity = typeof a11y === "string" ? a11y : a11y?.[0];
+			expect({ rule: id, severity }).toEqual({ rule: id, severity: id.startsWith("a11y/") ? "warn" : "off" });
 		}
+		expect(PRESETS["gribble:recommended"]["html/valid"]).toEqual(["off", { ignore: [] }]);
 	});
 });
 
@@ -69,7 +85,7 @@ describe("presets", () => {
 		expect(rec["perf/regression"]).toEqual(["warn", { score: -5, lcpMs: 500, cls: 0.05, weightKb: 300 }]);
 		expect(rec["flows/replay"]).toBe("critical");
 		expect(rec["review/guidelines"]).toBe("warn");
-		// No checker yet, so the default install has nothing to warn about.
+		// Implemented, but kept off so a default install does not change with the checkers.
 		expect(rec["a11y/focus-visible"]).toBe("off");
 		expect(rec["a11y/keyboard-reachable"]).toBe("off");
 		expect(rec["html/deprecated-elements"]).toBe("off");
@@ -83,7 +99,7 @@ describe("presets", () => {
 		expect(strict["seo/twitter-card"]).toBe("off");
 		expect(strict["perf/tbt"]).toEqual(["warn", { maxMs: 200 }]);
 		expect(strict["review/ux"]).toBe("warn");
-		// `off` stays `off`, so a rule without a checker is not promoted either.
+		// `off` stays `off`; strict promotes warn to error, it does not switch rules on.
 		expect(strict["html/deprecated-elements"]).toBe("off");
 		expect(strict["a11y/focus-visible"]).toBe("off");
 		expect(strict["visual/regression"]).toEqual([
@@ -103,9 +119,14 @@ describe("presets", () => {
 			{ impact: ["critical", "serious"], tags: ["wcag2a", "wcag2aa"], disable: [] },
 		]);
 		expect(a11y["a11y/touch-target"]).toEqual(["warn", { minPx: 44 }]);
-		// Focusing on a category does not switch on a rule that has no checker yet.
-		expect(a11y["a11y/skip-link"]).toBe("off");
+		// Focusing on a category switches on the rules that are off in recommended, at warn,
+		// the same way seo/twitter-card is warn in gribble:seo.
+		expect(a11y["a11y/skip-link"]).toBe("warn");
+		expect(a11y["a11y/focus-visible"]).toBe("warn");
+		expect(a11y["a11y/keyboard-reachable"]).toBe("warn");
+		expect(a11y["a11y/reduced-motion"]).toBe("warn");
 		expect(a11y["seo/title"]).toBe("off");
+		expect(a11y["html/deprecated-elements"]).toBe("off");
 	});
 });
 
@@ -264,6 +285,18 @@ describe("resolveRules", () => {
 });
 
 describe("unimplemented rules", () => {
+	// Every registered rule has a checker, so the helper is exercised against a stubbed registry in
+	// which these five are still planned. The next planned rule will flow through the same code.
+	const PLANNED = new Set([
+		"a11y/keyboard-reachable",
+		"a11y/skip-link",
+		"html/deprecated-elements",
+		"html/valid",
+		"i18n/mixed-language",
+		"i18n/lang-mismatch",
+	]);
+	const lookup = (id: string) => (getRule(id) ? { implemented: !PLANNED.has(id) } : undefined);
+
 	it("lists enabled rules without a checker and formats one warning", () => {
 		const rules = resolveRules([
 			parseRulesConfig(
@@ -279,7 +312,7 @@ describe("unimplemented rules", () => {
 				].join("\n"),
 			),
 		]);
-		const ids = unimplementedEnabledRules(rules);
+		const ids = unimplementedEnabledRules(rules, lookup);
 		expect(ids).toEqual([
 			"a11y/keyboard-reachable",
 			"a11y/skip-link",
@@ -288,7 +321,8 @@ describe("unimplemented rules", () => {
 			"i18n/mixed-language",
 		]);
 		expect(ids).not.toContain("a11y/focus-visible");
-		for (const id of ids) expect(getRule(id)?.implemented).toBe(false);
+		// Against the real registry the same configuration has nothing to warn about.
+		expect(unimplementedEnabledRules(rules)).toEqual([]);
 		expect(formatUnimplementedRulesWarning(ids)).toBe(
 			"5 enabled rules have no checker yet and will not run: a11y/keyboard-reachable, a11y/skip-link, html/deprecated-elements, html/valid, i18n/mixed-language. Planned (accepted in rules.yaml, no checker yet); see gribble explain <rule>.",
 		);
@@ -300,10 +334,15 @@ describe("unimplemented rules", () => {
 	it("is silent for a default install", () => {
 		// What `gribble init` writes: no rule of its own, so the audit must have nothing to warn about.
 		for (const preset of PRESET_IDS) {
-			expect(unimplementedEnabledRules(resolveRules([parseRulesConfig(`extends: [${preset}]`)]))).toEqual([]);
+			const rules = resolveRules([parseRulesConfig(`extends: [${preset}]`)]);
+			expect(unimplementedEnabledRules(rules)).toEqual([]);
+			// gribble:a11y switches a11y/skip-link on, so a registry without its checker would warn.
+			expect(unimplementedEnabledRules(rules, lookup)).toEqual(
+				preset === "gribble:a11y" ? ["a11y/keyboard-reachable", "a11y/skip-link"] : [],
+			);
 		}
 		expect(formatUnimplementedRulesWarning([])).toBeUndefined();
-		expect(unimplementedEnabledRules(resolveRules([]))).toEqual([]);
+		expect(unimplementedEnabledRules(resolveRules([]), lookup)).toEqual([]);
 	});
 
 	it("is silent when every enabled rule has a checker", () => {
@@ -312,7 +351,7 @@ describe("unimplemented rules", () => {
 				"extends: [gribble:recommended]\nrules:\n  a11y/skip-link: off\n  html/valid: off\n  i18n/*: off\n",
 			),
 		]);
-		expect(unimplementedEnabledRules(rules)).toEqual([]);
+		expect(unimplementedEnabledRules(rules, lookup)).toEqual([]);
 	});
 
 	it("counts route overrides and lets the environment have the last word", () => {
@@ -321,7 +360,7 @@ describe("unimplemented rules", () => {
 				'overrides:\n  - routes: ["/admin/**"]\n    rules: { html/valid: error, i18n/*: warn }\n',
 			),
 		]);
-		expect(unimplementedEnabledRules(overridden)).toEqual([
+		expect(unimplementedEnabledRules(overridden, lookup)).toEqual([
 			"html/valid",
 			"i18n/mixed-language",
 			"i18n/lang-mismatch",
@@ -332,7 +371,8 @@ describe("unimplemented rules", () => {
 				rules: { "html/valid": "off", "a11y/*": "off", "a11y/skip-link": "warn" },
 			},
 		});
-		expect(unimplementedEnabledRules(env)).toEqual(["a11y/skip-link"]);
+		expect(unimplementedEnabledRules(env, lookup)).toEqual(["a11y/skip-link"]);
+		expect(unimplementedEnabledRules(env)).toEqual([]);
 	});
 });
 
@@ -344,8 +384,19 @@ describe("rendering", () => {
 		expect(md).toContain("## SEO");
 		expect(md).toContain('| `gribble:recommended` | `[warn, {"timeout":10000,"ignore":["linkedin.com"]}]` |');
 		expect(md).toContain("| `timeout` | integer | `10000` |");
-		expect(md).toContain("planned (accepted in rules.yaml, no checker yet)");
+		expect(md).toContain("**Status:** implemented · **Kind:** deterministic");
+		expect(md).not.toContain("planned (accepted in rules.yaml, no checker yet)");
 		for (const id of RULE_IDS) expect(md).toContain(`### ${id}`);
+	});
+
+	it("marks a rule without a checker as planned", () => {
+		const planned = { ...getRule("links/broken")!, implemented: false };
+		const md = renderRulesReference([planned]);
+		expect(md).toContain("### links/broken");
+		expect(md).toContain(
+			"**Status:** planned (accepted in rules.yaml, no checker yet) · **Kind:** deterministic",
+		);
+		expect(md).not.toContain("## SEO");
 	});
 
 	it("explains a rule and handles unknown ids", () => {
