@@ -30,7 +30,14 @@ export interface CheckContext {
 	onEvent?: (e: AuditEvent) => void;
 	shared?: SharedCheckState;
 	/** Lazily filled caches so checks do not repeat page work. */
-	cache?: { snapshot?: PageSnapshot; html?: string; text?: string; navigation?: GotoResult };
+	cache?: {
+		snapshot?: PageSnapshot;
+		html?: string;
+		/** Served document source, see `getSource`. */
+		source?: string;
+		text?: string;
+		navigation?: GotoResult;
+	};
 }
 
 export interface RouteCheckResult {

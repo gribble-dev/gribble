@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { getRule } from "@gribble/core";
 import { describe, expect, it } from "vitest";
 import { run } from "../src/index.js";
 import { testIo, withTempDir } from "./helpers.js";
@@ -90,9 +91,25 @@ describe("gribble explain", () => {
 		await withTempDir(async (dir) => {
 			await writeProject(dir);
 			const io = testIo({ cwd: dir });
-			expect(await run(["explain", "a11y/skip-link", "--env", "preview"], { context: io.context })).toBe(0);
-			expect(io.stdout.text).toContain("Status: planned, no checker yet");
+			// Every registered rule has a checker now; a stubbed registry stands in for the next planned one.
+			const planned = { ...getRule("a11y/skip-link")!, implemented: false };
+			const deps = {
+				context: io.context,
+				getRule: (id: string) => (id === planned.id ? planned : getRule(id)),
+			};
+			expect(await run(["explain", "a11y/skip-link", "--env", "preview"], deps)).toBe(0);
 			expect(io.stdout.text).toContain("  Effective: warn (no checker yet, so it will not run)");
+			expect(io.stdout.text).toContain("  Source: environments.preview.rules.a11y/skip-link");
+		});
+	});
+
+	it("prints the status of an implemented rule the project enables", async () => {
+		await withTempDir(async (dir) => {
+			await writeProject(dir);
+			const io = testIo({ cwd: dir });
+			expect(await run(["explain", "a11y/skip-link", "--env", "preview"], { context: io.context })).toBe(0);
+			expect(io.stdout.text).toContain("Status: implemented");
+			expect(io.stdout.text).toContain("\n  Effective: warn\n");
 			expect(io.stdout.text).toContain("  Source: environments.preview.rules.a11y/skip-link");
 		});
 	});

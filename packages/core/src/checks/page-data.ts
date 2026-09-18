@@ -50,6 +50,16 @@ export async function getHtml(ctx: CheckContext): Promise<string> {
 	return c.html;
 }
 
+/**
+ * The document as the server sent it, before the parser repaired it. Empty when the page wrapper
+ * cannot hand it over (a fake page, a navigation that failed, a body that was already consumed).
+ */
+export async function getSource(ctx: CheckContext): Promise<string> {
+	const c = cache(ctx);
+	if (c.source === undefined) c.source = (await ctx.page.documentSource?.().catch(() => undefined)) ?? "";
+	return c.source;
+}
+
 export async function getBodyText(ctx: CheckContext): Promise<string> {
 	const c = cache(ctx);
 	if (c.text === undefined) c.text = await ctx.page.text().catch(() => "");

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Smooth sailing – Fixture Harbor</title>
+	<meta name="description" content="A page with a skip link, visible focus styles, keyboard-reachable controls and motion that respects the user's preference.">
+	<link rel="stylesheet" href="/assets/site.css">
+	<style>
+		.skip { position: absolute; left: -9999px; }
+		.skip:focus { left: 8px; top: 8px; }
+		:focus-visible { outline: 3px solid #0a84ff; }
+		.fade { transition: opacity 0.3s; }
+		@keyframes pulse { to { opacity: 0.4; } }
+		@media (prefers-reduced-motion: no-preference) {
+			.pulse { animation: pulse 3s ease-in-out infinite alternate; }
+		}
+		.pulse { width: 24px; height: 24px; background: #999; }
+	</style>
+</head>
+<body>
+	<a href="#main" class="skip">Skip to content</a>
+	<header>
+		<nav aria-label="Main">
+			<a href="/">Home</a>
+			<a href="/about.html">About</a>
+			<a href="/holes.html">Holes</a>
+			<a href="/headings.html">Headings</a>
+			<a href="/untitled.html">Untitled</a>
+			<a href="/login.html">Login</a>
+			<a href="/wide.html">Wide</a>
+		</nav>
+	</header>
+	<main id="main">
+		<h1>Smooth sailing</h1>
+		<p class="fade">Everything here can be reached and seen with a keyboard.</p>
+		<button type="button" id="go">Go</button>
+		<div role="button" tabindex="0" data-testid="custom">Custom control</div>
+		<div class="pulse" data-testid="pulse"></div>
+	</main>
+</body>
+</html>

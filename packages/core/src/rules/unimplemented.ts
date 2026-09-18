@@ -1,13 +1,18 @@
 import type { ResolvedRules } from "../config/resolve.js";
 import { expandRuleWildcard, isRuleWildcard, RULE_IDS } from "./ids.js";
-import { getRule } from "./registry.js";
+import { getRule, type RuleMeta } from "./registry.js";
 
 /**
  * Rules that are switched on (base setting or any route override) but whose registry entry has
  * no checker yet (`implemented: false`), in registry order. They validate and resolve like any other
  * rule and then produce nothing, so the audit warns about them instead of staying silent.
+ * `lookup` defaults to the registry; tests pass a stub so the helper stays covered while every
+ * registered rule has a checker.
  */
-export function unimplementedEnabledRules(rules: ResolvedRules): string[] {
+export function unimplementedEnabledRules(
+	rules: ResolvedRules,
+	lookup: (id: string) => Pick<RuleMeta, "implemented"> | undefined = getRule,
+): string[] {
 	const enabled = new Set<string>();
 	for (const entry of rules.entries()) enabled.add(entry.id);
 	for (const override of rules.overrides) {
@@ -31,7 +36,7 @@ export function unimplementedEnabledRules(rules: ResolvedRules): string[] {
 			else enabled.add(id);
 		}
 	}
-	return RULE_IDS.filter((id) => enabled.has(id) && getRule(id)?.implemented === false);
+	return RULE_IDS.filter((id) => enabled.has(id) && lookup(id)?.implemented === false);
 }
 
 /** One warn line for audit startup naming the enabled rules that will not run; undefined when there are none. */

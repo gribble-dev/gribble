@@ -6,6 +6,8 @@ import type {
 	AuditEvent,
 	BrowserSession,
 	CheckContext,
+	DesignTokens,
+	Finding,
 	ProjectContext,
 	RouteCheckResult,
 } from "../src/index.js";
@@ -230,7 +232,16 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		const rules = result.findings.map((f) => f.rule);
 		expect(rules.filter((r) => /^(html|seo|a11y|links|ui|i18n)\//.test(r))).toEqual([]);
 		const notRun = result.notRun ?? [];
-		expect(notRun.map((n) => n.rule)).toEqual(["html/*", "seo/*", "links/*", "ui/*", "i18n/*", "a11y/*"]);
+		// a11y/* appears twice: once for axe and once for the focus, keyboard and motion rules.
+		expect(notRun.map((n) => n.rule)).toEqual([
+			"html/*",
+			"seo/*",
+			"links/*",
+			"ui/*",
+			"i18n/*",
+			"a11y/*",
+			"a11y/*",
+		]);
 		for (const entry of notRun) {
 			expect(entry.route).toBe("/sitemap.xml");
 			expect(entry.reason).toBe("response is application/xml, not an HTML document; page rules skipped");
@@ -339,6 +350,227 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		expect(findings.map((f) => f.rule)).not.toContain("seo/robots-txt");
 		expect(findings.map((f) => f.rule)).not.toContain("seo/duplicate-title");
 	}, 90_000);
+});
+
+const PLANNED_RULES = [
+	"a11y/focus-visible",
+	"a11y/keyboard-reachable",
+	"a11y/skip-link",
+	"a11y/reduced-motion",
+	"ui/spacing-from-tokens",
+	"ui/empty-state",
+	"html/deprecated-elements",
+	"html/valid",
+	"security/form-without-csrf",
+	"i18n/mixed-language",
+	"i18n/lang-mismatch",
+];
+
+const NO_TOKENS: DesignTokens = { colors: new Set(), fontSizes: new Set(), spacing: new Set(), sources: [] };
+
+describe.skipIf(!hasChromium())(`formerly planned rules (${SKIP_BROWSER_REASON})`, () => {
+	let site: FixtureSite;
+	let browser: BrowserSession;
+	let dir: string;
+	let project: ProjectContext;
+
+	/** Run one route with only the eleven rules on (no preset), optionally with different settings. */
+	async function run(
+		path: string,
+		opts: { rules?: string; tokens?: DesignTokens } = {},
+	): Promise<RouteCheckResult> {
+		const page = await browser.newPage({ viewport: "desktop" });
+		const ctx: CheckContext = {
+			project: opts.rules
+				? await makeProject({ url: site.url, targetDir: dir, rulesYaml: opts.rules })
+				: project,
+			page,
+			route: path,
+			url: `${site.url}${path}`,
+			viewport: "desktop",
+			targetName: "",
+			runDir: join(dir, "run"),
+			tokens: opts.tokens ?? NO_TOKENS,
+			shared: { links: new LinkCache(), reportedOnce: new Set() },
+		};
+		try {
+			return await runRouteChecks(ctx, { lighthouse: false, screenshot: false });
+		} finally {
+			await page.close();
+		}
+	}
+
+	const only = (result: RouteCheckResult, rule: string) => result.findings.filter((f) => f.rule === rule);
+	const kindOf = (f: Finding) => (f.evidence?.data as { kind?: string } | undefined)?.kind;
+
+	beforeAll(async () => {
+		site = await startFixtureSite();
+		dir = await mkdtemp(join(tmpdir(), "gribble-planned-"));
+		project = await makeProject({
+			url: site.url,
+			targetDir: dir,
+			rulesYaml: `rules:\n${PLANNED_RULES.map((r) => `  ${r}: warn`).join("\n")}\n`,
+		});
+		browser = await launchBrowser({ project, headless: true });
+	}, 60_000);
+
+	afterAll(async () => {
+		await browser?.close();
+		await site?.close();
+		await rm(dir, { recursive: true, force: true });
+	});
+
+	it("runs every one of them on an HTML route", async () => {
+		const events: AuditEvent[] = [];
+		const page = await browser.newPage({ viewport: "desktop" });
+		const ctx: CheckContext = {
+			project,
+			page,
+			route: "/a11y.html",
+			url: `${site.url}/a11y.html`,
+			viewport: "desktop",
+			targetName: "",
+			runDir: join(dir, "run"),
+			shared: { links: new LinkCache(), reportedOnce: new Set() },
+			onEvent: (e) => events.push(e),
+		};
+		const result = await runRouteChecks(ctx, { lighthouse: false, screenshot: false });
+		expect(result.notRun).toEqual([]);
+		const ended = events.filter((e): e is CheckEnd => e.type === "check:end");
+		expect(ended.filter((e) => e.rule === "a11y/*")).toHaveLength(2);
+		expect(ended.every((e) => e.ok)).toBe(true);
+		// focus-visible moves focus and reduced-motion emulates media; both are undone afterwards.
+		expect(await page.raw.evaluate(() => document.activeElement === document.body)).toBe(true);
+		expect(await page.raw.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(false);
+		await page.close();
+	}, 60_000);
+
+	it("finds missing focus styles, mouse-only controls, the missing skip link and motion that ignores the preference", async () => {
+		const result = await run("/a11y.html");
+		expect(only(result, "a11y/keyboard-reachable").map((f) => f.subject)).toEqual([
+			'[data-testid="mouse-card"]',
+			'[data-testid="fake-button"]',
+			'[data-testid="unreachable"]',
+			'[data-testid="jumpy"]',
+		]);
+		const focus = only(result, "a11y/focus-visible");
+		expect(focus.map((f) => f.location?.selector)).toEqual(["#no-ring"]);
+		expect(focus[0]?.title).toContain("No focus ring");
+		const skip = only(result, "a11y/skip-link");
+		expect(skip).toHaveLength(1);
+		expect(skip[0]?.subject).toBe("missing");
+		expect(skip[0]?.message).toContain("7 tabbable elements");
+		expect(only(result, "a11y/reduced-motion").map((f) => f.subject)).toEqual([
+			"animation:spin",
+			"transition:transform",
+		]);
+		expect(result.findings.map((f) => f.location?.selector)).not.toContain('[data-testid="safe"]');
+	}, 60_000);
+
+	it("stays quiet on a page with a skip link, focus styles, reachable controls and guarded motion", async () => {
+		const result = await run("/a11y-clean.html");
+		expect(result.findings.map((f) => f.rule).filter((r) => r.startsWith("a11y/"))).toEqual([]);
+		// Two leading links are not enough navigation to need a skip link.
+		expect(only(await run("/holes.html"), "a11y/skip-link")).toEqual([]);
+	}, 60_000);
+
+	it("reports obsolete markup and the structural errors in the served source", async () => {
+		const result = await run("/markup.html");
+		expect(only(result, "html/deprecated-elements").map((f) => f.subject)).toEqual([
+			"center",
+			"font",
+			"marquee",
+			"td[align]",
+			"table[cellpadding]",
+			"td[valign]",
+		]);
+		expect(only(result, "html/deprecated-elements")[0]?.location?.selector).toBe("#old-center");
+		const valid = only(result, "html/valid");
+		const kinds = new Set(valid.map((f) => kindOf(f)));
+		expect([...kinds].sort()).toEqual([
+			"block-in-p",
+			"duplicate-attribute",
+			"list-child",
+			"nested-a",
+			"self-closing",
+			"stray-end-tag",
+			"unclosed",
+		]);
+		expect(valid.find((f) => kindOf(f) === "duplicate-attribute")?.location?.path).toBe("document:26");
+		expect(valid.some((f) => f.message.includes("<script"))).toBe(false);
+
+		const ignored = await run("/markup.html", {
+			rules: "rules:\n  html/valid: [warn, { ignore: ['appears more than once', '/no matching open/'] }]\n",
+		});
+		const remaining = new Set(only(ignored, "html/valid").map((f) => kindOf(f)));
+		expect(remaining.has("duplicate-attribute")).toBe(false);
+		expect(remaining.has("stray-end-tag")).toBe(false);
+		expect(remaining.has("unclosed")).toBe(true);
+	}, 60_000);
+
+	it("keeps html/valid and html/deprecated-elements quiet on well-formed pages", async () => {
+		for (const path of ["/", "/holes.html", "/login.html", "/about.html"]) {
+			const result = await run(path);
+			expect({
+				path,
+				rules: result.findings.map((f) => f.rule).filter((r) => r.startsWith("html/")),
+			}).toEqual({
+				path,
+				rules: [],
+			});
+		}
+	}, 60_000);
+
+	it("flags a same-origin POST form without a token and leaves protected, external and GET forms alone", async () => {
+		const result = await run("/forms.html");
+		const csrf = only(result, "security/form-without-csrf");
+		expect(csrf.map((f) => f.location?.selector)).toEqual(["#unprotected"]);
+		expect(csrf[0]?.subject).toBe(`${site.url}/comments`);
+		expect(only(await run("/login.html"), "security/form-without-csrf")).toEqual([]);
+	}, 60_000);
+
+	it("tells a mixed page from a mislabelled one and reads the locale from the URL", async () => {
+		const mixed = await run("/mixed.html");
+		const mix = only(mixed, "i18n/mixed-language");
+		expect(mix).toHaveLength(1);
+		expect(mix[0]?.subject).toBe("latin+cjk");
+		expect(mix[0]?.message).toContain('<html lang="en">');
+		expect(only(mixed, "i18n/lang-mismatch").map((f) => f.location?.selector)).toEqual([
+			'[data-testid="wrong-lang"]',
+		]);
+
+		const zh = await run("/zh.html");
+		expect(only(zh, "i18n/mixed-language")).toEqual([]);
+		expect(only(zh, "i18n/lang-mismatch").map((f) => f.subject)).toEqual(["html:en"]);
+
+		const de = await run("/de/index.html");
+		expect(only(de, "i18n/lang-mismatch").map((f) => f.subject)).toEqual(["route:de"]);
+		expect(only(de, "i18n/lang-mismatch")[0]?.suggestion).toContain('lang="de"');
+
+		const home = await run("/");
+		expect(home.findings.map((f) => f.rule).filter((r) => r.startsWith("i18n/"))).toEqual([]);
+	}, 60_000);
+
+	it("reports empty tables and lists without an explanation and skips the explained, loading and navigational ones", async () => {
+		const result = await run("/empty.html");
+		expect(only(result, "ui/empty-state").map((f) => f.subject)).toEqual(["#orders", "#crates"]);
+		expect(only(result, "ui/empty-state")[0]?.title).toContain('"Orders"');
+	}, 60_000);
+
+	it("compares margins and paddings with the spacing tokens and allows the browser defaults", async () => {
+		const tokens: DesignTokens = { ...NO_TOKENS, spacing: new Set(["8", "24", "4", "13"]) };
+		const result = await run("/spacing.html", { tokens });
+		const spacing = only(result, "ui/spacing-from-tokens");
+		expect(spacing.length).toBeGreaterThan(0);
+		// 16px on the box is off the scale; the 16px default margin of <p> and the 8px nav gap are not.
+		expect(spacing.map((f) => f.location?.selector)).toEqual(
+			spacing.map(() => expect.stringMatching(/^\[data-testid="(on|off)"\]$/)),
+		);
+		expect(spacing.map((f) => f.subject)).toContain("margin-top:16px");
+		expect(spacing.map((f) => f.subject)).toContain("padding-top:7px");
+		expect(spacing.map((f) => f.subject)).not.toContain("margin-top:13px");
+		expect(only(await run("/spacing.html"), "ui/spacing-from-tokens")).toEqual([]);
+	}, 60_000);
 });
 
 describe.skipIf(!hasChromium() || process.env.GRIBBLE_TEST_LIGHTHOUSE !== "1")(

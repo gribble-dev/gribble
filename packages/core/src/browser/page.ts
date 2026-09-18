@@ -41,6 +41,7 @@ export class PlaywrightAuditPage implements AuditPage {
 	private requestLog: RequestRecord[] = [];
 	private lastSnapshot = new Map<string, InteractiveElement>();
 	private lastGoto: GotoResult | undefined;
+	private lastResponse: Response | undefined;
 	private readonly onClose: () => Promise<void>;
 
 	constructor(opts: {
@@ -127,6 +128,7 @@ export class PlaywrightAuditPage implements AuditPage {
 		let result: GotoResult;
 		try {
 			const response = await this.raw.goto(url, { waitUntil, timeout: opts.timeoutMs ?? 30_000 });
+			this.lastResponse = response ?? undefined;
 			if (waitUntil === "load") {
 				// Give SPAs a moment to settle without waiting for long-polling connections.
 				await this.raw.waitForLoadState("networkidle", { timeout: 3_000 }).catch(() => {});
@@ -138,10 +140,16 @@ export class PlaywrightAuditPage implements AuditPage {
 				headers: response ? lowerHeaders(response.headers()) : undefined,
 			};
 		} catch (err) {
+			this.lastResponse = undefined;
 			result = { ok: false, finalUrl: this.raw.url(), error: (err as Error).message };
 		}
 		this.lastGoto = result;
 		return result;
+	}
+
+	async documentSource(): Promise<string | undefined> {
+		if (!this.lastResponse) return undefined;
+		return this.lastResponse.text().catch(() => undefined);
 	}
 
 	private locatorFor(target: string): Locator {

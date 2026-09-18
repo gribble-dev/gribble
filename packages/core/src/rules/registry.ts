@@ -493,20 +493,18 @@ const defs: RuleDef[] = [
 		id: "a11y/focus-visible",
 		summary: "Focused elements must be visibly focused.",
 		description:
-			"Tabs through interactive elements and reports those whose computed style does not change on focus (outline removed with no replacement).",
-		// No checker yet, so it is off by default; restore `warn` when the checker lands.
+			"Focuses each visible interactive element and reports those whose computed style (outline, box-shadow, border, background, color, text-decoration, pseudo-elements) does not change at all on focus. Off by default; elements the browser would not paint a focus ring for anyway are skipped.",
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: "Do not remove `outline` without providing a `:focus-visible` style.",
 	},
 	{
 		id: "a11y/keyboard-reachable",
 		summary: "Every interactive element must be reachable with Tab.",
 		description:
-			"Compares the set of clickable elements with the set reached by tabbing through the page; elements that are only mouse-reachable are reported.",
-		// No checker yet, so it is off by default; restore `warn` when the checker lands.
+			'Reports controls that cannot be reached with Tab: elements with `onclick` or `role="button"`/`role="link"` on a non-focusable tag without `tabindex`, native controls forced to `tabindex="-1"` outside a roving-tabindex widget, and positive `tabindex` values that break document order. Off by default.',
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: 'Use native buttons and links, or add tabindex="0" and key handlers to custom controls.',
 	},
 	{
@@ -535,18 +533,18 @@ const defs: RuleDef[] = [
 		id: "a11y/skip-link",
 		summary: "Pages need a skip-to-content link.",
 		description:
-			"Reports pages whose first focusable element is not a link to the main content. Off by default.",
+			'Reports pages whose first tabbable element is not a same-page link to an existing target, when at least five tabbable elements come before the main content (`<main>`, `[role="main"]` or the first `<h1>`). Off by default.',
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: 'Add <a href="#main" class="skip-link">Skip to content</a> as the first element in `<body>`.',
 	},
 	{
 		id: "a11y/reduced-motion",
 		summary: "Animations must respect prefers-reduced-motion.",
 		description:
-			"Reports CSS animations and transitions longer than a threshold that still run under `prefers-reduced-motion: reduce`. Off by default.",
+			"Emulates `prefers-reduced-motion: reduce` and reports visible elements whose CSS animation is infinite or runs for at least one second in total, and transitions of at least one second on motion properties (`transform`, `translate`, offsets, `all`), that are still active under it. Off by default.",
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: "Wrap animations in `@media (prefers-reduced-motion: no-preference)`.",
 	},
 	// ----------------------------------------------------------------- perf
@@ -732,9 +730,9 @@ const defs: RuleDef[] = [
 		id: "ui/spacing-from-tokens",
 		summary: "Margins and paddings must come from the spacing scale.",
 		description:
-			"Compares computed margin and padding values with the project's spacing tokens. Off by default because it is noisy.",
+			"Compares computed margin and padding values with the project's spacing tokens (Tailwind `spacing`, `@theme` lengths, `--spacing-*`/`--space-*`/`--gap*`/`--size-*` custom properties). Zero, `auto` and the browser's own default margins for an element are always allowed; quiet when the project declares no spacing tokens. Off by default because it is noisy.",
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: "Use a spacing token.",
 	},
 	{
@@ -829,9 +827,9 @@ const defs: RuleDef[] = [
 		id: "ui/empty-state",
 		summary: "Lists and tables with zero rows need an empty state.",
 		description:
-			"Reports list and table containers that render no rows and no explanatory text. Off by default.",
+			'Reports visible `<table>`, `<ul>`, `<ol>`, `[role="list"]`, `[role="grid"]` and `[role="table"]` containers that render zero rows or items and no explanatory text inside or next to them. Navigation and menu lists, hidden and `aria-busy` containers are skipped. Off by default.',
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: "Render a short empty-state message with a next step.",
 	},
 	{
@@ -910,17 +908,17 @@ const defs: RuleDef[] = [
 	{
 		id: "html/deprecated-elements",
 		summary: "No deprecated HTML elements.",
-		description: "Reports `<center>`, `<font>`, `<marquee>`, `<frame>` and other obsolete elements.",
-		// No checker yet, so it is off by default; restore `warn` when the checker lands.
+		description:
+			"Reports `<center>`, `<font>`, `<marquee>`, `<frame>` and other obsolete elements, and obsolete presentational attributes such as `align`, `bgcolor`, `cellpadding` and `valign`.",
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: "Replace the element with semantic HTML and CSS.",
 	},
 	{
 		id: "html/valid",
 		summary: "Markup must validate.",
 		description:
-			"Runs an HTML validator on each document. Noisy on most real sites, so it is off by default; `ignore` takes validator message patterns.",
+			"Runs a structural check over the served document source (no network validator): stray and mismatched end tags, unclosed elements, duplicate attributes, self-closing syntax on non-void elements, nested links, list children that are not `<li>` and block content inside `<p>`. Noisy on most real sites, so it is off by default; `ignore` takes message patterns.",
 		options: {
 			schema: Type.Object(
 				{ ignore: stringList("Validator message patterns to ignore.", []) },
@@ -929,7 +927,7 @@ const defs: RuleDef[] = [
 			defaults: { ignore: [] },
 		},
 		recommended: ["off", { ignore: [] }],
-		implemented: false,
+		implemented: true,
 		fix: "Fix the reported markup errors.",
 	},
 	// ------------------------------------------------------------- security
@@ -997,9 +995,9 @@ const defs: RuleDef[] = [
 		id: "security/form-without-csrf",
 		summary: "State-changing forms need CSRF protection.",
 		description:
-			"Reports POST forms without a hidden token field or a same-site cookie policy. Off by default because frameworks differ.",
+			"Reports same-origin POST forms without a hidden token field (`csrf`, `xsrf`, `authenticity_token`, `_token`, `__RequestVerificationToken`, `antiforgery`) and no CSRF `<meta>` tag, unless every cookie the browser holds for the target is `SameSite=Lax` or `Strict`. Off by default because frameworks differ.",
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: "Add a CSRF token to the form or rely on SameSite cookies plus origin checks.",
 	},
 	// ----------------------------------------------------------------- i18n
@@ -1027,18 +1025,18 @@ const defs: RuleDef[] = [
 		id: "i18n/mixed-language",
 		summary: "A page must not mix languages.",
 		description:
-			"Detects the language of text blocks and reports pages with a significant share in a second language. Off by default.",
+			"Groups the visible text by Unicode script family and reports pages where a second script holds at least a fifth of the letters. Short strings, code, numerals and subtrees with their own `lang` are ignored; two languages in the same script (English inside German) are not detected. Off by default.",
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: "Translate the remaining strings.",
 	},
 	{
 		id: "i18n/lang-mismatch",
 		summary: "The declared html lang must match the content language.",
 		description:
-			"Compares the `lang` attribute with the detected language of the visible text. Off by default.",
+			"Reports a locale segment in the URL (`/de/…`, `/zh-CN/…`) that disagrees with `<html lang>`, and a `lang` attribute (on `<html>` or a subtree) whose visible text is almost entirely in another Unicode script family. Off by default.",
 		recommended: "off",
-		implemented: false,
+		implemented: true,
 		fix: "Set `lang` to the language the page is actually written in.",
 	},
 	// ---------------------------------------------------------------- flows
@@ -1193,9 +1191,11 @@ export function getRule(id: string): RuleMeta | undefined {
 }
 
 /** Rules grouped by category, in category order. */
-export function rulesByCategory(): Array<{ category: RuleCategory; rules: RuleMeta[] }> {
+export function rulesByCategory(
+	rules: readonly RuleMeta[] = RULES,
+): Array<{ category: RuleCategory; rules: RuleMeta[] }> {
 	const groups = new Map<RuleCategory, RuleMeta[]>();
-	for (const rule of RULES) {
+	for (const rule of rules) {
 		const list = groups.get(rule.category) ?? [];
 		list.push(rule);
 		groups.set(rule.category, list);

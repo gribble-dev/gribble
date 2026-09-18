@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Empty holds – Fixture Harbor</title>
+	<meta name="description" content="Lists and tables with zero rows, some of them explained and some of them not.">
+	<link rel="stylesheet" href="/assets/site.css">
+	<style>
+		.list { min-height: 40px; border: 1px solid #ccc; }
+		table { border-collapse: collapse; }
+		th, td { border: 1px solid #ccc; padding: 4px; }
+	</style>
+</head>
+<body>
+	<nav aria-label="Main"><a href="/">Home</a><ul></ul></nav>
+	<main>
+		<h1>Empty holds</h1>
+		<section>
+			<h2>Orders</h2>
+			<table id="orders" aria-label="Orders">
+				<thead><tr><th>Order</th><th>Total</th></tr></thead>
+				<tbody></tbody>
+			</table>
+		</section>
+		<section>
+			<h2>Crates</h2>
+			<ul class="list" id="crates"></ul>
+		</section>
+		<section>
+			<h2>Passengers</h2>
+			<ul class="list" id="passengers"></ul>
+			<p>No passengers booked yet. Add one to get started.</p>
+		</section>
+		<section>
+			<h2>Manifest</h2>
+			<table id="manifest">
+				<thead><tr><th>Item</th></tr></thead>
+				<tbody><tr><td>Rope</td></tr></tbody>
+			</table>
+		</section>
+		<ul class="list" id="loading" aria-busy="true"></ul>
+		<ul id="collapsed"></ul>
+	</main>
+</body>
+</html>
