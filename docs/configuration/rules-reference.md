@@ -1539,7 +1539,7 @@ Reports subresources requested over http from an https document.
 
 Responses must include the required security headers.
 
-Checks the document response for each header listed in `require`.
+Checks the document response for each header listed in `require`. A `content-security-policy` delivered as `<meta http-equiv="content-security-policy">` in the document counts as present, as prerendered pages do; a meta policy cannot carry `frame-ancestors`, `report-uri` or `sandbox`, so cover framing with `X-Frame-Options` on the static asset. The other headers have no meta form. The rule does not run when the target is a loopback address (dev and preview servers do not carry production headers); the report lists it under `notRun` instead, so audit a deployed URL to exercise it.
 
 **Status:** implemented · **Kind:** deterministic
 

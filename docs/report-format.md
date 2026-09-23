@@ -221,11 +221,11 @@ A failed flow also produces a `flows/replay` finding. `flows[]` is the execution
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `rule` | string | The rule family that did not run, e.g. `perf/*` or `html/*`. |
+| `rule` | string | The rule family or rule that did not run, e.g. `perf/*`, `html/*` or `security/headers`. |
 | `route` | string? | The route it was skipped on. Absent for site-wide checks such as `site/*`. |
-| `reason` | string | Why: Lighthouse failed to start, the response was not HTML, a check threw. |
+| `reason` | string | Why: Lighthouse failed to start, the response was not HTML, the target is loopback, a check threw. |
 
-A check that never ran contributes no findings, so a clean `findings[]` alone cannot tell "perf passed" from "perf never executed". `notRun[]` records the difference: Lighthouse that could not start on a route, the page rules skipped on a non-HTML response such as a sitemap, or a check that threw. The list is omitted when everything ran. It does not affect `summary.gate`; whether an unexecuted check should fail the gate is a policy decision tracked separately.
+A check that never ran contributes no findings, so a clean `findings[]` alone cannot tell "perf passed" from "perf never executed". `notRun[]` records the difference: Lighthouse that could not start on a route, the page rules skipped on a non-HTML response such as a sitemap, `security/headers` skipped because the target is a loopback address (dev servers do not carry production headers), or a check that threw. The list is omitted when everything ran. It does not affect `summary.gate`; whether an unexecuted check should fail the gate is a policy decision tracked separately.
 
 ## Versioning
 

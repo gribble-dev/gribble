@@ -14,6 +14,7 @@ import type {
 import {
 	checkSiteWide,
 	compilePatterns,
+	HEADERS_LOOPBACK_REASON,
 	isHtmlMediaType,
 	LinkCache,
 	launchBrowser,
@@ -231,7 +232,8 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		expect(result.status).toBe(200);
 		const rules = result.findings.map((f) => f.rule);
 		expect(rules.filter((r) => /^(html|seo|a11y|links|ui|i18n)\//.test(r))).toEqual([]);
-		const notRun = result.notRun ?? [];
+		// The fixture serves on loopback, so security/headers records its own skip; see the next test.
+		const notRun = (result.notRun ?? []).filter((n) => n.rule !== "security/headers");
 		// a11y/* appears twice: once for axe and once for the focus, keyboard and motion rules.
 		expect(notRun.map((n) => n.rule)).toEqual([
 			"html/*",
@@ -257,11 +259,23 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		).toBe(true);
 	}, 60_000);
 
+	it("records security/headers as not run on a loopback target without failing the security checks", async () => {
+		events.length = 0;
+		const result = await run("/about.html");
+		expect(result.findings.map((f) => f.rule)).not.toContain("security/headers");
+		expect(result.notRun).toEqual([
+			{ rule: "security/headers", route: "/about.html", reason: HEADERS_LOOPBACK_REASON },
+		]);
+		const security = events.find((e) => e.type === "check:end" && e.rule === "security/*");
+		expect(security).toMatchObject({ ok: true, route: "/about.html" });
+	}, 60_000);
+
 	it("records perf/* as not run when Lighthouse cannot start", async () => {
 		events.length = 0;
 		const result = await run("/about.html", "desktop", { lighthouse: true, cdpPort: undefined });
 		expect(result.findings.map((f) => f.rule).filter((r) => r.startsWith("perf/"))).toEqual([]);
 		expect(result.notRun).toEqual([
+			{ rule: "security/headers", route: "/about.html", reason: HEADERS_LOOPBACK_REASON },
 			{
 				rule: "perf/*",
 				route: "/about.html",

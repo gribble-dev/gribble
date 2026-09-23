@@ -215,7 +215,7 @@ export const reportSchema = Type.Object(
 		notRun: Type.Optional(
 			Type.Array(notRunCheckSchema, {
 				description:
-					"Checks that could not run (Lighthouse failed, non-HTML response). Omitted when every check ran.",
+					"Checks that could not run (Lighthouse failed, non-HTML response, security/headers on a loopback target). Omitted when every check ran.",
 			}),
 		),
 		durationMs: Type.Number(),
