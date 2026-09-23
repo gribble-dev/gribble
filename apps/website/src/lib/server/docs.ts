@@ -57,8 +57,9 @@ function build(): DocPage[] {
 	const pages: DocPage[] = [];
 	for (const [path, raw] of Object.entries(modules)) {
 		const fileName = path.split("/").pop() ?? "";
-		// `_`-prefixed files are scratch/placeholder documents and are never published.
-		if (fileName.startsWith("_")) continue;
+		// `_`-prefixed files are scratch/placeholder documents, and `README.md` files are notes for
+		// contributors browsing the folder on GitHub; neither is published.
+		if (fileName.startsWith("_") || fileName === "README.md") continue;
 
 		const slug = toSlug(path);
 		const { frontmatter, body } = parseFrontmatter(raw);

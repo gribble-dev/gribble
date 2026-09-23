@@ -10,6 +10,14 @@ The GitHub Action wraps `gribble audit --ci` and does the GitHub-shaped work aro
 uses: gribble-dev/action@v1
 ```
 
+```prompt
+Add the Gribble GitHub Action to this repository: audit every pull request and comment on new findings, refresh the baseline on pushes to main, and read the model provider API key from a repository secret.
+```
+
+Your agent writes the workflow file; it cannot create the secret. Add the API key yourself under the repository's **Settings → Secrets and variables → Actions**, with the name the workflow expects. A key pasted into a workflow file is a key published to everyone who can read the repository.
+
+Or by hand:
+
 ## A complete workflow
 
 Two jobs. Pull requests get audited and commented on; pushes to the default branch refresh the baseline.
@@ -104,6 +112,10 @@ A few choices in there worth explaining.
 | `fail-on` | `critical` \| `error` \| `warn` \| `none` | `error` | Lowest severity of a **new** finding that fails the step. |
 | `github-token` | string | `${{ github.token }}` | Token used for comments, checks and baseline commits. |
 | `report-artifact` | boolean | `true` | Upload the run directory as a workflow artifact. |
+
+```prompt
+Set the Gribble action to fail-on none while we roll it out, so findings are still reported and commented on but no build fails.
+```
 
 `fail-on: none` is the right setting while you are rolling Gribble out: everything still gets reported, commented on and uploaded, but nobody's build breaks while the team gets used to it. Tighten to `error` once the baseline is honest.
 
@@ -271,6 +283,10 @@ Use a dedicated test account on staging with no real data, never a production ac
 Values of variables named in auth profiles are redacted from session logs, reports and comments before anything is written.
 
 ## Preview deployments
+
+```prompt
+Change the Gribble workflow to audit our Vercel preview deployment instead of starting the dev server: wait for the deployment, then pass its URL as PREVIEW_URL.
+```
 
 To audit a Vercel or Netlify preview instead of starting a dev server, define an environment in `gribble.yaml`:
 

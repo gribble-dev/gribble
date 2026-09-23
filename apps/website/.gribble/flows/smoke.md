@@ -2,8 +2,9 @@
 name: smoke
 ---
 
-Open the home page and check that the hero, the three install steps and the mocked pull request
-comment are all present.
+Open the home page and check that the hero with its copyable setup prompt, the example agent
+conversation, the "Prefer the keyboard?" install commands and the mocked pull request comment are
+all present. Switch the conversation to another example and confirm its messages change.
 
 Follow the "Docs" link in the header. The sidebar should list at least one section, and every
 entry in it should open a page with a heading and body text.

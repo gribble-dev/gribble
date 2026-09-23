@@ -122,7 +122,11 @@ That last row is the diff-not-score principle in its most concrete form. Your ex
 
 ## Suppression
 
-Two ways to make a finding go away without fixing it.
+Two ways to make a finding go away without fixing it. Both are decisions for a person. Your coding agent will propose them and explain the trade-off, but the [Gribble skill](/docs/skills) tells it never to suppress a finding on its own:
+
+```prompt
+Gribble flags the external link to our status page as broken, but it only fails from CI. Check whether it's a real problem, and if it isn't, tell me which fingerprint you would ignore and why instead of changing anything.
+```
 
 **Ignore one finding by fingerprint.** This is the precise tool — it suppresses exactly this problem on exactly this route, and a genuinely new instance elsewhere still gets reported.
 

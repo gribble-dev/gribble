@@ -22,6 +22,8 @@ Everything lives in the `.gribble/` directory next to the app being audited:
   runs/             audit output, gitignored; runs/latest.json is the newest report
 ```
 
+The full documentation for the installed version ships at `node_modules/gribble/docs/` (same pages as https://gribble.dev/docs). Read it there before guessing at a flag or a field.
+
 ## Fix findings
 
 ### 1. Read the report
@@ -111,7 +113,7 @@ Re-read `.gribble/runs/latest.json` after the run and confirm the fingerprints y
   ```
 
   That appends the fingerprint to `ignore:` in `rules.yaml` and leaves the rule on for everything else. Turning a rule `off` or lowering its severity is a team decision — propose it, explain the trade-off, and let the user decide.
-- Never hand-edit anything under `.gribble/baseline/`. It is a machine-written snapshot of the known state on the main branch; editing it corrupts the new/existing/fixed diff. It is refreshed by `gribble baseline update` or `gribble audit --update-baseline`.
+- Never hand-edit anything under `.gribble/baseline/`. It is a machine-written snapshot of the known state on the main branch; editing it corrupts the new/existing/fixed diff. It is refreshed by `gribble baseline update` or `gribble audit --update-baseline` — and only when the user asks for it. Re-baselining to make a failing gate pass hides the regression instead of fixing it.
 - Never edit files under `.gribble/runs/` — they are regenerated on every audit and gitignored.
 
 ## Write flows
@@ -296,3 +298,10 @@ The unit is one `.gribble/` per app (`apps/web/.gribble/`, `apps/docs/.gribble/`
 - The root `.gribble/` holds only shared rules and guidelines — no `target`.
 
 Put a convention that applies to every app at the root; put app-specific thresholds, route overrides and flows in that app's `.gribble/`. Audit one app with `gribble audit --target apps/web` from the root, or `gribble audit --all` to sweep every `.gribble/` in the repo.
+
+### Setup and CI requests
+
+Not every request is a finding. For these, read the named page from the installed docs first and follow it.
+
+- **"Set up Gribble" / "re-run init".** Follow `node_modules/gribble/docs/agent-setup.md` (or https://gribble.dev/setup.md when Gribble is not installed yet). Only use a model id that `gribble models` printed. Do not run `gribble login` — it is interactive and stores a personal credential; ask the user to run it. If `.gribble/` already exists, ask before passing `--force` to `init`.
+- **"Add Gribble to CI".** Follow `node_modules/gribble/docs/ci-github-action.md` or `node_modules/gribble/docs/ci-gitlab.md`. Never commit a secret: API keys and test-account passwords go in the repository's secret store (GitHub Actions secrets, GitLab masked CI/CD variables), referenced by name from the workflow. You cannot create those secrets; tell the user which ones to add. Use `mode: gate` wherever no model key is available, and never move a personal subscription login into CI.

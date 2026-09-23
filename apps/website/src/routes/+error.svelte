@@ -9,7 +9,7 @@
 </svelte:head>
 
 <section class="wrap">
-	<Mascot size={96} title="A puzzled gribble" />
+	<Mascot size={120} wiggle title="A puzzled gribble" />
 	<h1>{page.status} — nothing to chew on here</h1>
 	<p>{page.error?.message ?? "That page is not on the map."}</p>
 	<p>
@@ -26,5 +26,9 @@
 		display: grid;
 		justify-items: start;
 		gap: var(--space-2);
+	}
+
+	h1 {
+		margin-top: var(--space-4);
 	}
 </style>

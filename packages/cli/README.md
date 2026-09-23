@@ -6,6 +6,14 @@ Tiny bugs that find your bugs before you ship.
 
 ## Install
 
+Tell your coding agent:
+
+```prompt
+Set up Gribble in this project by following https://gribble.dev/setup.md
+```
+
+It follows the [agent setup guide](https://gribble.dev/docs/agent-setup): install, `init`, first baseline, then it asks you which model to use. Or by hand:
+
 ```bash
 pnpm add -D gribble
 pnpm exec gribble install     # downloads the Playwright Chromium build

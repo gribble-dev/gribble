@@ -1,11 +1,28 @@
 <script lang="ts">
 	import { page } from "$app/state";
+	import { copyText } from "$lib/copy";
 	import "$lib/styles/markdown.css";
 	import type { LayoutProps } from "./$types";
 
 	let { data, children }: LayoutProps = $props();
 
 	let current = $derived(page.url.pathname.replace(/\/$/, "") || "/docs");
+	let ready = $state(false);
+
+	$effect(() => {
+		ready = true;
+	});
+
+	/** One delegated handler for every ```prompt card the Markdown renderer emitted. */
+	async function onClick(event: MouseEvent) {
+		const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>("button[data-copy-prompt]");
+		if (!button) return;
+		const text = button.closest(".prompt-card")?.querySelector<HTMLElement>(".prompt-text");
+		if (!text) return;
+		const copied = await copyText(text.textContent ?? "", text);
+		button.textContent = copied ? "Copied" : "Selected";
+		setTimeout(() => (button.textContent = "Copy"), 1800);
+	}
 </script>
 
 <div class="docs-shell">
@@ -34,7 +51,8 @@
 		</nav>
 	</aside>
 
-	<div class="content">
+	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+	<div class="content" class:copy-ready={ready} onclick={onClick}>
 		{@render children?.()}
 	</div>
 </div>
@@ -45,17 +63,20 @@
 		margin: 0 auto;
 		padding: var(--space-8) var(--space-4) var(--space-16);
 		display: grid;
-		grid-template-columns: 15rem minmax(0, 1fr);
-		gap: var(--space-8);
+		grid-template-columns: 15.5rem minmax(0, 1fr);
+		gap: var(--space-12);
 		align-items: start;
 	}
 
 	.sidebar {
 		position: sticky;
-		top: 4.5rem;
-		max-height: calc(100vh - 6rem);
+		top: 5rem;
+		max-height: calc(100vh - 6.5rem);
 		overflow-y: auto;
 		min-width: 0;
+		padding: var(--space-4);
+		background: var(--bg-water);
+		border-radius: var(--radius-lg);
 	}
 
 	.content {
@@ -68,11 +89,14 @@
 	}
 
 	.group-label {
-		font-size: 0.75rem;
+		font-family: var(--font-display);
+		font-size: 0.8rem;
+		font-weight: 600;
 		text-transform: uppercase;
-		letter-spacing: 0.09em;
+		letter-spacing: 0.06em;
 		color: var(--text-faint);
 		margin: 0 0 var(--space-2);
+		padding-left: var(--space-3);
 	}
 
 	.sidebar ul {
@@ -80,27 +104,29 @@
 		margin: 0;
 		padding: 0;
 		display: grid;
-		gap: 0.1rem;
+		gap: 0.15rem;
 	}
 
 	.sidebar a {
 		display: block;
-		padding: 0.28rem var(--space-2);
-		border-radius: var(--radius-sm);
+		padding: 0.32rem var(--space-3);
+		border-radius: var(--radius-pill);
+		border: 2px solid transparent;
 		color: var(--text-muted);
 		text-decoration: none;
-		font-size: 0.94rem;
+		font-size: 0.95rem;
 	}
 
 	.sidebar a:hover {
-		background: var(--bg-sunken);
+		background: var(--bg-raised);
 		color: var(--text);
 	}
 
 	.sidebar a[aria-current="page"] {
-		background: var(--accent-soft);
-		color: var(--accent);
-		font-weight: 600;
+		background: var(--bg-raised);
+		border-color: var(--outline);
+		color: var(--text);
+		font-weight: 650;
 	}
 
 	.empty {
@@ -117,8 +143,6 @@
 		.sidebar {
 			position: static;
 			max-height: none;
-			border-bottom: 1px solid var(--border);
-			padding-bottom: var(--space-4);
 		}
 	}
 </style>

@@ -51,6 +51,18 @@ And a sixth, less mechanical one: a recurring false positive usually means an am
 
 Development is also evaluated against a deliberately broken reference site with dozens of known defects, and every prompt or model change is measured on it for both recall and false positives.
 
+## Can I drive Gribble through my coding agent? Won't it just silence the findings?
+
+Yes, and that is how most people use it. `gribble init` installs a [skill](/docs/skills) for Claude Code, Cursor, pi, and any agent that reads the Agent Skills location, so ordinary requests work:
+
+```prompt
+Fix the new Gribble findings on the pricing page and verify with a gate audit.
+```
+
+The skill is explicit that silencing its critic is not the agent's call. It fixes the cause and re-runs the gate to prove it. When it thinks a finding is wrong, it says so and suggests the fingerprint-scoped `gribble ignore` for you to approve; it does not add `ignore` entries, turn rules `off`, lower severities, or touch `.gribble/baseline/` on its own. Those are decisions for a person, and they show up in the diff of a committed file where a reviewer can see them.
+
+If an agent does it anyway, treat it like any other bad change: reject the diff, and tell it why.
+
 ## Why doesn't the model look at screenshots by default?
 
 Because text beats pixels for almost everything.

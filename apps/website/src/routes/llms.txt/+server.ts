@@ -15,6 +15,10 @@ export const GET: RequestHandler = () => {
 		"Gribble is a CLI and GitHub Action. It boots the site under development, walks its routes and flows, and reports findings that point back at source files.",
 	);
 	lines.push("");
+	lines.push(
+		`To add Gribble to a project, follow the agent setup guide: ${site.url}/setup.md. It installs the CLI, runs \`gribble init\` non-interactively and stops to ask the user which model to use.`,
+	);
+	lines.push("");
 
 	const groups = docGroups();
 	if (groups.length === 0) {

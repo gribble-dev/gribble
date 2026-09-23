@@ -26,6 +26,18 @@ overrides:
 
 Every rule id, its options and its defaults per preset are listed in the [rules reference](/docs/configuration/rules-reference), which is generated from the registry in the source and is therefore always current.
 
+Most edits to this file start as a sentence about a standard. Your coding agent knows the rule ids, reads `gribble explain` for the options, and knows when a standard belongs in [`guidelines.md`](/docs/guidelines) instead:
+
+```prompt
+Make an LCP over 2.5 seconds a Gribble error on every page, and a missing meta description an error on blog posts only.
+```
+
+```prompt
+Turn off the SEO checks for everything under /admin in Gribble's rules.yaml; nobody searches for our admin dashboard.
+```
+
+Or by hand, starting with the structure below.
+
 ## Structure
 
 ### `extends`

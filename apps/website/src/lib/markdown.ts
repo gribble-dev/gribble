@@ -129,6 +129,7 @@ export function renderMarkdown(body: string, options: { slug: string }): Rendere
 			code(token) {
 				// Code blocks scroll horizontally, so they must be keyboard focusable (axe: scrollable-region-focusable).
 				const lang = (token.lang ?? "").trim().split(/\s+/)[0] ?? "";
+				if (lang === "prompt") return renderPrompt(token.text);
 				const cls = lang ? ` class="language-${escapeHtml(lang)}"` : "";
 				return `<pre tabindex="0"><code${cls}>${escapeHtml(token.text)}\n</code></pre>\n`;
 			},
@@ -153,6 +154,24 @@ export function renderMarkdown(body: string, options: { slug: string }): Rendere
 
 	const html = marked.parse(body, { async: false });
 	return { html, headings };
+}
+
+/**
+ * A ```prompt fence is a sentence the reader pastes into a coding agent. It renders as the same
+ * "Ask your agent" card the home page uses. Its copy button stays invisible until the docs layout
+ * has attached the click handler (`.copy-ready`), so no dead button shows without JavaScript.
+ */
+function renderPrompt(text: string): string {
+	const body = escapeHtml(text.trim());
+	return [
+		'<figure class="prompt-card">',
+		'<figcaption class="prompt-label">Ask your agent</figcaption>',
+		'<div class="prompt-row">',
+		`<p class="prompt-text">${body}</p>`,
+		'<button type="button" class="prompt-copy" data-copy-prompt>Copy</button>',
+		"</div>",
+		"</figure>\n",
+	].join("");
 }
 
 function escapeHtml(value: string): string {
