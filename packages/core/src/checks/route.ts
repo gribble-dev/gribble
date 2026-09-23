@@ -2,6 +2,7 @@
  * Runs every enabled deterministic per-route check on one page/viewport.
  */
 import type { Finding, NotRunCheck, RouteMetrics } from "../report/schema.js";
+import { checkA11y } from "./a11y.js";
 import { runAxe } from "./axe.js";
 import { ruleEnabled, ruleOptions } from "./finding.js";
 import { checkHtml } from "./html.js";
@@ -50,6 +51,9 @@ const CHECKS: Check[] = [
 	// Transport, response headers and leaked credentials apply to any response.
 	{ id: "security/*", run: checkSecurity, htmlOnly: false },
 	{ id: "a11y/*", run: runAxe, htmlOnly: true },
+	// Focus, keyboard and motion rules that axe does not cover; they move focus and emulate media,
+	// so they run last.
+	{ id: "a11y/*", run: checkA11y, htmlOnly: true },
 ];
 
 function tokensForSnapshot(ctx: CheckContext) {
@@ -66,7 +70,11 @@ function tokensForSnapshot(ctx: CheckContext) {
 		ruleEnabled(ctx, "ui/font-sizes-from-tokens") && ctx.tokens && ctx.tokens.fontSizes.size > 0
 			? [...ctx.tokens.fontSizes]
 			: undefined;
-	return colors || fontSizes ? { colors, fontSizes } : undefined;
+	const spacing =
+		ruleEnabled(ctx, "ui/spacing-from-tokens") && ctx.tokens && ctx.tokens.spacing.size > 0
+			? [...ctx.tokens.spacing]
+			: undefined;
+	return colors || fontSizes || spacing ? { colors, fontSizes, spacing } : undefined;
 }
 
 /** Navigate (unless told not to), snapshot, run the checks, collect metrics and the screenshot. */

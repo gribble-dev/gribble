@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Rotten planks – Fixture Harbor</title>
+	<meta name="description" content="Obsolete elements, presentational attributes and markup the browser has to repair while parsing.">
+	<link rel="stylesheet" href="/assets/site.css">
+	<script>
+		// a "</div>" inside a script must not confuse the structure check
+		const html = "<div></div>";
+	</script>
+</head>
+<body>
+	<nav aria-label="Main"><a href="/">Home</a></nav>
+	<main>
+		<h1>Rotten planks</h1>
+		<center id="old-center">Centered the old way</center>
+		<p><font color="red">Red text</font> and <marquee>scrolling text</marquee></p>
+		<table cellpadding="4" id="old-table">
+			<tr><td align="center" valign="top">cell</td></tr>
+		</table>
+		<p>Intro <div id="block-in-p">block inside a paragraph</div></p>
+		<ul id="bad-list"><div>not an item</div><li>an item</li></ul>
+		<a href="/">outer <a href="/about.html">inner</a></a>
+		<span class="a" class="b" id="dup">duplicate attribute</span>
+		<div class="self" id="self-closing"/>
+		<section id="unclosed"><b>bold never closed</section>
+		</span>
+		<svg viewBox="0 0 10 10" width="10" height="10"><path d="M0 0h10v10z"/></svg>
+	</main>
+</body>
+</html>

@@ -1,3 +1,4 @@
+export { checkA11y } from "./a11y.js";
 export { runAxe } from "./axe.js";
 export {
 	compilePatterns,
@@ -26,6 +27,7 @@ export {
 	getBodyText,
 	getHtml,
 	getSnapshot,
+	getSource,
 	isHtmlMediaType,
 	isLoopbackHost,
 	mediaTypeOf,

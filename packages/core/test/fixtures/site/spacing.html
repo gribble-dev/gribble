@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Odd gaps – Fixture Harbor</title>
+	<meta name="description" content="Boxes with margins and paddings on and off the spacing scale.">
+	<link rel="stylesheet" href="/assets/site.css">
+	<style>
+		body { padding: 0; }
+		.off { margin: 13px; padding: 7px; border: 1px solid #ccc; }
+		.on { margin: 16px; padding: 8px; border: 1px solid #ccc; }
+	</style>
+</head>
+<body>
+	<nav aria-label="Main"><a href="/">Home</a></nav>
+	<main>
+		<h1>Odd gaps</h1>
+		<p>A paragraph keeps the browser's default margins.</p>
+		<div class="off" data-testid="off">Off the scale</div>
+		<div class="on" data-testid="on">On the scale</div>
+	</main>
+</body>
+</html>

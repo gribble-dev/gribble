@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Keyboard traps – Fixture Harbor</title>
+	<meta name="description" content="A page with missing focus styles, mouse-only controls, no skip link and animations that ignore reduced motion.">
+	<link rel="stylesheet" href="/assets/site.css">
+	<style>
+		#no-ring { outline: none; }
+		#no-ring:focus { outline: none; }
+		.ring:focus-visible { box-shadow: 0 0 0 3px #0a84ff; outline: none; }
+		.card { padding: 8px; border: 1px solid #ccc; }
+		@keyframes spin { to { transform: rotate(360deg); } }
+		@keyframes pulse { to { opacity: 0.4; } }
+		.spinner { width: 24px; height: 24px; border: 3px solid #999; border-radius: 50%; animation: spin 1s linear infinite; }
+		.slide { transition: transform 2s ease; }
+		.safe { width: 24px; height: 24px; background: #999; }
+		@media (prefers-reduced-motion: no-preference) {
+			.safe { animation: pulse 3s ease-in-out infinite alternate; }
+		}
+		.quick { transition: color 0.2s; }
+		.toolbar button { margin-right: 4px; }
+	</style>
+</head>
+<body>
+	<header>
+		<nav aria-label="Main">
+			<a href="/">Home</a>
+			<a href="/about.html">About</a>
+			<a href="/holes.html">Holes</a>
+			<a href="/headings.html">Headings</a>
+			<a href="/untitled.html">Untitled</a>
+			<a href="/login.html">Login</a>
+			<a href="/wide.html">Wide</a>
+		</nav>
+	</header>
+	<main id="main">
+		<h1>Keyboard traps</h1>
+		<p class="quick">Some of these controls only work with a mouse.</p>
+		<button type="button" id="no-ring">No focus ring</button>
+		<button type="button" id="ring" class="ring">Custom ring</button>
+		<button type="button" id="default-ring">Browser ring</button>
+		<div class="card" onclick="alert('card')" data-testid="mouse-card">Clickable card without tabindex</div>
+		<span role="button" data-testid="fake-button">Fake button</span>
+		<div class="card" onclick="alert('wrap')" data-testid="delegating-card"><a href="/about.html">Real link inside a clickable card</a></div>
+		<button type="button" tabindex="-1" data-testid="unreachable">Removed from tab order</button>
+		<a href="/about.html" tabindex="3" data-testid="jumpy">Positive tabindex</a>
+		<div role="toolbar" class="toolbar" aria-label="Format">
+			<button type="button" tabindex="0">Bold</button>
+			<button type="button" tabindex="-1" data-testid="roving">Italic</button>
+			<button type="button" tabindex="-1">Underline</button>
+		</div>
+		<div class="spinner" data-testid="spinner" aria-hidden="true"></div>
+		<div class="slide" data-testid="slide">Slides in</div>
+		<div class="safe" data-testid="safe"></div>
+	</main>
+</body>
+</html>
