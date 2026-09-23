@@ -87,7 +87,7 @@ A few choices in there worth explaining.
 
 `fetch-depth: 0` gives the Action the git history it needs to resolve the base commit and to decide which files changed. `mode: gate` in the baseline job is deliberate — that job exists to record metrics and snapshots, and paying for an AI review that nobody will read is waste. `comment: false` for the same reason: there is no pull request to comment on.
 
-`mode: all` in the audit job needs the AI review runtime in the repository's devDependencies — `@earendil-works/pi-ai` and `@earendil-works/pi-coding-agent`, which Gribble declares as [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional) that no package manager installs on its own. `pnpm install --frozen-lockfile` then picks them up like anything else. The baseline job's `mode: gate` needs neither, which is the point: a gate-only repository installs no model runtime at all.
+`mode: all` in the audit job needs the AI review runtime in the repository's devDependencies — `@earendil-works/pi-ai` and `@earendil-works/pi-coding-agent`, which Gribble declares as [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional) that no package manager installs on its own. `pnpm install --frozen-lockfile` then picks them up like anything else. The baseline job's `mode: gate` needs neither, which is the point: a gate-only repository installs no model runtime at all, as long as its lockfile was not carried over from Gribble 0.3 with pnpm (see [Upgrading from 0.3](/docs/getting-started#upgrading-from-0-3)).
 
 ## Inputs
 

@@ -25,7 +25,7 @@ pnpm add -D gribble
 
 ### The review runtime is optional
 
-That install gives you the deterministic half and nothing else. The AI half — pi's agent loop, model catalog and the provider SDKs behind it — ships as **optional peer dependencies**, so `--mode gate` in CI installs no model runtime at all: no provider SDKs, no cloud credential chain, roughly 120 fewer packages.
+That install gives you the deterministic half and nothing else. The AI half — pi's agent loop, model catalog and the provider SDKs behind it — ships as **optional peer dependencies**, so a fresh install for `--mode gate` in CI brings no model runtime at all: no provider SDKs, no cloud credential chain, roughly 120 fewer packages. Upgrading from 0.3 with pnpm is the exception; see [below](#upgrading-from-0-3).
 
 For `review` or `all`, add the two runtime packages next to Gribble:
 
@@ -35,7 +35,24 @@ pnpm add -D gribble @earendil-works/pi-ai @earendil-works/pi-coding-agent
 # yarn add --dev gribble @earendil-works/pi-ai @earendil-works/pi-coding-agent
 ```
 
-No package manager installs an optional peer on its own — npm, pnpm, yarn and bun all skip it — so this step is always explicit. Gribble pins one exact pi version and both packages must match it; reach `review` without them and the CLI stops with the exact `npm install` line, version included, instead of a module-resolution stack trace.
+No package manager installs an optional peer on its own — on a fresh install npm, pnpm, yarn and bun all skip it — so this step is always explicit. Gribble pins one exact pi version and both packages must match it; reach `review` without them and the CLI stops with the exact `npm install` line, version included, instead of a module-resolution stack trace.
+
+### Upgrading from 0.3
+
+Gribble 0.3 shipped the review runtime as a hard dependency. With pnpm, bumping to 0.4 does not remove it: pnpm resolves the new optional peers against what the lockfile already holds, finds the runtime from 0.3 there, and keeps it — along with the provider SDKs and the AWS credential chain behind it. `pnpm install` answers `Already up to date`, and `pnpm dedupe` leaves it too. Gate-mode audits say so with a warning.
+
+If you use `review` or `all`, that is fine: add the two packages to your devDependencies as above, so the lockfile keeps them on purpose. If you only run `gate`, check whether the runtime is still there after the bump:
+
+```bash
+pnpm why @earendil-works/pi-ai
+```
+
+No output means it is gone. If it is listed under `gribble`, re-resolve without it. Either:
+
+- **Turn off `autoInstallPeers` for one install.** Set `autoInstallPeers: false` in `pnpm-workspace.yaml` (or `auto-install-peers=false` in `.npmrc` on pnpm 9), run `pnpm install`, then remove the setting and run `pnpm install` again. The runtime does not come back, because a fresh resolution never auto-installs an optional peer. The first install also re-resolves every other peer your project relies on pnpm to add automatically, so read the lockfile diff before committing it. Leaving the setting at `false` is not a fix: it is a different dependency graph.
+- **Regenerate the lockfile.** Delete `pnpm-lock.yaml` and `node_modules`, then `pnpm install`. This re-resolves everything else in the project as well, within the ranges in your `package.json` files.
+
+`pnpm remove gribble && pnpm add -D gribble` does not help; the runtime is resolved again from the lockfile. Neither does an `overrides` entry for the pi packages, which leaves the provider SDKs behind or the lockfile unchanged depending on the pnpm version.
 
 Then fetch the browser binary:
 

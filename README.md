@@ -16,7 +16,7 @@ pnpm exec gribble init      # creates .gribble/ and (optionally) a skill for you
 pnpm exec gribble audit     # let the gribbles chew on it
 ```
 
-`gate` mode installs no model runtime. `review` and `all` need pi, which ships as optional peer dependencies no package manager installs on its own:
+A fresh install for `gate` mode brings no model runtime (upgrading from 0.3 with pnpm? [read this](https://gribble.dev/docs/getting-started#upgrading-from-0-3)). `review` and `all` need pi, which ships as optional peer dependencies no package manager installs on its own:
 
 ```bash
 pnpm add -D gribble @earendil-works/pi-ai @earendil-works/pi-coding-agent

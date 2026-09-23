@@ -18,7 +18,7 @@ If you already have a Lighthouse CI setup you are happy with, set `perf/*` rules
 
 Several levers, roughly in order of effect:
 
-- **Run `--mode gate` in CI.** Deterministic checks, flow replay and all regression rules run with no model at all. Zero tokens, and no model runtime installed either — the pi packages are [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional), so a gate-only install skips three provider SDKs and the AWS credential chain. Many teams run gate on every PR and review nightly.
+- **Run `--mode gate` in CI.** Deterministic checks, flow replay and all regression rules run with no model at all. Zero tokens, and no model runtime installed either — the pi packages are [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional), so a fresh gate-only install skips three provider SDKs and the AWS credential chain. A pnpm lockfile carried over from 0.3 keeps them until you [re-resolve it](/docs/getting-started#upgrading-from-0-3). Many teams run gate on every PR and review nightly.
 - **Use `--changed`.** Only routes the diff can affect are audited.
 - **Set budgets.** `budget.max_steps`, `budget.max_tokens` and optionally `budget.max_cost_usd` in `gribble.yaml` are hard caps; the run ends cleanly and reports what it has.
 - **Keep `review.vision: false`** — the default. The model reads structured page snapshots instead of images, which is cheaper *and* more accurate.
