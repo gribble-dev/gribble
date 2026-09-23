@@ -182,4 +182,48 @@ describe("event renderer", () => {
 			"No baseline yet — this run is the baseline. 1 finding recorded as known.",
 		);
 	});
+
+	it("prints the completeness block with aligned labels", () => {
+		const io = testIo({ env: { CI: "true" } });
+		const ui = createUi({ context: io.context, machine: true });
+		const incomplete = report([], {
+			mode: "gate",
+			baseline: {
+				present: true,
+				bootstrap: false,
+				status: "available",
+				routes: { compared: 7, notComparable: [{ route: "/new", reason: "not in the baseline yet" }] },
+			},
+			completeness: {
+				status: "incomplete",
+				routes: {
+					requested: 10,
+					checked: 8,
+					notChecked: [
+						{ route: "/account/settings", code: "auth-failed", reason: "login failed", intentional: false },
+						{ route: "/messages", code: "auth-failed", reason: "login failed", intentional: false },
+					],
+				},
+				flows: { requested: 0, ran: 0, notRun: [] },
+				checks: { notRun: 0, unexpected: 0 },
+				review: { status: "not-requested" },
+				required: {
+					ok: false,
+					missing: [
+						{ kind: "route", name: "/account/settings", code: "auth-failed", reason: "login failed" },
+						{ kind: "route", name: "/messages", code: "auth-failed", reason: "login failed" },
+					],
+				},
+			},
+		});
+		const renderer = createEventRenderer({ ui, mode: "plain", url: "http://localhost:3000" });
+		renderer.start();
+		renderer.finish(incomplete);
+		const text = io.stderr.text;
+		expect(text).toContain("  Execution: incomplete — 8 of 10 routes checked\n");
+		expect(text).toContain("  Findings:  no new blocking findings in completed checks\n");
+		expect(text).toContain("  Baseline:  available for 7 routes; 1 has no comparable baseline\n");
+		expect(text).toContain("  Unreached: /account/settings, /messages — auth-failed\n");
+		expect(text).toContain("  Required:  missing — route /account/settings, route /messages\n");
+	});
 });

@@ -245,6 +245,7 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		for (const entry of notRun) {
 			expect(entry.route).toBe("/sitemap.xml");
 			expect(entry.reason).toBe("response is application/xml, not an HTML document; page rules skipped");
+			expect(entry).toMatchObject({ code: "unsupported", intentional: true });
 		}
 		const ended = events.filter((e): e is CheckEnd => e.type === "check:end" && e.route === "/sitemap.xml");
 		expect(ended.filter((e) => e.ok === false).map((e) => e.rule)).toEqual(notRun.map((n) => n.rule));
@@ -266,6 +267,7 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 				rule: "perf/*",
 				route: "/about.html",
 				reason: "Lighthouse could not run: no CDP port for the browser session",
+				code: "error",
 			},
 		]);
 		const perf = events.find((e) => e.type === "check:end" && e.rule === "perf/*");

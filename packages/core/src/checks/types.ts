@@ -53,6 +53,8 @@ export interface RouteCheckResult {
 	faviconHref?: string;
 	/** hreflang values declared on the page. */
 	hreflangs?: string[];
+	/** Set when the document did not load (network error or HTTP >= 400): why, e.g. `HTTP 404`. */
+	unreachable?: string;
 	/** Checks that did not run on this route (Lighthouse failure, non-HTML response, a check that threw). */
 	notRun?: NotRunCheck[];
 	durationMs?: number;

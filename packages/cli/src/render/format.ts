@@ -1,4 +1,4 @@
-import type { Finding, NotRunCheck, Report } from "@gribble/core";
+import { completenessSummary, type Finding, type NotRunCheck, type Report } from "@gribble/core";
 import type { Colors } from "../ui.js";
 
 export const SEVERITY_ORDER = ["critical", "error", "warn", "info"] as const;
@@ -103,6 +103,25 @@ export function modelLabel(model: Report["model"]): string | undefined {
  * Collapse the report's not-run checks into one group per reason: the distinct rules that share it
  * and the distinct routes they were skipped on. Site-wide checks carry no route.
  */
+/**
+ * The Execution / Findings / Baseline / Unreached block, labels aligned. Empty for reports written
+ * before the completeness section existed.
+ */
+export function formatCompleteness(report: Report, c: Colors): string[] {
+	const lines = completenessSummary(report);
+	if (lines.length === 0) return [];
+	const width = Math.max(...lines.map((l) => l.label.length)) + 1;
+	return lines.map(({ label, text }) => {
+		const tint =
+			label === "Required"
+				? c.red
+				: label === "Unreached" || (label === "Execution" && text.startsWith("incomplete"))
+					? c.yellow
+					: (s: string) => s;
+		return `  ${c.dim(`${label}:`.padEnd(width))} ${tint(text)}`;
+	});
+}
+
 export function groupNotRun(
 	entries: NotRunCheck[],
 ): Array<{ rules: string[]; routes: string[]; reason: string }> {

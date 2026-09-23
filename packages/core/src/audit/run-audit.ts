@@ -18,12 +18,27 @@ import { checkRegressions, encodeBaselineScreenshot } from "../checks/regression
 import { runRouteChecks } from "../checks/route.js";
 import { checkSiteWide } from "../checks/site-wide.js";
 import type { CheckContext, RouteCheckResult, SharedCheckState } from "../checks/types.js";
+import type { Flow } from "../flows/schema.js";
 import { replayFlow } from "../gate/replay.js";
 import { discoverRoutes } from "../repo/routes.js";
 import { type DesignTokens, readDesignTokens } from "../repo/tokens.js";
+import {
+	baselineStatusFor,
+	buildCompleteness,
+	evaluateCoverage,
+	type NotExecuted,
+	notRunEntry,
+} from "../report/completeness.js";
 import { applyRulePolicy, dedupeFindings, sortFindings } from "../report/findings.js";
 import { normalizeRoute } from "../report/fingerprint.js";
-import type { Finding, FlowResult, NotRunCheck, Report, RouteResult } from "../report/schema.js";
+import type {
+	Completeness,
+	Finding,
+	FlowResult,
+	NotRunCheck,
+	Report,
+	RouteResult,
+} from "../report/schema.js";
 import { summarizeReport } from "../report/summary.js";
 import { RUNS_DIR, runDirName, writeRunReport } from "../report/write.js";
 import { getRule } from "../rules/registry.js";
@@ -135,6 +150,12 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 		}
 	};
 	const perRoute = new Map<string, RouteCheckResult>();
+	// Routes and flows that did not execute, with why. Filled while running, completed after.
+	const routeNotChecked = new Map<string, NotExecuted>();
+	const flowNotRun = new Map<string, NotExecuted>();
+	const reachedFlows = new Set<string>();
+	let unresolvedRoutes: string[] = [];
+	let review: Completeness["review"] = { status: "not-requested" };
 	const screenshots = new Map<string, Buffer>();
 	const snapshots: Record<string, string> = {};
 	let usage = { steps: 0, tokens: 0, costUsd: 0 };
@@ -204,6 +225,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 		});
 		routes = resolved.routes;
 		urls = resolved.urls;
+		unresolvedRoutes = resolved.skipped;
 		incremental = resolved.incremental;
 		log(
 			"info",
@@ -269,6 +291,11 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 							});
 						} catch (err) {
 							log("error", `Checks failed on ${route} (${viewport}): ${(err as Error).message}`);
+							if (viewport === desktop && !routeNotChecked.has(route))
+								routeNotChecked.set(route, {
+									code: "error",
+									reason: `checks failed: ${(err as Error).message}`,
+								});
 							emit({ type: "route:end", route, viewport, durationMs: Date.now() - routeStarted });
 							continue;
 						}
@@ -308,7 +335,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 					);
 				} catch (err) {
 					siteError = `failed: ${(err as Error).message}`;
-					recordNotRun([{ rule: "site/*", reason: siteError }]);
+					recordNotRun([notRunEntry("site/*", "error", siteError)]);
 				}
 				emit({
 					type: "check:end",
@@ -317,14 +344,15 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 					ok: !siteError,
 					...(siteError ? { error: siteError } : {}),
 				});
+			} else {
+				recordNotRun([notRunEntry("site/*", "aborted", "the run stopped before site-wide checks")]);
 			}
 
 			// Replay recorded flows.
 			for (const flow of project.flows) {
 				if (aborted()) break;
 				if (!flow.replay) continue;
-				if (flow.env && flow.env.length > 0 && project.environment && !flow.env.includes(project.environment))
-					continue;
+				if (!flowInEnvironment(flow, project.environment)) continue;
 				const profileName =
 					typeof flow.requiresAuth === "string"
 						? flow.requiresAuth
@@ -337,6 +365,10 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 						"warn",
 						`Flow "${flow.name}" needs auth profile "${profileName}", which logs in through the reviewer model. Skipped in gate mode without a model.`,
 					);
+					flowNotRun.set(flow.name, {
+						code: "no-model",
+						reason: `auth profile "${profileName}" logs in through the reviewer model, and none was resolved`,
+					});
 					continue;
 				}
 				const result = await replayFlow({
@@ -350,8 +382,10 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 					signal: options.signal,
 				});
 				gateFindings.push(...result.findings);
-				const { findings: _drop, ...flowResult } = result;
+				const { findings: _drop, notReached, ...flowResult } = result;
 				flowResults.push(flowResult);
+				if (notReached) flowNotRun.set(flow.name, notReached);
+				else reachedFlows.add(flow.name);
 			}
 
 			// Regressions against the baseline.
@@ -376,7 +410,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 					);
 				} catch (err) {
 					regressionError = `failed: ${(err as Error).message}`;
-					recordNotRun([{ rule: "regression/*", reason: regressionError }]);
+					recordNotRun([notRunEntry("regression/*", "error", regressionError)]);
 				}
 				emit({
 					type: "check:end",
@@ -395,10 +429,11 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 					options.ci ? "warn" : "error",
 					"Review skipped: no reviewer model was resolved. Run `gribble login` or set `model` in gribble.yaml.",
 				);
+				review = { status: "skipped", code: "no-model", reason: "no reviewer model was resolved" };
 			} else {
 				emit({ type: "phase", phase: "review", message: "The reviewer gribble is reading the pages…" });
 				try {
-					const review = await runReviewSession({
+					const session = await runReviewSession({
 						project,
 						targetName,
 						browser,
@@ -417,11 +452,22 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 						mode,
 					});
 					reviewRan = true;
-					aiFindings.push(...review.findings);
-					flowResults.push(...review.flows);
-					usage = review.usage;
+					aiFindings.push(...session.findings);
+					flowResults.push(...session.flows);
+					for (const flow of session.flows) reachedFlows.add(flow.name);
+					usage = session.usage;
+					review = session.budgetExhausted
+						? { status: "incomplete", code: "budget-exhausted", reason: session.budgetExhausted }
+						: aborted()
+							? { status: "incomplete", code: "aborted", reason: "the run stopped during the review" }
+							: { status: "complete" };
 				} catch (err) {
 					log("error", `Review failed: ${(err as Error).message}`);
+					review = {
+						status: "incomplete",
+						code: "error",
+						reason: `review failed: ${(err as Error).message}`,
+					};
 				}
 			}
 		}
@@ -430,6 +476,8 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 		await devServer?.stop().catch(() => {});
 	}
 	if (aborted()) log("warn", "Audit aborted; the report covers what was checked so far.");
+	if ((mode === "review" || mode === "all") && review.status === "not-requested")
+		review = { status: "incomplete", code: "aborted", reason: "the run stopped before the review" };
 
 	// --------------------------------------------------------------- baseline
 	emit({
@@ -456,6 +504,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	});
 	const findings = sortFindings(diff.findings);
 	const summary = summarizeReport(findings, { ci: options.ci, fixedCount: diff.fixed.length });
+	const findingsHeadline = summary.headline;
 	if (bootstrap && summary.gate === "fail") {
 		// Nothing to compare against yet: the first run records the known state instead of blocking.
 		summary.gate = "pass";
@@ -536,6 +585,86 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	}
 	if (notRun.length > 0) report.notRun = notRun;
 
+	// ----------------------------------------------------------- completeness
+	const flowsInScope = project.flows.filter((flow) => {
+		if (flowInEnvironment(flow, project.environment)) return true;
+		flowNotRun.set(flow.name, {
+			code: "excluded",
+			reason: `limited to ${flow.env?.join(", ")}; this run is ${project.environment}`,
+		});
+		return false;
+	});
+	// A flow the reviewer walked counts as run even when its replay never got past the start.
+	for (const name of reachedFlows) flowNotRun.delete(name);
+	for (const flow of flowsInScope) {
+		if (reachedFlows.has(flow.name) || flowNotRun.has(flow.name)) continue;
+		flowNotRun.set(flow.name, whyFlowDidNotRun(mode, review, aborted()));
+	}
+	const routeNotCheckedReason = (route: string): NotExecuted | undefined => {
+		if (!ranGate) {
+			// Review-only runs hand the routes to the reviewer; they are unchecked only when it never ran.
+			return reviewRan
+				? undefined
+				: { code: review.code ?? "error", reason: review.reason ?? "the review did not run" };
+		}
+		const failed = routeNotChecked.get(route);
+		if (failed) return failed;
+		const result = perRoute.get(route);
+		if (!result)
+			return aborted()
+				? { code: "aborted", reason: "the run stopped before this route" }
+				: { code: "error", reason: "no check result was recorded" };
+		if (result.unreachable) return { code: "unreachable", reason: result.unreachable };
+		return undefined;
+	};
+	const checkedRoutes: string[] = [];
+	const notCheckedRoutes: Array<NotExecuted & { route: string }> = unresolvedRoutes.map((route) => ({
+		route: normalizeRoute(route),
+		code: "unresolved",
+		reason: "no link on the crawled pages matches this dynamic route",
+	}));
+	for (const route of routes) {
+		const why = routeNotCheckedReason(route);
+		if (why) notCheckedRoutes.push({ route: normalizeRoute(route), ...why });
+		else checkedRoutes.push(route);
+	}
+	const completeness = buildCompleteness({
+		routes: { requested: routes.length + unresolvedRoutes.length, notChecked: notCheckedRoutes },
+		flows: {
+			requested: project.flows.length,
+			ran: project.flows.filter((f) => reachedFlows.has(f.name)).length,
+			notRun: [...flowNotRun].map(([flow, why]) => ({ flow, ...why })),
+		},
+		notRun,
+		review,
+	});
+
+	let compared = checkedRoutes.length;
+	if (baseline && !bootstrap && ranGate) {
+		const known = new Set([...Object.keys(baseline.metrics), ...baseline.findings.map((f) => f.route)]);
+		const notComparable = checkedRoutes
+			.filter((route) => !known.has(normalizeRoute(route)))
+			.map((route) => ({ route: normalizeRoute(route), reason: "not in the baseline yet" }));
+		compared = checkedRoutes.length - notComparable.length;
+		report.baseline.routes = { compared, notComparable };
+	}
+	report.baseline.status = baselineStatusFor({
+		present: !!baseline,
+		bootstrap,
+		compared,
+		checked: checkedRoutes.length,
+	});
+	report.completeness = completeness;
+	const required = evaluateCoverage({ ...report, completeness }, project.config.coverage?.required);
+	if (required) {
+		completeness.required = required;
+		if (!required.ok) {
+			// Applied after the bootstrap pass: a project that requires coverage opted out of the lenient first run.
+			summary.gate = "fail";
+			summary.headline = `${findingsHeadline} Required coverage did not execute: ${required.missing.length} missing.`;
+		}
+	}
+
 	if ((options.updateBaseline || bootstrap) && !aborted()) {
 		const screenshotsMode = project.config.baseline.screenshots;
 		const baselineScreenshots: Record<string, Uint8Array> = {};
@@ -570,6 +699,28 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	log("debug", `Report written to ${written.jsonPath}.`);
 	emit({ type: "done", report });
 	return report;
+}
+
+/** Flows limited to other environments (`env:` in the frontmatter) are left out of this run. */
+function flowInEnvironment(flow: Flow, environment: string | undefined): boolean {
+	return !(flow.env && flow.env.length > 0 && environment && !flow.env.includes(environment));
+}
+
+/** Why an in-scope flow has no result, from what this mode could do with it. */
+function whyFlowDidNotRun(
+	mode: AuditOptions["mode"],
+	review: Completeness["review"],
+	aborted: boolean,
+): NotExecuted {
+	const reviewWalks = mode === "review" || mode === "all";
+	if (aborted) return { code: "aborted", reason: "the run stopped before this flow" };
+	if (!reviewWalks)
+		return {
+			code: "replay-missing",
+			reason: "no recorded replay (flows/<name>.replay.json); gate mode only replays recorded flows",
+		};
+	if (review.code && review.status !== "complete") return { code: review.code, reason: review.reason ?? "" };
+	return { code: "not-reached", reason: "the reviewer did not walk this flow" };
 }
 
 /** OS, CPU architecture and browser build of this run; pixel baselines only compare within one platform. */

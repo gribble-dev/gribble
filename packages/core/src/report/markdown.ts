@@ -1,3 +1,4 @@
+import { completenessSummary } from "./completeness.js";
 import { sortFindings } from "./findings.js";
 import { locationKey } from "./fingerprint.js";
 import type { Finding, Report } from "./schema.js";
@@ -45,6 +46,12 @@ export function toMarkdownSummary(
 	if (report.target.name) meta.push(`target \`${report.target.name}\``);
 	if (report.target.environment) meta.push(`env \`${report.target.environment}\``);
 	out.push(meta.join(" · "), "");
+
+	const completeness = completenessSummary(report);
+	if (completeness.length > 0) {
+		for (const line of completeness) out.push(`- **${line.label}:** ${line.text}`);
+		out.push("");
+	}
 
 	out.push("| Severity | New |", "| --- | ---: |");
 	for (const severity of ["critical", "error", "warn", "info"] as const) {

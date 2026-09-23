@@ -1,5 +1,15 @@
 export { type CodeQualityIssue, type CodeQualitySeverity, toCodeQuality } from "./codequality.js";
 export {
+	baselineStatusFor,
+	buildCompleteness,
+	type CompletenessInput,
+	completenessSummary,
+	evaluateCoverage,
+	isIntentionalNotRun,
+	type NotExecuted,
+	notRunEntry,
+} from "./completeness.js";
+export {
 	applyRulePolicy,
 	capSeverity,
 	dedupeFindings,
@@ -19,6 +29,10 @@ export {
 } from "./markdown.js";
 export { toSarif } from "./sarif.js";
 export {
+	type BaselineStatus,
+	baselineStatusSchema,
+	type Completeness,
+	completenessSchema,
 	FINDING_SEVERITIES,
 	type Finding,
 	type FindingLocation,
@@ -30,8 +44,12 @@ export {
 	findingSeveritySchema,
 	fixedFindingSchema,
 	flowResultSchema,
+	INTENTIONAL_NOT_RUN_CODES,
+	NOT_RUN_REASON_CODES,
 	type NotRunCheck,
+	type NotRunReasonCode,
 	notRunCheckSchema,
+	notRunReasonCodeSchema,
 	type Report,
 	type ReportSummary,
 	type RouteMetrics,

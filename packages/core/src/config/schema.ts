@@ -286,6 +286,56 @@ const baselineSchema = Type.Object(
 	{ additionalProperties: false, description: "Baseline storage and update policy.", default: {} },
 );
 
+const coverageSchema = Type.Object(
+	{
+		required: Type.Optional(
+			Type.Object(
+				{
+					routes: Type.Optional(
+						Type.Boolean({
+							description:
+								"Fail the gate when a requested route was not checked (unreachable, unresolved, aborted).",
+							default: false,
+						}),
+					),
+					flows: Type.Optional(
+						Type.Union([Type.Boolean(), Type.Array(Type.String(), { minItems: 1 })], {
+							description:
+								"Fail the gate when a flow in scope did not execute: `true` for every flow, or a list of flow names. A flow that ran and failed is a finding, not missing coverage.",
+							default: false,
+						}),
+					),
+					checks: Type.Optional(
+						Type.Boolean({
+							description:
+								"Fail the gate when a check did not run for an unexpected reason. Intentional omissions (`unsupported`, `excluded`, `skipped`) never count.",
+							default: false,
+						}),
+					),
+					baseline: Type.Optional(
+						Type.Boolean({
+							description:
+								"Fail the gate unless findings were compared with an established baseline. A bootstrap run then fails instead of passing.",
+							default: false,
+						}),
+					),
+				},
+				{
+					additionalProperties: false,
+					description:
+						"Coverage that must execute. Everything is off by default; the AI review is always advisory.",
+					default: {},
+				},
+			),
+		),
+	},
+	{
+		additionalProperties: false,
+		description: "Completeness policy: treat missing coverage as a gate failure instead of a clean run.",
+		default: {},
+	},
+);
+
 const viewportSchema = Type.Object(
 	{
 		width: Type.Integer({ description: "Viewport width in CSS pixels.", minimum: 1 }),
@@ -337,6 +387,7 @@ const environmentOverrideSchema = Type.Object(
 		allowed_origins: Type.Optional(allowedOriginsSchema),
 		auth: Type.Optional(authSchema),
 		baseline: Type.Optional(partialObject(baselineSchema, "Baseline overrides for this environment.")),
+		coverage: Type.Optional(coverageSchema),
 		viewports: Type.Optional(viewportsSchema),
 		output: Type.Optional(partialObject(outputSchema, "Output overrides for this environment.")),
 		reusePiAuth: Type.Optional(reusePiAuthSchema),
@@ -363,6 +414,7 @@ export const gribbleConfigSchema = Type.Object(
 		),
 		auth: Type.Optional(authSchema),
 		baseline: Type.Optional(baselineSchema),
+		coverage: Type.Optional(coverageSchema),
 		viewports: Type.Optional(viewportsSchema),
 		output: Type.Optional(outputSchema),
 		reusePiAuth: Type.Optional(reusePiAuthSchema),

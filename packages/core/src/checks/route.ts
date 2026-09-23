@@ -1,7 +1,8 @@
 /**
  * Runs every enabled deterministic per-route check on one page/viewport.
  */
-import type { Finding, NotRunCheck, RouteMetrics } from "../report/schema.js";
+import { notRunEntry } from "../report/completeness.js";
+import type { Finding, NotRunCheck, NotRunReasonCode, RouteMetrics } from "../report/schema.js";
 import { checkA11y } from "./a11y.js";
 import { runAxe } from "./axe.js";
 import { ruleEnabled, ruleOptions } from "./finding.js";
@@ -105,6 +106,7 @@ export async function runRouteChecks(
 	};
 
 	if (!loaded) {
+		result.unreachable = nav?.error ?? (nav?.status !== undefined ? `HTTP ${nav.status}` : "no response");
 		findings.push(...(await checkNetwork(ctx)).filter((f) => f.rule === "network/page-error"));
 		result.durationMs = Date.now() - started;
 		return result;
@@ -153,8 +155,8 @@ export async function runRouteChecks(
 		});
 	}
 
-	const skip = (rule: string, reason: string, startedCheck: number) => {
-		notRun.push({ rule, route: ctx.route, reason });
+	const skip = (rule: string, code: NotRunReasonCode, reason: string, startedCheck: number) => {
+		notRun.push(notRunEntry(rule, code, reason, ctx.route));
 		ctx.onEvent?.({
 			type: "check:end",
 			rule,
@@ -171,14 +173,14 @@ export async function runRouteChecks(
 		const startedCheck = Date.now();
 		ctx.onEvent?.({ type: "check:start", rule: check.id, route: ctx.route });
 		if (skipReason && check.htmlOnly) {
-			skip(check.id, skipReason, startedCheck);
+			skip(check.id, "unsupported", skipReason, startedCheck);
 			continue;
 		}
 		let produced: Finding[];
 		try {
 			produced = await check.run(ctx);
 		} catch (err) {
-			skip(check.id, `failed on ${ctx.viewport}: ${(err as Error).message}`, startedCheck);
+			skip(check.id, "error", `failed on ${ctx.viewport}: ${(err as Error).message}`, startedCheck);
 			continue;
 		}
 		findings.push(...produced);
@@ -197,13 +199,13 @@ export async function runRouteChecks(
 		const startedLh = Date.now();
 		if (skipReason) {
 			// Lighthouse scores a page load; a sitemap has no LCP worth gating on.
-			skip("perf/*", skipReason, startedLh);
+			skip("perf/*", "unsupported", skipReason, startedLh);
 		} else {
 			const lh = await runLighthouse(ctx, { port: opts.cdpPort });
 			findings.push(...lh.findings);
 			result.metrics = { ...result.metrics, ...lh.metrics };
 			if (lh.error) {
-				skip("perf/*", lh.error, startedLh);
+				skip("perf/*", "error", lh.error, startedLh);
 			} else {
 				ctx.onEvent?.({
 					type: "check:end",

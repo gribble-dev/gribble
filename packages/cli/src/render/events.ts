@@ -4,6 +4,7 @@ import type { PromptSpinner } from "../prompts.js";
 import type { Ui } from "../ui.js";
 import {
 	columnWidths,
+	formatCompleteness,
 	formatCost,
 	formatCounts,
 	formatDuration,
@@ -286,6 +287,7 @@ export function createEventRenderer(opts: RendererOptions): EventRenderer {
 				const ledger = copy.audit.ledger(summary.existingCount, summary.fixedCount);
 				if (ledger) ui.line(`  ${c.dim(ledger)}`);
 			}
+			for (const line of formatCompleteness(report, c)) ui.line(line);
 			for (const group of groupNotRun(report.notRun ?? [])) {
 				ui.line(`  ${c.yellow(copy.audit.notRun(group.rules, group.routes, group.reason))}`);
 			}

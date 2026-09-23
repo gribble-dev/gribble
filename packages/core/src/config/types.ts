@@ -80,6 +80,19 @@ export interface BaselineConfig {
 	update: "commit" | "pr" | "manual";
 }
 
+/** Coverage that must execute; a miss fails the gate. All off by default. */
+export interface CoverageRequirements {
+	routes: boolean;
+	/** `true` for every flow in scope, or the names of the flows that must execute. */
+	flows: boolean | string[];
+	checks: boolean;
+	baseline: boolean;
+}
+
+export interface CoverageConfig {
+	required: CoverageRequirements;
+}
+
 export interface Viewport {
 	width: number;
 	height: number;
@@ -99,6 +112,7 @@ export interface EnvironmentOverride {
 	allowed_origins?: string[];
 	auth?: AuthConfig;
 	baseline?: Partial<BaselineConfig>;
+	coverage?: { required?: Partial<CoverageRequirements> };
 	viewports?: Record<string, Viewport>;
 	output?: Partial<OutputConfig>;
 	reusePiAuth?: boolean;
@@ -117,6 +131,8 @@ export interface GribbleConfig {
 	environments?: Record<string, EnvironmentOverride>;
 	auth?: AuthConfig;
 	baseline: BaselineConfig;
+	/** Filled with defaults by the parser; optional for hand-built configs. */
+	coverage?: CoverageConfig;
 	viewports: Record<string, Viewport>;
 	output: OutputConfig;
 	reusePiAuth: boolean;

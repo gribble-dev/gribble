@@ -79,7 +79,7 @@ Three independent mechanisms, each sufficient on its own:
 
 1. **Severity capping.** A model returns a severity with each finding, but that severity is capped by the matching `review/<category>` rule, which defaults to `warn`. Even if the model says `critical`, the finding lands as `warn`, and `warn` does not fail the gate.
 2. **A confidence floor.** Each AI finding carries a 0–1 confidence. Anything below `review.min_confidence` (default `0.7`) is dropped before it reaches the report.
-3. **The gate verdict ignores source.** `summary.gate` is `fail` only when a **new** finding with severity `error` or `critical` came from a deterministic rule or from `flows/replay`.
+3. **The gate verdict ignores source.** `summary.gate` is `fail` only when a **new** finding with severity `error` or `critical` came from a deterministic rule or from `flows/replay` — or, when a project opts in with [`coverage.required`](/docs/configuration/gribble-yaml#coverage), when required routes, flows, checks or the baseline did not execute. An incomplete review is labeled in the report's [`completeness`](/docs/report-format#completeness) and never fails the gate.
 
 If you genuinely want an AI finding to be able to block a merge, you can raise a `review/*` rule to `error` in `rules.yaml`. We think you should not, at least not for a while.
 
