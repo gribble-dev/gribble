@@ -29,6 +29,8 @@ export interface CheckContext {
 	signal?: AbortSignal;
 	onEvent?: (e: AuditEvent) => void;
 	shared?: SharedCheckState;
+	/** Rules a check skipped on this route; `runRouteChecks` hands them back as `notRun`. */
+	notRun?: NotRunCheck[];
 	/** Lazily filled caches so checks do not repeat page work. */
 	cache?: {
 		snapshot?: PageSnapshot;

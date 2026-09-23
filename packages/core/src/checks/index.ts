@@ -42,7 +42,14 @@ export {
 	type VisualDiff,
 } from "./regressions.js";
 export { type RunRouteChecksOptions, runRouteChecks } from "./route.js";
-export { checkSecurity, maskSecret, SECRET_PATTERNS } from "./security.js";
+export {
+	checkSecurity,
+	HEADERS_LOOPBACK_REASON,
+	META_CSP_NOTE,
+	maskSecret,
+	metaCspPolicy,
+	SECRET_PATTERNS,
+} from "./security.js";
 export { checkSeo, type HeadInfo, readHead } from "./seo.js";
 export { checkSiteWide, parseRobots, parseSitemapLocs } from "./site-wide.js";
 export type {
