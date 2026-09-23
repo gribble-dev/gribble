@@ -47,10 +47,15 @@ export {
 	type FlowRecording,
 } from "./state.js";
 export { summarizeForPrompt } from "./summarize.js";
-export { browserPack } from "./tools/browser.js";
+export {
+	browserPack,
+	type ReplaySelector,
+	replaySelectorCandidates,
+	selectorForReplay,
+} from "./tools/browser.js";
 export { a11yPack, crawlPack, perfPack, seoPack } from "./tools/checks.js";
 export { StringEnum } from "./tools/common.js";
-export { buildReplay, flowSlug, flowsPack } from "./tools/flows.js";
+export { buildReplay, flowSlug, flowsPack, relativeToTarget, replayStartUrl } from "./tools/flows.js";
 export { discoveredRoutesFor, MAP_DOM_TO_SOURCE_PARAMS, repoPack } from "./tools/repo.js";
 export {
 	ADD_FINDING_PARAMS,

@@ -136,6 +136,14 @@ const targetSchema = Type.Object(
 				default: 120000,
 			}),
 		),
+		maxConnectionFailures: Type.Optional(
+			Type.Integer({
+				description:
+					"Stop the audit after this many routes in a row fail with a connection error (the server is gone). 0 disables the check.",
+				minimum: 0,
+				default: 3,
+			}),
+		),
 	},
 	{ additionalProperties: false, description: "What to audit and how to reach it." },
 );

@@ -20,6 +20,7 @@ import { checkSiteWide } from "../checks/site-wide.js";
 import type { CheckContext, RouteCheckResult, SharedCheckState } from "../checks/types.js";
 import type { Flow } from "../flows/schema.js";
 import { replayFlow } from "../gate/replay.js";
+import { formatUndeclaredReviewRuntimeWarning, hasUndeclaredReviewRuntime } from "../pi.js";
 import { discoverRoutes } from "../repo/routes.js";
 import { type DesignTokens, readDesignTokens } from "../repo/tokens.js";
 import {
@@ -44,11 +45,34 @@ import { RUNS_DIR, runDirName, writeRunReport } from "../report/write.js";
 import { getRule } from "../rules/registry.js";
 import { formatUnimplementedRulesWarning, unimplementedEnabledRules } from "../rules/unimplemented.js";
 import { GRIBBLE_CORE_VERSION } from "../version.js";
-import { startDevServer } from "./dev-server.js";
+import { type DevServer, describeExit, startDevServer } from "./dev-server.js";
 import { resolveRoutes } from "./routes.js";
+import { ConnectionFailureCounter, TargetGoneError, urlAnswers } from "./target-gone.js";
 import type { AuditEvent, AuditGitInfo, AuditOptions } from "./types.js";
 
 const execFileAsync = promisify(execFile);
+
+/** Teardown steps that talk to a browser or a process that may be wedged get this long, then move on. */
+const CLOSE_TIMEOUT_MS = 15_000;
+
+/** Resolve after `promise` settles or `ms` elapses, whichever comes first; never rejects. */
+async function settleWithin(promise: Promise<unknown>, ms: number): Promise<boolean> {
+	let timer: NodeJS.Timeout | undefined;
+	const timedOut = new Promise<false>((resolve) => {
+		timer = setTimeout(() => resolve(false), ms);
+	});
+	try {
+		return await Promise.race([
+			promise.then(
+				() => true,
+				() => true,
+			),
+			timedOut,
+		]);
+	} finally {
+		clearTimeout(timer);
+	}
+}
 
 async function git(cwd: string, args: string[]): Promise<string | undefined> {
 	try {
@@ -106,7 +130,16 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	const emit = (event: AuditEvent) => options.onEvent?.(event);
 	const log = (level: "debug" | "info" | "warn" | "error", message: string) =>
 		emit({ type: "log", level, message });
-	const aborted = () => options.signal?.aborted === true;
+	// Aborted by the caller, or by the circuit breaker once the target is gone (see target-gone.ts).
+	const gone = new AbortController();
+	let goneError: TargetGoneError | undefined;
+	const markGone = (err: TargetGoneError) => {
+		if (goneError) return;
+		goneError = err;
+		gone.abort(err);
+	};
+	const signal = options.signal ? AbortSignal.any([options.signal, gone.signal]) : gone.signal;
+	const aborted = () => signal.aborted;
 	const startedAt = new Date();
 	const generatedAt = startedAt.toISOString();
 	const runsDir =
@@ -132,6 +165,9 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	// Enabled rules with no checker resolve like any other rule and then do nothing; say so up front.
 	const unimplementedWarning = formatUnimplementedRulesWarning(unimplementedEnabledRules(project.rules));
 	if (unimplementedWarning) log("warn", unimplementedWarning);
+	// Gate never loads the review runtime; one left over from a 0.3 lockfile is dead weight nobody asked for.
+	if (mode === "gate" && (await hasUndeclaredReviewRuntime(project.repoRoot, project.targetDir)))
+		log("warn", formatUndeclaredReviewRuntimeWarning());
 
 	const gateFindings: Finding[] = [];
 	const aiFindings: Finding[] = [];
@@ -161,10 +197,36 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	let usage = { steps: 0, tokens: 0, costUsd: 0 };
 	let browser: BrowserSession | undefined;
 	let renderPlatformRecorded: { os: string; arch: string; browser: string } | undefined;
-	let devServer: { stop(): Promise<void> } | undefined;
+	let devServer: DevServer | undefined;
+	let tearingDown = false;
+	let routesStarted = 0;
 	let routes: string[] = [];
 	let urls: Record<string, string> = {};
 	let incremental = false;
+	const progress = () =>
+		routesStarted > 0
+			? `after ${routesStarted} of ${routes.length} route(s)`
+			: "before any route was audited";
+	const breaker = new ConnectionFailureCounter(project.config.target.maxConnectionFailures);
+	/** Feed one page load to the breaker; true when the target is gone and the audit must stop. */
+	const tripped = async (navigationError: string | undefined): Promise<boolean> => {
+		if (goneError) return true;
+		if (!breaker.record(navigationError)) return false;
+		const { url } = project.config.target;
+		// Confirm before giving up: a route on another host can be refused while the target is fine.
+		if (await urlAnswers(url)) {
+			breaker.reset();
+			return false;
+		}
+		const who = devServer?.started ? "the dev server" : "the target";
+		markGone(
+			new TargetGoneError(
+				`${who} is gone: ${breaker.count()} page loads in a row failed with ${breaker.lastError()} ${progress()}, and ${url} no longer answers.`,
+				devServer?.outputTail() ?? [],
+			),
+		);
+		return true;
+	};
 
 	try {
 		// ----------------------------------------------------------------- server
@@ -180,8 +242,25 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 				url: project.config.target.url,
 				timeoutMs: project.config.target.readyTimeoutMs,
 				env,
-				signal: options.signal,
+				signal,
 				onLog: (line, stream) => log("debug", `[dev ${stream}] ${line}`),
+			});
+			const server = devServer;
+			const { start, url } = project.config.target;
+			void server.unexpectedExit.then(async (exit) => {
+				const answers = await urlAnswers(url);
+				if (tearingDown) return;
+				// A wrapper that exits while the real server keeps serving is odd but harmless.
+				if (answers) {
+					log("warn", `The dev server command exited ${describeExit(exit)}, but ${url} still answers.`);
+					return;
+				}
+				markGone(
+					new TargetGoneError(
+						`the dev server is gone: \`${start}\` exited ${describeExit(exit)} ${progress()}, and ${url} no longer answers.`,
+						server.outputTail(),
+					),
+				);
 			});
 		}
 
@@ -202,7 +281,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 							model,
 							agentDir: options.agentDir,
 							env,
-							signal: options.signal,
+							signal,
 							onEvent: options.onEvent,
 						})
 				: undefined,
@@ -221,7 +300,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 			changedFiles: options.changedFiles,
 			requested: options.routes,
 			onEvent: options.onEvent,
-			signal: options.signal,
+			signal,
 		});
 		routes = resolved.routes;
 		urls = resolved.urls;
@@ -259,8 +338,9 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 				return page;
 			};
 			try {
-				for (const route of routes) {
+				routeLoop: for (const route of routes) {
 					if (aborted()) break;
+					routesStarted++;
 					const url = urls[route]!;
 					for (const viewport of viewports) {
 						if (aborted()) break;
@@ -278,11 +358,11 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 							runDir,
 							tokens,
 							routeSource: discovered.source,
-							signal: options.signal,
+							signal,
 							onEvent: options.onEvent,
 							shared,
 						};
-						let result: RouteCheckResult;
+						let result: RouteCheckResult | undefined;
 						try {
 							result = await runRouteChecks(ctx, {
 								lighthouse: viewport === desktop && lighthouseOn,
@@ -296,6 +376,12 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 									code: "error",
 									reason: `checks failed: ${(err as Error).message}`,
 								});
+						}
+						if (await tripped(ctx.cache?.navigation?.error)) {
+							emit({ type: "route:end", route, viewport, durationMs: Date.now() - routeStarted });
+							break routeLoop;
+						}
+						if (!result) {
 							emit({ type: "route:end", route, viewport, durationMs: Date.now() - routeStarted });
 							continue;
 						}
@@ -313,7 +399,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 					}
 				}
 			} finally {
-				for (const page of pages.values()) await page.close().catch(() => {});
+				for (const page of pages.values()) await settleWithin(page.close(), CLOSE_TIMEOUT_MS);
 			}
 
 			if (!aborted()) {
@@ -330,7 +416,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 							targetName,
 							shared,
 							onEvent: options.onEvent,
-							signal: options.signal,
+							signal,
 						})),
 					);
 				} catch (err) {
@@ -379,7 +465,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 					targetName,
 					env,
 					onEvent: options.onEvent,
-					signal: options.signal,
+					signal,
 				});
 				gateFindings.push(...result.findings);
 				const { findings: _drop, notReached, ...flowResult } = result;
@@ -448,7 +534,7 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 						sessionDir: options.ci ? undefined : join(project.gribbleDir, "sessions"),
 						env,
 						onEvent: options.onEvent,
-						signal: options.signal,
+						signal,
 						mode,
 					});
 					reviewRan = true;
@@ -472,9 +558,16 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 			}
 		}
 	} finally {
-		await browser?.close().catch(() => {});
+		// Every check has run; an exit noticed from here on cannot void the results.
+		tearingDown = true;
+		// A browser wedged by a dead target must not hold the run hostage; Playwright kills it on exit.
+		if (browser && !(await settleWithin(browser.close(), CLOSE_TIMEOUT_MS)))
+			log("warn", `The browser did not close within ${CLOSE_TIMEOUT_MS / 1000}s; leaving it behind.`);
 		await devServer?.stop().catch(() => {});
 	}
+	// No report and no baseline from a run whose target vanished: every route after the crash
+	// would read as a page error, and every baseline finding on them as fixed.
+	if (goneError) throw goneError;
 	if (aborted()) log("warn", "Audit aborted; the report covers what was checked so far.");
 	if ((mode === "review" || mode === "all") && review.status === "not-requested")
 		review = { status: "incomplete", code: "aborted", reason: "the run stopped before the review" };

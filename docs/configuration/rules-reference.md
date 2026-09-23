@@ -35,7 +35,7 @@ Presets: `gribble:recommended`, `gribble:strict`, `gribble:seo`, `gribble:a11y`.
 
 Internal links must not resolve to a 4xx or 5xx response.
 
-Every same-origin anchor, image, script and stylesheet reference is requested. A response of 400 or above, a connection failure or a timeout is reported with the link target as the subject.
+Every same-origin anchor, image, script and stylesheet reference is requested. A response of 400 or above, a connection failure or a timeout is reported with the link target as the subject. A same-origin link that redirects to another origin is judged by where it lands: its failure belongs to `links/broken-external`, not this rule.
 
 **Status:** implemented · **Kind:** deterministic
 
@@ -66,7 +66,7 @@ Good:
 
 External links must respond.
 
-Links to other origins are requested with a HEAD (falling back to GET) request. Hosts listed in `ignore` are skipped; some sites block automated requests, so this rule defaults to warn.
+Links to other origins are requested with a HEAD (falling back to GET) request. Hosts listed in `ignore` are skipped, and 403, 429 and 999 responses are treated as inconclusive, since some sites block automated requests; this rule defaults to warn. The same treatment applies to a same-origin link that redirects off-site (an affiliate `/go/partner` hop, say): the final host is checked against `ignore`, and a failure is reported here with the same-origin link as the subject.
 
 **Status:** implemented · **Kind:** deterministic
 
@@ -82,7 +82,7 @@ Links to other origins are requested with a HEAD (falling back to GET) request. 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `timeout` | integer | `10000` | Per-request timeout in milliseconds. |
-| `ignore` | string[] | `["linkedin.com"]` | Hostnames (or globs) that are never checked, e.g. sites that block bots. |
+| `ignore` | string[] | `["linkedin.com"]` | Hostnames (or globs) that are never checked, directly or as the target of a same-origin redirect, e.g. sites that block bots. |
 
 **Fix:** Update or remove the link. If the host blocks automated requests, add it to `ignore`.
 
@@ -1539,7 +1539,7 @@ Reports subresources requested over http from an https document.
 
 Responses must include the required security headers.
 
-Checks the document response for each header listed in `require`.
+Checks the document response for each header listed in `require`. A `content-security-policy` delivered as `<meta http-equiv="content-security-policy">` in the document counts as present, as prerendered pages do; a meta policy cannot carry `frame-ancestors`, `report-uri` or `sandbox`, so cover framing with `X-Frame-Options` on the static asset. The other headers have no meta form. The rule does not run when the target is a loopback address (dev and preview servers do not carry production headers); the report lists it under `notRun` instead, so audit a deployed URL to exercise it.
 
 **Status:** implemented · **Kind:** deterministic
 

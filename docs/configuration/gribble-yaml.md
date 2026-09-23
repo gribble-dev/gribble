@@ -51,9 +51,10 @@ Where the site under audit lives.
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `target.url` | string | — | **Required.** The base URL to audit. `${VAR}` interpolation allowed. |
-| `target.start` | string | — | Command to start the site. Run before the audit; Gribble waits for `url` to respond, then shuts it down afterwards. Omit when the URL is already up. |
+| `target.start` | string | — | Command to start the site. Run before the audit; Gribble waits for `url` to respond, then shuts it down afterwards. If it exits mid-audit and `url` stops answering, the audit stops with exit code `4` and prints the command's last output. Omit when the URL is already up. |
 | `target.routes` | `auto` \| `crawl` \| string[] | `auto` | `auto` reads your framework's routes (Next.js app directory, React Router, Nuxt pages). `crawl` follows links from the base URL. An explicit list audits exactly those paths. |
 | `target.readyTimeoutMs` | number | `120000` | How long to wait for `url` to respond after running `start`. |
+| `target.maxConnectionFailures` | number | `3` | Stop the audit when this many routes in a row fail with a connection error (refused, reset, empty response): the server is gone and every later route would fail the same way. `0` disables the check. |
 
 ```yaml
 target:

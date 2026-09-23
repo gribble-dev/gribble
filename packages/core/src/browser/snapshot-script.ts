@@ -178,6 +178,33 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 		);
 	};
 
+	/**
+	 * Name from content, the way Playwright computes it for `role=...[name=...]`: skip `aria-hidden`,
+	 * `hidden` and undisplayed subtrees, prefer a child's `aria-label` or `alt`, and put spaces around
+	 * block-level children.
+	 */
+	const nameFromContent = (node: Node): string => {
+		let out = "";
+		for (const child of Array.from(node.childNodes)) {
+			if (child.nodeType === 3) {
+				out += child.textContent ?? "";
+				continue;
+			}
+			if (child.nodeType !== 1) continue;
+			const el = child as Element;
+			const tag = el.tagName.toLowerCase();
+			if (tag === "script" || tag === "style" || tag === "template" || tag === "noscript") continue;
+			if (el.getAttribute("aria-hidden") === "true" || el.hasAttribute("hidden")) continue;
+			const style = win.getComputedStyle(el);
+			if (style.display === "none" || style.visibility === "hidden") continue;
+			const label = el.getAttribute("aria-label")?.trim();
+			const token = label || (tag === "img" ? (el.getAttribute("alt") ?? "") : nameFromContent(el));
+			out += style.display === "inline" ? token : ` ${token} `;
+		}
+		return out;
+	};
+
+	/** Full accessible name; never truncated, since recorded replay selectors match it exactly. */
 	const accessibleName = (el: Element): string => {
 		const ariaLabel = el.getAttribute("aria-label");
 		if (ariaLabel?.trim()) return collapse(ariaLabel);
@@ -198,13 +225,13 @@ export function collectSnapshot(opts: SnapshotScriptOptions): SnapshotScriptResu
 			return collapse(el.getAttribute("placeholder") ?? el.getAttribute("title") ?? "");
 		}
 		if (tag === "img") return collapse(el.getAttribute("alt") ?? "");
-		let text = collapse(el.textContent ?? "");
+		let text = collapse(nameFromContent(el));
 		if (!text) {
 			const img = el.querySelector("img[alt], svg[aria-label], [aria-label]");
 			text = collapse(img?.getAttribute("alt") ?? img?.getAttribute("aria-label") ?? "");
 		}
 		if (!text) text = collapse(el.getAttribute("title") ?? "");
-		return text.slice(0, 120);
+		return text;
 	};
 
 	const structuralPath = (el: Element): string => {

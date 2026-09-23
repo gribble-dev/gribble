@@ -4,6 +4,7 @@ export const EXIT = {
 	gateFailed: 1,
 	config: 2,
 	crash: 3,
+	targetGone: 4,
 	cancelled: 130,
 } as const;
 

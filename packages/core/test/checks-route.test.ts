@@ -1,4 +1,6 @@
 import { mkdtemp, rm } from "node:fs/promises";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +16,7 @@ import type {
 import {
 	checkSiteWide,
 	compilePatterns,
+	HEADERS_LOOPBACK_REASON,
 	isHtmlMediaType,
 	LinkCache,
 	launchBrowser,
@@ -231,7 +234,8 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		expect(result.status).toBe(200);
 		const rules = result.findings.map((f) => f.rule);
 		expect(rules.filter((r) => /^(html|seo|a11y|links|ui|i18n)\//.test(r))).toEqual([]);
-		const notRun = result.notRun ?? [];
+		// The fixture serves on loopback, so security/headers records its own skip; see the next test.
+		const notRun = (result.notRun ?? []).filter((n) => n.rule !== "security/headers");
 		// a11y/* appears twice: once for axe and once for the focus, keyboard and motion rules.
 		expect(notRun.map((n) => n.rule)).toEqual([
 			"html/*",
@@ -258,11 +262,35 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		).toBe(true);
 	}, 60_000);
 
+	it("records security/headers as not run on a loopback target without failing the security checks", async () => {
+		events.length = 0;
+		const result = await run("/about.html");
+		expect(result.findings.map((f) => f.rule)).not.toContain("security/headers");
+		expect(result.notRun).toEqual([
+			{
+				rule: "security/headers",
+				route: "/about.html",
+				reason: HEADERS_LOOPBACK_REASON,
+				code: "skipped",
+				intentional: true,
+			},
+		]);
+		const security = events.find((e) => e.type === "check:end" && e.rule === "security/*");
+		expect(security).toMatchObject({ ok: true, route: "/about.html" });
+	}, 60_000);
+
 	it("records perf/* as not run when Lighthouse cannot start", async () => {
 		events.length = 0;
 		const result = await run("/about.html", "desktop", { lighthouse: true, cdpPort: undefined });
 		expect(result.findings.map((f) => f.rule).filter((r) => r.startsWith("perf/"))).toEqual([]);
 		expect(result.notRun).toEqual([
+			{
+				rule: "security/headers",
+				route: "/about.html",
+				reason: HEADERS_LOOPBACK_REASON,
+				code: "skipped",
+				intentional: true,
+			},
 			{
 				rule: "perf/*",
 				route: "/about.html",
@@ -330,6 +358,66 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		expect(chain?.subject).toBe(`${site.url}/redirect-twice`);
 		expect(chain?.suggestion).toContain("/about.html");
 		await page.close();
+	}, 60_000);
+
+	it("judges a same-origin link that redirects off-site by where it lands", async () => {
+		// A second origin standing in for a partner site that blocks bots on one path and lost another.
+		const partner = createServer((req, res) => {
+			res.writeHead(req.url === "/blocked" ? 403 : req.url === "/gone" ? 404 : 200);
+			res.end();
+		});
+		await new Promise<void>((resolve) => partner.listen(0, "127.0.0.1", resolve));
+		const partnerUrl = `http://127.0.0.1:${(partner.address() as AddressInfo).port}`;
+		const hop = (path: string) => `/go?to=${encodeURIComponent(`${partnerUrl}${path}`)}`;
+		const check = async (ignore: string[]) => {
+			const rulesDir = await mkdtemp(join(tmpdir(), "gribble-links-"));
+			const page = await browser.newPage();
+			try {
+				const ctx: CheckContext = {
+					project: await makeProject({
+						url: site.url,
+						targetDir: rulesDir,
+						rulesYaml: `rules:\n  links/broken: error\n  links/broken-external: [warn, { ignore: ${JSON.stringify(ignore)} }]\n`,
+					}),
+					page,
+					route: "/",
+					url: `${site.url}/`,
+					viewport: "desktop",
+					targetName: "",
+					runDir: join(rulesDir, "run"),
+					shared: { links: new LinkCache(), reportedOnce: new Set() },
+				};
+				await page.goto(`${site.url}/`);
+				await page.raw.evaluate(
+					(hrefs) => {
+						document.body.replaceChildren();
+						for (const href of hrefs) {
+							const a = document.createElement("a");
+							a.href = href;
+							a.textContent = "partner";
+							document.body.append(a);
+						}
+					},
+					[hop("/blocked"), hop("/gone"), hop("/ok")],
+				);
+				const { findings } = await runRouteChecks(ctx, { skipNavigation: true, screenshot: false });
+				return findings.filter((f) => f.rule.startsWith("links/"));
+			} finally {
+				await page.close();
+				await rm(rulesDir, { recursive: true, force: true });
+			}
+		};
+		try {
+			const findings = await check(["linkedin.com"]);
+			expect(findings.map((f) => [f.rule, f.subject])).toEqual([
+				["links/broken-external", `${site.url}${hop("/gone")}`],
+			]);
+			expect(findings[0]?.severity).toBe("warn");
+			expect(findings[0]?.message).toContain(`redirects to ${partnerUrl}/gone`);
+			expect(await check(["127.0.0.1"])).toEqual([]);
+		} finally {
+			await new Promise((resolve) => partner.close(resolve));
+		}
 	}, 60_000);
 
 	it("runs the site-wide checks over the per-route results", async () => {

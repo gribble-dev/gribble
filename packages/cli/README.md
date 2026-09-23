@@ -19,7 +19,7 @@ The AI review runtime is an **optional peer dependency**, so that install carrie
 pnpm add -D gribble @earendil-works/pi-ai @earendil-works/pi-coding-agent
 ```
 
-No package manager installs optional peers by itself. Without them, `--mode review` stops with the exact install command. See [Getting started](https://gribble.dev/docs/getting-started#the-review-runtime-is-optional).
+No package manager installs optional peers by itself on a fresh install. Upgrading from 0.3 with pnpm keeps the runtime from the old lockfile; [here is how to drop it](https://gribble.dev/docs/getting-started#upgrading-from-0-3). Without them, `--mode review` stops with the exact install command. See [Getting started](https://gribble.dev/docs/getting-started#the-review-runtime-is-optional).
 
 ## Commands
 
@@ -35,7 +35,7 @@ No package manager installs optional peers by itself. Without them, `--mode revi
 | `baseline update` | Refresh `.gribble/baseline/` |
 | `version` | Print the version |
 
-Exit codes: `0` passed, `1` gate failed, `2` configuration or auth error, `3` unexpected crash.
+Exit codes: `0` passed, `1` gate failed, `2` configuration or auth error, `3` unexpected crash, `4` the site stopped answering mid-audit.
 
 Full reference: [gribble.dev/docs/cli](https://gribble.dev/docs/cli). The same pages ship inside this package under `docs/`.
 

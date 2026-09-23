@@ -24,4 +24,12 @@ process.on("SIGINT", () => {
 
 const context = { ...defaultRunContext(), signal: controller.signal };
 const code = await run(process.argv.slice(2), { context });
-process.exitCode = code;
+// Exit explicitly once the output is flushed. Waiting for the event loop to drain lets any handle
+// that outlived the audit (a dev server orphan holding our pipes, a wedged browser connection)
+// keep the process, and a CI job, alive for hours after the work is done.
+const flushed = (stream: NodeJS.WriteStream) =>
+	new Promise<void>((resolve) => {
+		stream.write("", () => resolve());
+	});
+await Promise.all([flushed(process.stdout), flushed(process.stderr)]);
+process.exit(code);

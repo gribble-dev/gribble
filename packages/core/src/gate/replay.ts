@@ -162,10 +162,17 @@ export async function replayFlow(opts: ReplayFlowOptions): Promise<ReplayFlowRes
 		page = await opts.browser.newPage({ authProfile });
 		const start = resolveUrl(opts.browser.baseUrl, replay.startUrl);
 		const nav = await page.goto(start, { timeoutMs: 30_000 });
-		if (!nav.ok)
-			throw new Error(
-				`start url ${start} failed: ${nav.status ? `HTTP ${nav.status}` : (nav.error ?? "no response")}`,
-			);
+		if (!nav.ok) {
+			const reason = `start url ${start} failed: ${nav.status ? `HTTP ${nav.status}` : (nav.error ?? "no response")}`;
+			// A flow whose first step navigates does not depend on where it starts (older sidecars
+			// recorded whatever page the agent was on).
+			if (replay.steps[0]?.action !== "navigate") throw new Error(reason);
+			opts.onEvent?.({
+				type: "log",
+				level: "warn",
+				message: `flow ${flow.name}: ${reason}; continuing, step 1 navigates`,
+			});
+		}
 		for (const [index, step] of replay.steps.entries()) {
 			if (opts.signal?.aborted) throw new Error("aborted");
 			try {

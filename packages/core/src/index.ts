@@ -8,10 +8,13 @@ export * from "./flows/index.js";
 export * from "./gate/index.js";
 export * from "./models/index.js";
 export {
+	formatUndeclaredReviewRuntimeWarning,
+	hasUndeclaredReviewRuntime,
 	loadPiCodingAgent,
 	PI_RUNTIME_VERSION,
 	REVIEW_RUNTIME_INSTALL_COMMAND,
 	REVIEW_RUNTIME_PACKAGES,
+	REVIEW_RUNTIME_UPGRADE_DOCS,
 	ReviewRuntimeMissingError,
 } from "./pi.js";
 export * from "./project/index.js";

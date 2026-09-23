@@ -9,7 +9,7 @@ import { Type } from "typebox";
 import { Value } from "typebox/value";
 import { describeValidationErrors } from "../../config/errors.js";
 import { FLOWS_DIR, replaySidecarPath } from "../../flows/load.js";
-import { type FlowReplay, flowReplaySchema } from "../../flows/schema.js";
+import { type FlowReplay, type FlowStep, flowReplaySchema } from "../../flows/schema.js";
 import { FLOW_TOOLS } from "../names.js";
 import type { AgentState } from "../state.js";
 import { textResult } from "./common.js";
@@ -32,6 +32,35 @@ export function flowSlug(name: string): string {
 			.replace(/[^a-z0-9]+/g, "-")
 			.replace(/^-+|-+$/g, "") || "flow"
 	);
+}
+
+/**
+ * `url` as a path when it is on the target's origin, so a sidecar survives `--env` switches;
+ * `about:blank` becomes the target's own path and paths stay paths.
+ */
+export function relativeToTarget(url: string, targetUrl: string): string {
+	try {
+		const target = new URL(targetUrl);
+		const parsed = new URL(url, target);
+		if (parsed.protocol === "about:") return target.pathname;
+		if (parsed.origin !== target.origin) return url;
+		return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+	} catch {
+		return url;
+	}
+}
+
+/**
+ * Where a recorded replay starts. A flow whose first step navigates positions itself, so it starts
+ * at the target root and the page the agent happened to be on is not recorded; otherwise the page
+ * the flow started on, relative to the target.
+ */
+export function replayStartUrl(
+	recording: { startUrl: string; steps: FlowStep[] },
+	targetUrl: string,
+): string {
+	if (recording.steps[0]?.action === "navigate") return relativeToTarget(targetUrl, targetUrl);
+	return relativeToTarget(recording.startUrl, targetUrl);
 }
 
 /** Build a replay from a recording and validate it against the schema. */
@@ -80,8 +109,14 @@ export function flowsPack(state: AgentState): InlineExtension {
 						state.emit({ type: "flow:end", flow: previous, ok: false, error: "not ended" });
 					}
 					const page = await state.currentPage();
-					const startUrl = page.url() === "about:blank" ? state.config.target.url : page.url();
-					state.flowRecording = { name: params.name, startUrl, steps: [], startedAt: Date.now() };
+					const startUrl = relativeToTarget(page.url(), state.config.target.url);
+					state.flowRecording = {
+						name: params.name,
+						startUrl,
+						steps: [],
+						problems: [],
+						startedAt: Date.now(),
+					};
 					state.emit({ type: "flow:start", flow: params.name });
 					return textResult(`Recording flow "${params.name}" from ${startUrl}.`, {
 						name: params.name,
@@ -122,13 +157,23 @@ export function flowsPack(state: AgentState): InlineExtension {
 					state.emit({ type: "flow:end", flow: params.name, ok: params.ok, durationMs, error: result.error });
 
 					let written: string | undefined;
+					let skipped: string | undefined;
 					if (params.ok && state.recordReplays && recording.steps.length > 0) {
 						const known = state.flows.find((f) => f.name === params.name);
 						const sidecar = known
 							? replaySidecarPath(known.file)
 							: join(state.project.gribbleDir, FLOWS_DIR, `${flowSlug(params.name)}.replay.json`);
-						if (!known?.replay && !(await exists(sidecar))) {
-							const replay = buildReplay(recording);
+						// An existing replay is never overwritten.
+						const hasReplay = !!known?.replay || (await exists(sidecar));
+						if (!hasReplay && recording.problems.length > 0) {
+							// A sidecar that cannot replay would fail the next gate as flows/replay.
+							skipped = `Replay not written to ${sidecar}: ${recording.problems.join("; ")}.`;
+							state.log("warn", `flow ${params.name}: ${skipped}`);
+						} else if (!hasReplay) {
+							const replay = buildReplay({
+								...recording,
+								startUrl: replayStartUrl(recording, state.config.target.url),
+							});
 							await mkdir(join(sidecar, ".."), { recursive: true });
 							await writeFile(sidecar, `${JSON.stringify(replay, null, 2)}\n`, "utf8");
 							state.replaysWritten.push(sidecar);
@@ -137,8 +182,8 @@ export function flowsPack(state: AgentState): InlineExtension {
 					}
 					const verdict = params.ok ? "succeeded" : `failed: ${result.error}`;
 					return textResult(
-						`Flow "${params.name}" ${verdict} after ${recording.steps.length} recorded step(s).${written ? ` Replay written to ${written}.` : ""}`,
-						{ ...result, replay: written },
+						`Flow "${params.name}" ${verdict} after ${recording.steps.length} recorded step(s).${written ? ` Replay written to ${written}.` : ""}${skipped ? ` ${skipped}` : ""}`,
+						{ ...result, replay: written, replaySkipped: skipped },
 					);
 				},
 			});

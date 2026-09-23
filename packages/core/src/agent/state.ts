@@ -36,8 +36,11 @@ export interface AgentBudget {
 
 export interface FlowRecording {
 	name: string;
+	/** Page the flow started on, relative to the target when it is on the target's origin. */
 	startUrl: string;
 	steps: FlowStep[];
+	/** Recorded steps whose selector could not be verified on the live page, as `step N: why`. */
+	problems: string[];
 	startedAt: number;
 }
 
@@ -183,9 +186,12 @@ export class AgentState {
 		return this.currentRoute;
 	}
 
-	/** Append a replay step when a flow is being recorded. */
-	recordStep(step: FlowStep): void {
-		this.flowRecording?.steps.push(step);
+	/** Append a replay step when a flow is being recorded; `problem` says why it may not replay. */
+	recordStep(step: FlowStep, problem?: string): void {
+		const recording = this.flowRecording;
+		if (!recording) return;
+		recording.steps.push(step);
+		if (problem) recording.problems.push(`step ${recording.steps.length}: ${problem}`);
 	}
 
 	/** Add a finding unless the fingerprint is already known; emits the `finding` event. */

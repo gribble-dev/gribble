@@ -145,6 +145,37 @@ describe.skipIf(!hasChromium())(`replayFlow (${SKIP_BROWSER_REASON})`, () => {
 		expect(result.notReached).toBeUndefined();
 	}, 60_000);
 
+	it("warns and continues when the start url is broken but step 1 navigates (#34)", async () => {
+		const events: AuditEvent[] = [];
+		const result = await replayFlow({
+			flow: flow("smoke"),
+			replay: {
+				version: 1,
+				name: "smoke",
+				// An older sidecar: an absolute leftover page that does not exist in this environment.
+				startUrl: `${site.url}/cities/beijing/the-forbidden-city`,
+				steps: [
+					{ action: "navigate", url: "/" },
+					{ action: "expect_text", text: "Welcome aboard" },
+				],
+			},
+			browser,
+			project,
+			targetName: "",
+			env: {},
+			onEvent: (e) => events.push(e),
+		});
+		expect(result).toMatchObject({ ok: true, steps: 2 });
+		expect(result.findings.map((f) => f.rule)).not.toContain("flows/replay");
+		expect(events).toContainEqual(
+			expect.objectContaining({
+				type: "log",
+				level: "warn",
+				message: expect.stringMatching(/flow smoke: start url .* failed: HTTP 404; continuing/),
+			}),
+		);
+	}, 60_000);
+
 	it("reports flows/max-duration when a flow is slow", async () => {
 		const result = await replayFlow({
 			flow: flow("slow"),

@@ -261,13 +261,13 @@ A failed flow also produces a `flows/replay` finding. `flows[]` is the execution
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `rule` | string | The rule family that did not run, e.g. `perf/*` or `html/*`. |
+| `rule` | string | The rule family or rule that did not run, e.g. `perf/*`, `html/*` or `security/headers`. |
 | `route` | string? | The route it was skipped on. Absent for site-wide checks such as `site/*`. |
-| `reason` | string | Why: Lighthouse failed to start, the response was not HTML, a check threw. |
+| `reason` | string | Why: Lighthouse failed to start, the response was not HTML, the target is loopback, a check threw. |
 | `code` | [reason code](#reason-codes)? | The same reason, machine-readable. Absent in reports from older versions: treat that as unexpected. |
 | `intentional` | `true`? | Present for an expected omission (`unsupported`, `excluded`, `skipped`). |
 
-A check that never ran contributes no findings, so a clean `findings[]` alone cannot tell "perf passed" from "perf never executed". `notRun[]` records the difference: Lighthouse that could not start on a route, the page rules skipped on a non-HTML response such as a sitemap, or a check that threw. The list is omitted when everything ran. It does not affect `summary.gate` unless the project opts in with [`coverage.required.checks`](/docs/configuration/gribble-yaml#coverage).
+A check that never ran contributes no findings, so a clean `findings[]` alone cannot tell "perf passed" from "perf never executed". `notRun[]` records the difference: Lighthouse that could not start on a route, the page rules skipped on a non-HTML response such as a sitemap, `security/headers` skipped because the target is a loopback address (dev servers do not carry production headers), or a check that threw. The list is omitted when everything ran. It does not affect `summary.gate` unless the project opts in with [`coverage.required.checks`](/docs/configuration/gribble-yaml#coverage).
 
 ### `completeness`
 
@@ -297,7 +297,7 @@ A check that never ran contributes no findings, so a clean `findings[]` alone ca
 | `error` | no | The check itself failed. |
 | `unsupported` | yes | The check does not apply, e.g. page rules on a sitemap. |
 | `excluded` | yes | Configuration left it out, e.g. a flow whose `env` does not include this environment. |
-| `skipped` | yes | The run skipped it on purpose by design (reserved for checks such as loopback links on a remote target). |
+| `skipped` | yes | The run skipped it on purpose by design e.g. `security/headers` on a loopback target. |
 
 Codes may be added in later releases. Treat an unknown code as unexpected.
 

@@ -174,7 +174,7 @@ export const notRunReasonCodeSchema = Type.Enum(NOT_RUN_REASON_CODES, {
 		"`error`: the check itself failed.",
 		"`unsupported` (intentional): the check does not apply, e.g. a non-HTML response.",
 		"`excluded` (intentional): configuration left it out, e.g. a flow limited to another environment.",
-		"`skipped` (intentional): the run skipped it on purpose, e.g. loopback links on a remote target.",
+		"`skipped` (intentional): the run skipped it on purpose, e.g. `security/headers` on a loopback target.",
 	].join(" "),
 });
 
@@ -368,7 +368,7 @@ export const reportSchema = Type.Object(
 		notRun: Type.Optional(
 			Type.Array(notRunCheckSchema, {
 				description:
-					"Checks that could not run (Lighthouse failed, non-HTML response). Omitted when every check ran.",
+					"Checks that could not run (Lighthouse failed, non-HTML response, security/headers on a loopback target). Omitted when every check ran.",
 			}),
 		),
 		completeness: Type.Optional(completenessSchema),

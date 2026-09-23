@@ -14,6 +14,7 @@ describe("parseGribbleConfig", () => {
 		const cfg = parseGribbleConfig(minimal, { env: {} });
 		expect(cfg.target.routes).toBe("auto");
 		expect(cfg.target.readyTimeoutMs).toBe(120000);
+		expect(cfg.target.maxConnectionFailures).toBe(3);
 		expect(cfg.review).toEqual({ max_comments: 5, min_confidence: 0.7, vision: false, explore: true });
 		expect(cfg.budget).toEqual({ max_steps: 200, max_tokens: 2000000 });
 		expect(cfg.baseline).toEqual({ screenshots: "off", update: "commit" });

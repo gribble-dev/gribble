@@ -96,6 +96,7 @@ export async function runRouteChecks(
 	const loaded = !!nav && nav.ok && (nav.status ?? 0) < 400;
 
 	const notRun: NotRunCheck[] = [];
+	ctx.notRun = notRun;
 	const result: RouteCheckResult = {
 		findings,
 		metrics: {},

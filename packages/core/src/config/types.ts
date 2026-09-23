@@ -30,6 +30,8 @@ export interface TargetConfig {
 	routes: "auto" | "crawl" | string[];
 	/** How long to wait for `url` to respond after `start`, in milliseconds. */
 	readyTimeoutMs: number;
+	/** Consecutive routes refused at the socket before the audit stops; 0 disables the check. */
+	maxConnectionFailures: number;
 }
 
 export interface ReviewConfig {

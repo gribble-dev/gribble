@@ -45,6 +45,12 @@ export async function startFixtureSite(): Promise<FixtureSite> {
 			res.end();
 			return;
 		}
+		if (path === "/go") {
+			// An affiliate-style hop: redirects wherever `to` says, usually off-site.
+			res.writeHead(302, { location: url.searchParams.get("to") ?? "/" });
+			res.end();
+			return;
+		}
 		const file = normalize(join(FIXTURE_SITE, path));
 		if (!file.startsWith(FIXTURE_SITE)) {
 			res.writeHead(403);

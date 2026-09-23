@@ -2,6 +2,7 @@
  * security/* — transport, mixed content, leaked credentials, response headers, exposed source maps,
  * POST forms without CSRF protection.
  */
+import { notRunEntry } from "../report/completeness.js";
 import type { Finding } from "../report/schema.js";
 import { report, ruleEnabled, ruleOptions, truncate } from "./finding.js";
 import { getHtml, isLoopbackHost, sameOrigin, targetOrigin } from "./page-data.js";
@@ -34,6 +35,27 @@ export const SECRET_PATTERNS: SecretPattern[] = [
 export function maskSecret(value: string): string {
 	if (value.length <= 10) return `${value.slice(0, 3)}…`;
 	return `${value.slice(0, 6)}…${value.slice(-3)}`;
+}
+
+export const HEADERS_LOOPBACK_REASON =
+	"target is a loopback address; dev and preview servers do not carry production headers";
+
+export const META_CSP_NOTE =
+	"A meta policy cannot carry frame-ancestors, report-uri or sandbox; cover framing with X-Frame-Options or a CSP header.";
+
+/** Policy of the first `<meta http-equiv="content-security-policy">` with a non-empty `content`. */
+export function metaCspPolicy(html: string): string | undefined {
+	for (const [tag] of html.matchAll(/<meta\b[^>]*>/gi)) {
+		const attrs = new Map<string, string>();
+		for (const m of tag.slice(5).matchAll(/([^\s"'=<>/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g)) {
+			const name = m[1]!.toLowerCase();
+			if (!attrs.has(name)) attrs.set(name, m[2] ?? m[3] ?? m[4] ?? "");
+		}
+		if (attrs.get("http-equiv")?.trim().toLowerCase() !== "content-security-policy") continue;
+		const policy = attrs.get("content")?.trim();
+		if (policy) return policy;
+	}
+	return undefined;
 }
 
 interface PostForm {
@@ -190,22 +212,48 @@ export async function checkSecurity(ctx: CheckContext): Promise<Finding[]> {
 		}
 	}
 
-	// Dev and preview servers on loopback never carry production headers; checking them there is noise.
-	if (ruleEnabled(ctx, "security/headers") && !loopback) {
-		const required = (ruleOptions<{ require: string[] }>(ctx, "security/headers").require ?? []).map((h) =>
-			h.toLowerCase(),
-		);
-		const headers = ctx.cache?.navigation?.headers ?? ctx.page.lastNavigation()?.headers ?? {};
-		const missing = required.filter(
-			(h) => !(h in headers) && !(h === "strict-transport-security" && ctx.page.url().startsWith("http://")),
-		);
-		if (missing.length) {
-			report(ctx, out, "security/headers", {
-				title: `Missing security headers: ${missing.join(", ")}`,
-				message: `The document response for ${ctx.route} lacks ${missing.join(", ")}.`,
-				subject: missing.join(","),
-				viewport: null,
-			});
+	if (ruleEnabled(ctx, "security/headers")) {
+		if (loopback) {
+			// Dev and preview servers on loopback never carry production headers; checking them there is noise.
+			ctx.notRun?.push(notRunEntry("security/headers", "skipped", HEADERS_LOOPBACK_REASON, ctx.route));
+		} else {
+			const required = (ruleOptions<{ require: string[] }>(ctx, "security/headers").require ?? []).map((h) =>
+				h.toLowerCase(),
+			);
+			const headers = ctx.cache?.navigation?.headers ?? ctx.page.lastNavigation()?.headers ?? {};
+			let missing = required.filter(
+				(h) =>
+					!(h in headers) && !(h === "strict-transport-security" && ctx.page.url().startsWith("http://")),
+			);
+			// A prerendered page has no server to set headers, so the policy travels in the document.
+			// Only CSP has a meta equivalent; the other headers stay header-only.
+			let metaCsp: string | undefined;
+			if (missing.includes("content-security-policy")) {
+				metaCsp = metaCspPolicy(await getHtml(ctx));
+				if (metaCsp !== undefined) missing = missing.filter((h) => h !== "content-security-policy");
+			}
+			if (metaCsp !== undefined && once("security/headers:meta-csp")) {
+				ctx.onEvent?.({
+					type: "log",
+					level: "info",
+					message: `${ctx.route} delivers its content-security-policy in <meta http-equiv>; security/headers accepts it. ${META_CSP_NOTE}`,
+				});
+			}
+			if (missing.length) {
+				report(ctx, out, "security/headers", {
+					title: `Missing security headers: ${missing.join(", ")}`,
+					message: `The document response for ${ctx.route} lacks ${missing.join(", ")}.`,
+					subject: missing.join(","),
+					viewport: null,
+					evidence:
+						metaCsp === undefined
+							? undefined
+							: {
+									snippet: truncate(`<meta http-equiv="content-security-policy" content="${metaCsp}">`, 200),
+									data: { cspDelivery: "meta", note: META_CSP_NOTE },
+								},
+				});
+			}
 		}
 	}
 
