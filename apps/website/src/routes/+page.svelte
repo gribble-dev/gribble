@@ -531,6 +531,11 @@ pnpm exec gribble audit     <span class="c"># let the gribbles chew on it</span>
 		border: 2px dashed var(--outline);
 	}
 
+	/* The faint label does not reach 4.5:1 on the coral wash. */
+	.member.ai .member-kind {
+		color: var(--text-muted);
+	}
+
 	.member h3 {
 		margin: 0;
 		font-size: 1.12rem;
@@ -640,7 +645,7 @@ pnpm exec gribble audit     <span class="c"># let the gribbles chew on it</span>
 	.terminal {
 		margin: 0;
 		background: var(--kelp);
-		color: var(--sand);
+		color: var(--on-kelp);
 		border: 2px solid var(--outline);
 		box-shadow: var(--sticker-shadow);
 		font-size: 0.95rem;
@@ -651,7 +656,7 @@ pnpm exec gribble audit     <span class="c"># let the gribbles chew on it</span>
 	}
 
 	.terminal .c {
-		color: #9fd1c3;
+		color: var(--on-kelp-comment);
 	}
 
 	/* ---------- docs ---------- */
