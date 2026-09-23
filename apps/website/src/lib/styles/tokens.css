@@ -50,6 +50,14 @@
 	--fill-alt: var(--seaglass);
 	--on-fill-alt: var(--kelp);
 
+	/* Text on the always-kelp bands (footer, terminal), in both themes. */
+	--on-kelp: var(--sand);
+	--on-kelp-muted: #c9d9d3;
+	--on-kelp-link: #ffb3a8;
+	--on-kelp-link-hover: #ffd2cb;
+	--on-kelp-comment: #9fd1c3;
+	--kelp-deep: #0a1a17;
+
 	/* The reader's own chat bubbles, and the glow behind the hero. */
 	--bubble-you: var(--kelp);
 	--on-bubble-you: var(--sand);

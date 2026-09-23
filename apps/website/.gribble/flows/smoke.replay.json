@@ -55,7 +55,7 @@
     },
     {
       "action": "navigate",
-      "url": "http://localhost:4173/docs/README"
+      "url": "http://localhost:4173/docs/agent-setup"
     },
     {
       "action": "navigate",

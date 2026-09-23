@@ -89,7 +89,7 @@
 	/>
 
 	<!-- shine -->
-	<ellipse cx="21" cy="18.6" rx="3" ry="1.7" transform="rotate(-28 21 18.6)" fill="#ffffff" opacity="0.55" />
+	<ellipse cx="21" cy="18.6" rx="3" ry="1.7" transform="rotate(-28 21 18.6)" fill="var(--critter-eye)" opacity="0.55" />
 </svg>
 
 <style>

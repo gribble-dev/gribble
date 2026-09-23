@@ -146,11 +146,11 @@
 	.site-footer {
 		border-top: 2px solid var(--outline);
 		background: var(--kelp);
-		color: var(--sand);
-		--accent: #ffb3a8;
-		--accent-hover: #ffd2cb;
-		/* The footer is always a kelp band, so the critter ink flips to sand to stay visible. */
-		--critter-ink: #0a1a17;
+		color: var(--on-kelp);
+		--accent: var(--on-kelp-link);
+		--accent-hover: var(--on-kelp-link-hover);
+		/* The footer is always a kelp band; the critter outline goes a shade darker so it still reads. */
+		--critter-ink: var(--kelp-deep);
 	}
 
 	.inner {
@@ -188,7 +188,7 @@
 
 	.legal {
 		margin: 0;
-		color: #c9d9d3;
+		color: var(--on-kelp-muted);
 		font-size: 0.88rem;
 	}
 
