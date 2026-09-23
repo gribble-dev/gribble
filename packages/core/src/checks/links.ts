@@ -113,6 +113,42 @@ async function sourceLocation(ctx: CheckContext, link: PageLink) {
 	}
 }
 
+/** Statuses that sites answer to automated clients and that say nothing about the link. */
+const INCONCLUSIVE_STATUSES = new Set([403, 429, 999]);
+
+export interface ProbeVerdict {
+	/** The rule a failure belongs to: decided by the origin of the URL whose response was judged. */
+	rule: "links/broken" | "links/broken-external";
+	/** A same-origin link whose redirects ended on another origin. */
+	redirectedOff: boolean;
+	/** True when the probe is a failure worth reporting. */
+	broken: boolean;
+}
+
+/**
+ * Judges a probe by where it ended, not where it started. A same-origin link that redirects off the
+ * site (an affiliate `/go/partner` hop, say) is answered by the other origin, so it gets the
+ * `links/broken-external` treatment: the rule id, its `ignore` hosts and the inconclusive statuses.
+ */
+export function judgeProbe(
+	probe: LinkProbe,
+	opts: { internal: boolean; origin: string; ignore: readonly string[] },
+): ProbeVerdict {
+	const redirectedOff = opts.internal && probe.redirects > 0 && !sameOrigin(probe.finalUrl, opts.origin);
+	const external = !opts.internal || redirectedOff;
+	const rule = external ? "links/broken-external" : "links/broken";
+	if (probe.ok) return { rule, redirectedOff, broken: false };
+	if (redirectedOff) {
+		let host = "";
+		try {
+			host = new URL(probe.finalUrl).hostname;
+		} catch {}
+		if (host && matchOrigin(host, opts.ignore)) return { rule, redirectedOff, broken: false };
+	}
+	const inconclusive = external && probe.status !== undefined && INCONCLUSIVE_STATUSES.has(probe.status);
+	return { rule, redirectedOff, broken: !inconclusive };
+}
+
 /** links/broken, links/broken-external, links/redirect-chain, links/empty-href, links/target-blank-noopener. */
 export async function checkLinks(ctx: CheckContext): Promise<Finding[]> {
 	const out: Finding[] = [];
@@ -196,7 +232,11 @@ export async function checkLinks(ctx: CheckContext): Promise<Finding[]> {
 	for (const { link, internal, promise } of probes) {
 		if (ctx.signal?.aborted) break;
 		const probe = await promise;
-		const rule = internal ? "links/broken" : "links/broken-external";
+		const { rule, redirectedOff, broken } = judgeProbe(probe, {
+			internal,
+			origin,
+			ignore: externalOptions.ignore ?? [],
+		});
 		const kindLabel =
 			link.kind === "anchor"
 				? "Link"
@@ -205,11 +245,13 @@ export async function checkLinks(ctx: CheckContext): Promise<Finding[]> {
 					: link.kind === "script"
 						? "Script"
 						: "Stylesheet";
-		const inconclusive = !internal && (probe.status === 403 || probe.status === 429 || probe.status === 999);
-		if (!probe.ok && !inconclusive && ruleEnabled(ctx, rule)) {
+		if (broken && ruleEnabled(ctx, rule)) {
+			const via = redirectedOff ? ` redirects to ${truncate(probe.finalUrl, 70)}, which` : "";
 			report(ctx, out, rule, {
-				title: `${kindLabel} to ${truncate(probe.url, 70)} is broken (${describe(probe)})`,
-				message: `${link.kind === "anchor" ? `Anchor "${truncate(link.text || "(no text)", 40)}"` : `${kindLabel} reference`} points at ${probe.url}, which answered ${describe(probe)}${probe.redirects ? ` after ${probe.redirects} redirect(s)` : ""}.`,
+				title: redirectedOff
+					? `${kindLabel} to ${truncate(probe.url, 70)} redirects off-site and is broken (${describe(probe)})`
+					: `${kindLabel} to ${truncate(probe.url, 70)} is broken (${describe(probe)})`,
+				message: `${link.kind === "anchor" ? `Anchor "${truncate(link.text || "(no text)", 40)}"` : `${kindLabel} reference`} points at ${probe.url}, which${via} answered ${describe(probe)}${probe.redirects ? ` after ${probe.redirects} redirect(s)` : ""}.`,
 				subject: probe.url,
 				location: await sourceLocation(ctx, link),
 				evidence: {
