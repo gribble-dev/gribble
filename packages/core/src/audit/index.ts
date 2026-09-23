@@ -1,6 +1,7 @@
 export {
 	type DevServer,
 	DevServerError,
+	type DevServerExit,
 	type StartDevServerOptions,
 	startDevServer,
 	urlResponds,
@@ -13,4 +14,10 @@ export {
 	routePatternRegex,
 } from "./routes.js";
 export { collectGitInfo, runAudit, viewportsToAudit } from "./run-audit.js";
+export {
+	ConnectionFailureCounter,
+	isConnectionError,
+	TargetGoneError,
+	urlAnswers,
+} from "./target-gone.js";
 export type * from "./types.js";

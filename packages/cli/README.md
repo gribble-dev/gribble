@@ -35,7 +35,7 @@ No package manager installs optional peers by itself. Without them, `--mode revi
 | `baseline update` | Refresh `.gribble/baseline/` |
 | `version` | Print the version |
 
-Exit codes: `0` passed, `1` gate failed, `2` configuration or auth error, `3` unexpected crash.
+Exit codes: `0` passed, `1` gate failed, `2` configuration or auth error, `3` unexpected crash, `4` the site stopped answering mid-audit.
 
 Full reference: [gribble.dev/docs/cli](https://gribble.dev/docs/cli). The same pages ship inside this package under `docs/`.
 

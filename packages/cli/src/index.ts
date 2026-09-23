@@ -180,6 +180,14 @@ function buildProgram(deps: CliDeps, setExit: (code: number) => void): Command {
 	return program;
 }
 
+/** The dev server's last lines, carried on DevServerError and TargetGoneError as `output`. */
+function writeServerOutput(err: Error, write: (line: string) => void): void {
+	const output = (err as { output?: unknown }).output;
+	if (!Array.isArray(output) || output.length === 0) return;
+	write(copy.errors.devServerOutput(output.length));
+	for (const line of output) write(`  | ${String(line)}`);
+}
+
 /** Print an error the way the docs promise and return the exit code for it. */
 function reportError(err: unknown, deps: CliDeps, verbose: boolean): number {
 	const { stderr } = deps.context;
@@ -215,8 +223,15 @@ function reportError(err: unknown, deps: CliDeps, verbose: boolean): number {
 	}
 	if (err instanceof Error && err.name === "DevServerError") {
 		write(`error: ${err.message}`);
+		writeServerOutput(err, write);
 		write(copy.errors.devServerHint);
 		return EXIT.config;
+	}
+	if (err instanceof Error && err.name === "TargetGoneError") {
+		write(`error: ${err.message}`);
+		writeServerOutput(err, write);
+		write(copy.errors.targetGoneHint);
+		return EXIT.targetGone;
 	}
 	write(`${copy.errors.unexpected} ${errorMessage(err)}`);
 	if (verbose && err instanceof Error && err.stack) write(err.stack);

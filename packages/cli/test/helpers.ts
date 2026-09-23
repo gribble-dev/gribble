@@ -100,7 +100,12 @@ export function project(overrides: Partial<ProjectContext> = {}): ProjectContext
 		gribbleDir: join(targetDir, ".gribble"),
 		targetName: "",
 		config: {
-			target: { url: "http://localhost:3000", routes: "auto", readyTimeoutMs: 120_000 },
+			target: {
+				url: "http://localhost:3000",
+				routes: "auto",
+				readyTimeoutMs: 120_000,
+				maxConnectionFailures: 3,
+			},
 			review: { max_comments: 5, min_confidence: 0.7, vision: false, explore: true },
 			budget: { max_steps: 200, max_tokens: 2_000_000 },
 			allowed_origins: ["localhost"],

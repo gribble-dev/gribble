@@ -202,6 +202,9 @@ export const copy = {
 			"Re-run with --verbose for a stack trace, and report it at https://github.com/gribble-dev/gribble/issues.",
 		devServerHint:
 			"Check `target.start` and `target.url` in .gribble/gribble.yaml: the command must serve that URL (build first if it is a preview server). Raise `target.readyTimeoutMs` for slow starts.",
+		devServerOutput: (lines: number) => `Last ${lines} line(s) from the dev server:`,
+		targetGoneHint:
+			"No report was written: every route after this point would have failed the same way. Fix whatever stopped the server (its output is above), or raise `target.maxConnectionFailures` if the target drops connections on purpose.",
 		promptInCi: "This command needs an interactive terminal.",
 		cancelled: "Cancelled.",
 	},
