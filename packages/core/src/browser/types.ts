@@ -50,6 +50,12 @@ export interface InteractiveElement {
 	href?: string;
 }
 
+export interface SelectorMatch {
+	count: number;
+	/** The first match is the element behind the ref (true when no ref was given or it is gone). */
+	sameElement: boolean;
+}
+
 export interface LayoutIssue {
 	kind: "overlap" | "overflow-x" | "small-touch-target" | "text-clipped" | "offscreen";
 	refs: string[];
@@ -139,6 +145,12 @@ export interface AuditPage {
 	/** Requests seen since the last navigation (not drained). */
 	requests(): RequestRecord[];
 	resolveRef(ref: string): Promise<InteractiveElement | undefined>;
+	/**
+	 * How many elements `selector` matches on the live page and, when `ref` is given, whether the
+	 * first match is the element behind that snapshot ref. Invalid selectors match nothing.
+	 * Optional for fakes.
+	 */
+	matchSelector?(selector: string, ref?: string): Promise<SelectorMatch>;
 	/** Document status and headers of the last `goto`. */
 	lastNavigation(): GotoResult | undefined;
 	/** Body of the last document response as served, undefined when there is none. Optional for fakes. */

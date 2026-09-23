@@ -24,6 +24,7 @@ export type {
 	LayoutIssue,
 	PageSnapshot,
 	RequestRecord,
+	SelectorMatch,
 	SnapshotOptions,
 	SnapshotTokens,
 	StyleViolation,

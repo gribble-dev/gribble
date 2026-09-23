@@ -5,6 +5,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ExtensionAPI, InlineExtension } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import type { InteractiveElement } from "../../browser/types.js";
+import { truncate } from "../../checks/finding.js";
 import { formatSnapshot } from "../format.js";
 import { BROWSER_TOOLS } from "../names.js";
 import type { AgentState } from "../state.js";
@@ -13,16 +15,65 @@ import { minFontPx, refOf, StringEnum, snapshotTokensFor, textResult } from "./c
 const TARGET_DESCRIPTION =
 	"`ref=e12` from the last page_snapshot, or a Playwright selector: `text=Sign in`, `role=button[name=Save]`, or CSS.";
 
-async function selectorForReplay(state: AgentState, target: string): Promise<string> {
+/** A value quoted for a selector attribute: `"a \"b\""`. */
+function quoted(value: string): string {
+	return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/** A link href that survives `--env` switches: a path, not an absolute URL, a fragment or a script. */
+function stableHref(href: string | undefined): string | undefined {
+	if (!href || href.startsWith("#") || href.startsWith("//")) return undefined;
+	if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return undefined;
+	return href;
+}
+
+/**
+ * Selectors that could replay a click or fill on `el`, most stable first: test id, id, the href of
+ * a link, the role and full accessible name, then the structural path.
+ */
+export function replaySelectorCandidates(el: InteractiveElement): string[] {
+	const out: string[] = [];
+	if (el.testId) out.push(`[data-testid=${quoted(el.testId)}]`);
+	if (el.id) out.push(/^[A-Za-z][\w-]*$/.test(el.id) ? `#${el.id}` : `[id=${quoted(el.id)}]`);
+	const href = el.role === "link" ? stableHref(el.href) : undefined;
+	if (href) out.push(`${el.tag === "a" ? "a" : ""}[href=${quoted(href)}]`);
+	if (el.role && el.name) out.push(`role=${el.role}[name=${quoted(el.name)}]`);
+	if (el.selector) out.push(el.selector);
+	return [...new Set(out)];
+}
+
+export interface ReplaySelector {
+	selector: string;
+	/** Why the selector may not replay; set when no candidate resolved to the element on the live page. */
+	problem?: string;
+}
+
+/**
+ * The selector a flow recording keeps for `target`. Refs are turned into a candidate that matches
+ * exactly one element on the live page, and that element is the one behind the ref; a candidate whose
+ * first match is the element comes next, since replays act on the first match.
+ */
+export async function selectorForReplay(state: AgentState, target: string): Promise<ReplaySelector> {
 	const ref = refOf(target);
-	if (!ref) return target;
+	if (!ref) return { selector: target };
 	const page = await state.currentPage();
 	const el = await page.resolveRef(ref);
-	if (!el) return target;
-	if (el.testId) return `[data-testid="${el.testId}"]`;
-	if (el.id) return `#${el.id}`;
-	if (el.role && el.name) return `role=${el.role}[name="${el.name}"]`;
-	return el.selector;
+	if (!el) return { selector: target, problem: `ref ${ref} is not in the last page_snapshot` };
+	const candidates = replaySelectorCandidates(el);
+	const fallback = candidates[0] ?? el.selector;
+	if (!state.flowRecording || !page.matchSelector) return { selector: fallback };
+	let firstMatch: string | undefined;
+	for (const candidate of candidates) {
+		const match = await page.matchSelector(candidate, ref);
+		if (!match.sameElement) continue;
+		if (match.count === 1) return { selector: candidate };
+		firstMatch ??= candidate;
+	}
+	if (firstMatch) return { selector: firstMatch };
+	return {
+		selector: fallback,
+		problem: `no selector for ${ref}${el.name ? ` "${truncate(el.name, 60)}"` : ""} resolves to it on the live page`,
+	};
 }
 
 export function browserPack(state: AgentState): InlineExtension {
@@ -74,10 +125,10 @@ export function browserPack(state: AgentState): InlineExtension {
 				}),
 				async execute(_id, params, _signal, onUpdate) {
 					const page = await state.currentPage();
-					const selector = await selectorForReplay(state, params.target);
+					const { selector, problem } = await selectorForReplay(state, params.target);
 					onUpdate?.({ content: [{ type: "text", text: `Clicking ${params.target}` }], details: {} });
 					await page.click(params.target);
-					state.recordStep({ action: "click", selector, description: params.description });
+					state.recordStep({ action: "click", selector, description: params.description }, problem);
 					const url = page.url();
 					const route = state.trackUrl(url);
 					return textResult(`Clicked ${params.target}. Now at ${url} (route ${route}).`, {
@@ -119,9 +170,9 @@ export function browserPack(state: AgentState): InlineExtension {
 						throw new Error("fill needs either `value` or `secret_env`.");
 					}
 					const page = await state.currentPage();
-					const selector = await selectorForReplay(state, params.target);
+					const { selector, problem } = await selectorForReplay(state, params.target);
 					await page.fill(params.target, value);
-					state.recordStep({ action: "fill", selector, ...step });
+					state.recordStep({ action: "fill", selector, ...step }, problem);
 					return textResult(
 						params.secret_env
 							? `Filled ${params.target} from ${params.secret_env}.`

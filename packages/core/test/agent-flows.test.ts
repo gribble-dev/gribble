@@ -10,10 +10,13 @@ import {
 	flowReplaySchema,
 	flowSlug,
 	flowsPack,
+	relativeToTarget,
+	replaySelectorCandidates,
 } from "../src/index.js";
 import {
 	element,
 	fakeBrowser,
+	fakePage,
 	fakePi,
 	fakeProject,
 	fakeState,
@@ -69,7 +72,8 @@ describe("flow recording", () => {
 			expect(state.replaysWritten).toEqual([sidecar]);
 			const replay = JSON.parse(await readFile(sidecar, "utf8"));
 			expect(Value.Check(flowReplaySchema, replay)).toBe(true);
-			expect(replay.startUrl).toBe("http://localhost:3000");
+			// The flow navigates first, so it starts at the target root, not wherever the agent was.
+			expect(replay.startUrl).toBe("/");
 			expect(replay.steps).toEqual([
 				{ action: "navigate", url: "/login" },
 				{ action: "fill", selector: '[data-testid="email"]', value: "ada@example.com" },
@@ -102,6 +106,108 @@ describe("flow recording", () => {
 			});
 			expect(failed.details.error).toBe("no button");
 			expect(state.replaysWritten).toEqual([]);
+		});
+	});
+
+	it("records startUrl deterministically, relative to the target (#34)", async () => {
+		await withTempDir(async (dir) => {
+			const page = fakePage("desktop", "http://localhost:3000/cities/beijing/the-forbidden-city");
+			const browser = fakeBrowser({ desktop: page });
+			const state = fakeState({ project: fakeProject({ dir }), browser });
+			const h = fakePi();
+			await h.load(browserPack(state));
+			await h.load(flowsPack(state));
+
+			// A flow that navigates first starts at the target root, whatever page was left open.
+			await h.call(FLOW_TOOLS.flowStart, { name: "smoke" });
+			await h.call(BROWSER_TOOLS.navigate, { url: "/" });
+			await h.call(FLOW_TOOLS.flowEnd, { name: "smoke", ok: true });
+
+			// A flow that acts on the current page keeps it, as a path on the target.
+			page.setUrl("http://localhost:3000/login?next=%2Fevents%2Fnew");
+			page.nextSnapshot = snapshot({ interactive: [element({ ref: "e1", name: "Sign in", testId: "go" })] });
+			await h.call(BROWSER_TOOLS.pageSnapshot, {});
+			await h.call(FLOW_TOOLS.flowStart, { name: "guide" });
+			await h.call(BROWSER_TOOLS.click, { target: "ref=e1" });
+			await h.call(FLOW_TOOLS.flowEnd, { name: "guide", ok: true });
+
+			const read = async (name: string) =>
+				JSON.parse(await readFile(join(dir, ".gribble", "flows", `${name}.replay.json`), "utf8"));
+			expect((await read("smoke")).startUrl).toBe("/");
+			expect((await read("guide")).startUrl).toBe("/login?next=%2Fevents%2Fnew");
+		});
+	});
+
+	it("relativeToTarget keeps other origins and maps about:blank to the target", () => {
+		const target = "http://localhost:3000/app/";
+		expect(relativeToTarget("http://localhost:3000/app/cart?x=1#top", target)).toBe("/app/cart?x=1#top");
+		expect(relativeToTarget("about:blank", target)).toBe("/app/");
+		expect(relativeToTarget(target, target)).toBe("/app/");
+		expect(relativeToTarget("/login?next=%2F", target)).toBe("/login?next=%2F");
+		expect(relativeToTarget("https://auth.example.com/login", target)).toBe("https://auth.example.com/login");
+	});
+
+	it("prefers stable selectors and quotes names (#33)", () => {
+		const card = element({
+			ref: "e1",
+			role: "link",
+			tag: "a",
+			name: 'Visas "and" entry',
+			href: "/guides/visas",
+			selector: "main > a",
+		});
+		expect(replaySelectorCandidates(card)).toEqual([
+			'a[href="/guides/visas"]',
+			'role=link[name="Visas \\"and\\" entry"]',
+			"main > a",
+		]);
+		expect(replaySelectorCandidates({ ...card, href: "https://elsewhere.example/x" })[0]).toBe(
+			'role=link[name="Visas \\"and\\" entry"]',
+		);
+		expect(replaySelectorCandidates({ ...card, href: "#top", testId: "visas", id: "a b" })).toEqual([
+			'[data-testid="visas"]',
+			'[id="a b"]',
+			'role=link[name="Visas \\"and\\" entry"]',
+			"main > a",
+		]);
+	});
+
+	it("does not write a replay whose selectors do not resolve on the live page (#33)", async () => {
+		await withTempDir(async (dir) => {
+			const events: AuditEvent[] = [];
+			const page = fakePage();
+			const matched: string[] = [];
+			page.matchSelector = async (selector) => {
+				matched.push(selector);
+				return { count: 0, sameElement: false };
+			};
+			const state = fakeState({
+				project: fakeProject({ dir }),
+				browser: fakeBrowser({ desktop: page }),
+				events,
+			});
+			const h = fakePi();
+			await h.load(browserPack(state));
+			await h.load(flowsPack(state));
+			page.nextSnapshot = snapshot({
+				interactive: [element({ ref: "e1", role: "link", tag: "a", name: "Visas", href: "/guides/visas" })],
+			});
+			await h.call(BROWSER_TOOLS.pageSnapshot, {});
+			await h.call(FLOW_TOOLS.flowStart, { name: "guide" });
+			await h.call(BROWSER_TOOLS.click, { target: "ref=e1" });
+			await h.call(BROWSER_TOOLS.click, { target: "ref=e9" });
+			const end = await h.call<{ replay?: string; replaySkipped?: string }>(FLOW_TOOLS.flowEnd, {
+				name: "guide",
+				ok: true,
+			});
+			expect(matched).toEqual(['a[href="/guides/visas"]', 'role=link[name="Visas"]', "#e1"]);
+			expect(end.details.replay).toBeUndefined();
+			expect(end.details.replaySkipped).toMatch(/step 1: no selector for e1 "Visas"/);
+			expect(end.details.replaySkipped).toMatch(/step 2: ref e9 is not in the last page_snapshot/);
+			expect(state.replaysWritten).toEqual([]);
+			expect(events).toContainEqual(
+				expect.objectContaining({ type: "log", level: "warn", message: expect.stringContaining("guide") }),
+			);
 		});
 	});
 
