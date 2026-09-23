@@ -108,6 +108,10 @@ When review mode successfully walks a flow, it records what it actually did into
 }
 ```
 
+`startUrl` is a path on the target, so a sidecar recorded against your dev server replays against staging with `--env staging`. When the first recorded step is a `navigate`, the recorder writes the target root (`/`) instead of whatever page the review happened to be on, and a start page that fails to load is only a warning: the flow positions itself in step 1. A flow that begins by acting on the current page keeps that page as its `startUrl`, and there a failing start page fails the flow. Older sidecars with an absolute `startUrl` still replay.
+
+The recorder picks each selector the way you would: `data-testid`, then `id`, then a link's `href`, then the role and full accessible name (computed the way Playwright does, without `aria-hidden` text), then the element's structural path. It keeps the first one that matches only the element it clicked on the live page, or else the first one whose first match is that element (replays act on the first match). If none does, it writes no sidecar for that flow rather than one that would fail the next gate, and says so in the run log.
+
 ### Step actions
 
 | Action | Fields | Meaning |

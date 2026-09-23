@@ -8,6 +8,7 @@ import type {
 	InteractiveElement,
 	PageSnapshot,
 	RequestRecord,
+	SelectorMatch,
 	SnapshotOptions,
 	ViewportSize,
 } from "./types.js";
@@ -257,6 +258,24 @@ export class PlaywrightAuditPage implements AuditPage {
 
 	async resolveRef(ref: string): Promise<InteractiveElement | undefined> {
 		return this.lastSnapshot.get(ref.replace(/^ref=/, ""));
+	}
+
+	async matchSelector(selector: string, ref?: string): Promise<SelectorMatch> {
+		try {
+			const locator = this.raw.locator(selector);
+			const count = await locator.count();
+			if (count === 0 || !ref) return { count, sameElement: count > 0 };
+			const sameElement = await locator
+				.first()
+				.evaluate(
+					(el, [attr, id]) =>
+						el.getAttribute(attr) === id || !el.ownerDocument.querySelector(`[${attr}="${id}"]`),
+					[REF_ATTRIBUTE, ref.replace(/^ref=/, "")] as const,
+				);
+			return { count, sameElement };
+		} catch {
+			return { count: 0, sameElement: false };
+		}
 	}
 
 	async close(): Promise<void> {
