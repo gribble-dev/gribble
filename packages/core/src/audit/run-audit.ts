@@ -19,6 +19,7 @@ import { runRouteChecks } from "../checks/route.js";
 import { checkSiteWide } from "../checks/site-wide.js";
 import type { CheckContext, RouteCheckResult, SharedCheckState } from "../checks/types.js";
 import { replayFlow } from "../gate/replay.js";
+import { formatUndeclaredReviewRuntimeWarning, hasUndeclaredReviewRuntime } from "../pi.js";
 import { discoverRoutes } from "../repo/routes.js";
 import { type DesignTokens, readDesignTokens } from "../repo/tokens.js";
 import { applyRulePolicy, dedupeFindings, sortFindings } from "../report/findings.js";
@@ -117,6 +118,9 @@ export async function runAudit(options: AuditOptions): Promise<Report> {
 	// Enabled rules with no checker resolve like any other rule and then do nothing; say so up front.
 	const unimplementedWarning = formatUnimplementedRulesWarning(unimplementedEnabledRules(project.rules));
 	if (unimplementedWarning) log("warn", unimplementedWarning);
+	// Gate never loads the review runtime; one left over from a 0.3 lockfile is dead weight nobody asked for.
+	if (mode === "gate" && (await hasUndeclaredReviewRuntime(project.repoRoot, project.targetDir)))
+		log("warn", formatUndeclaredReviewRuntimeWarning());
 
 	const gateFindings: Finding[] = [];
 	const aiFindings: Finding[] = [];

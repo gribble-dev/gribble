@@ -18,7 +18,7 @@ yarn gribble audit
 
 Examples below omit the runner for readability.
 
-`gate` mode needs no model, and installs none: the AI review runtime is an [optional peer dependency](/docs/getting-started#the-review-runtime-is-optional). Commands that do need it — `audit --mode review`, `audit --mode all`, `login`, `logout`, `models` — stop with the install command when it is absent. `init` keeps going and skips model selection.
+`gate` mode needs no model, and a fresh install brings none: the AI review runtime is an [optional peer dependency](/docs/getting-started#the-review-runtime-is-optional). A pnpm lockfile carried over from 0.3 keeps it until you [re-resolve it](/docs/getting-started#upgrading-from-0-3), and gate-mode audits warn about that. Commands that do need it — `audit --mode review`, `audit --mode all`, `login`, `logout`, `models` — stop with the install command when it is absent. `init` keeps going and skips model selection.
 
 Two flags work on every command: `--verbose` prints debug logs and full stack traces, `--version` prints the version.
 

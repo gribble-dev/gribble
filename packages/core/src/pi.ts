@@ -1,3 +1,7 @@
+import { readFile, realpath } from "node:fs/promises";
+import { isAbsolute, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+
 /**
  * The pi runtime is an optional peer dependency. `gate` is deterministic and never constructs a
  * model, so a gate-only install has no business pulling in three provider SDKs and a cloud
@@ -17,6 +21,9 @@ declare const __GRIBBLE_PI_VERSION__: string | undefined;
 
 export const PI_RUNTIME_VERSION: string =
 	typeof __GRIBBLE_PI_VERSION__ === "string" ? __GRIBBLE_PI_VERSION__ : "latest";
+
+/** Where the upgrade note lives; the gate-mode warning below links to it. */
+export const REVIEW_RUNTIME_UPGRADE_DOCS = "https://gribble.dev/docs/getting-started#upgrading-from-0-3";
 
 /** The packages `--mode review` needs on disk, in the order the install command lists them. */
 export const REVIEW_RUNTIME_PACKAGES = ["@earendil-works/pi-ai", "@earendil-works/pi-coding-agent"] as const;
@@ -63,4 +70,51 @@ export function loadPiCodingAgent(): Promise<typeof import("@earendil-works/pi-c
 		throw err;
 	});
 	return codingAgent;
+}
+
+/** Where this build would load `specifier` from, as a file path; undefined when it does not resolve. */
+function resolveFromCore(specifier: string): string | undefined {
+	try {
+		return fileURLToPath(import.meta.resolve(specifier));
+	} catch {
+		return undefined;
+	}
+}
+
+async function declaresPackage(dir: string, name: string): Promise<boolean> {
+	try {
+		const manifest = JSON.parse(await readFile(join(dir, "package.json"), "utf8")) as Record<string, unknown>;
+		return ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"].some(
+			(field) => typeof manifest[field] === "object" && manifest[field] !== null && name in manifest[field],
+		);
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * True when `@earendil-works/pi-ai` resolves from inside `repoRoot` although neither `repoRoot`
+ * nor `targetDir` lists it in a package.json. That is the runtime a Gribble 0.3 lockfile carries
+ * across the upgrade: pnpm reuses it to satisfy the optional peers instead of dropping it. A
+ * runtime installed outside the repository (the Docker image, the npx fallback) is not reported.
+ */
+export async function hasUndeclaredReviewRuntime(
+	repoRoot: string,
+	targetDir: string,
+	resolve: (specifier: string) => string | undefined = resolveFromCore,
+): Promise<boolean> {
+	const [name] = REVIEW_RUNTIME_PACKAGES;
+	const resolved = resolve(name);
+	if (!resolved) return false;
+	const root = await realpath(repoRoot).catch(() => repoRoot);
+	const path = await realpath(resolved).catch(() => resolved);
+	const rel = relative(root, path);
+	if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return false;
+	for (const dir of new Set([repoRoot, targetDir])) if (await declaresPackage(dir, name)) return false;
+	return true;
+}
+
+/** One warn line for gate-mode audits that found the runtime left over from an upgrade. */
+export function formatUndeclaredReviewRuntimeWarning(): string {
+	return `${REVIEW_RUNTIME_PACKAGES[0]} is installed in this repository although gate mode does not need it and neither the root package.json nor the audited app's lists it. A lockfile carried over from Gribble 0.3 keeps the AI review runtime after the upgrade; see ${REVIEW_RUNTIME_UPGRADE_DOCS} to drop it.`;
 }

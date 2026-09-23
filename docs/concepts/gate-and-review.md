@@ -10,7 +10,7 @@ Gribble runs two kinds of check, and keeping them apart is the central design de
 
 Gate mode is ordinary code. No model is loaded, no tokens are spent, and the same commit produces the same findings every time.
 
-No model runtime is *installed* either: the pi packages behind review mode are [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional), so a gate-only project never fetches a provider SDK.
+No model runtime is *installed* either: the pi packages behind review mode are [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional), so a fresh gate-only install never fetches a provider SDK. (A pnpm lockfile from Gribble 0.3 is the exception: it keeps the runtime across the upgrade until you [re-resolve it](/docs/getting-started#upgrading-from-0-3).)
 
 What runs in gate:
 
