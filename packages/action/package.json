@@ -1,6 +1,6 @@
 {
 	"name": "@gribble/action",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"private": true,
 	"description": "GitHub Action that runs `gribble audit --ci` and turns the report into checks, annotations and PR comments.",
 	"license": "MIT",
