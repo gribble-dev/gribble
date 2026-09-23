@@ -1,4 +1,6 @@
 import { mkdtemp, rm } from "node:fs/promises";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -342,6 +344,66 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		expect(chain?.subject).toBe(`${site.url}/redirect-twice`);
 		expect(chain?.suggestion).toContain("/about.html");
 		await page.close();
+	}, 60_000);
+
+	it("judges a same-origin link that redirects off-site by where it lands", async () => {
+		// A second origin standing in for a partner site that blocks bots on one path and lost another.
+		const partner = createServer((req, res) => {
+			res.writeHead(req.url === "/blocked" ? 403 : req.url === "/gone" ? 404 : 200);
+			res.end();
+		});
+		await new Promise<void>((resolve) => partner.listen(0, "127.0.0.1", resolve));
+		const partnerUrl = `http://127.0.0.1:${(partner.address() as AddressInfo).port}`;
+		const hop = (path: string) => `/go?to=${encodeURIComponent(`${partnerUrl}${path}`)}`;
+		const check = async (ignore: string[]) => {
+			const rulesDir = await mkdtemp(join(tmpdir(), "gribble-links-"));
+			const page = await browser.newPage();
+			try {
+				const ctx: CheckContext = {
+					project: await makeProject({
+						url: site.url,
+						targetDir: rulesDir,
+						rulesYaml: `rules:\n  links/broken: error\n  links/broken-external: [warn, { ignore: ${JSON.stringify(ignore)} }]\n`,
+					}),
+					page,
+					route: "/",
+					url: `${site.url}/`,
+					viewport: "desktop",
+					targetName: "",
+					runDir: join(rulesDir, "run"),
+					shared: { links: new LinkCache(), reportedOnce: new Set() },
+				};
+				await page.goto(`${site.url}/`);
+				await page.raw.evaluate(
+					(hrefs) => {
+						document.body.replaceChildren();
+						for (const href of hrefs) {
+							const a = document.createElement("a");
+							a.href = href;
+							a.textContent = "partner";
+							document.body.append(a);
+						}
+					},
+					[hop("/blocked"), hop("/gone"), hop("/ok")],
+				);
+				const { findings } = await runRouteChecks(ctx, { skipNavigation: true, screenshot: false });
+				return findings.filter((f) => f.rule.startsWith("links/"));
+			} finally {
+				await page.close();
+				await rm(rulesDir, { recursive: true, force: true });
+			}
+		};
+		try {
+			const findings = await check(["linkedin.com"]);
+			expect(findings.map((f) => [f.rule, f.subject])).toEqual([
+				["links/broken-external", `${site.url}${hop("/gone")}`],
+			]);
+			expect(findings[0]?.severity).toBe("warn");
+			expect(findings[0]?.message).toContain(`redirects to ${partnerUrl}/gone`);
+			expect(await check(["127.0.0.1"])).toEqual([]);
+		} finally {
+			await new Promise((resolve) => partner.close(resolve));
+		}
 	}, 60_000);
 
 	it("runs the site-wide checks over the per-route results", async () => {

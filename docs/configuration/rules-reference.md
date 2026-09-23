@@ -35,7 +35,7 @@ Presets: `gribble:recommended`, `gribble:strict`, `gribble:seo`, `gribble:a11y`.
 
 Internal links must not resolve to a 4xx or 5xx response.
 
-Every same-origin anchor, image, script and stylesheet reference is requested. A response of 400 or above, a connection failure or a timeout is reported with the link target as the subject.
+Every same-origin anchor, image, script and stylesheet reference is requested. A response of 400 or above, a connection failure or a timeout is reported with the link target as the subject. A same-origin link that redirects to another origin is judged by where it lands: its failure belongs to `links/broken-external`, not this rule.
 
 **Status:** implemented · **Kind:** deterministic
 
@@ -66,7 +66,7 @@ Good:
 
 External links must respond.
 
-Links to other origins are requested with a HEAD (falling back to GET) request. Hosts listed in `ignore` are skipped; some sites block automated requests, so this rule defaults to warn.
+Links to other origins are requested with a HEAD (falling back to GET) request. Hosts listed in `ignore` are skipped, and 403, 429 and 999 responses are treated as inconclusive, since some sites block automated requests; this rule defaults to warn. The same treatment applies to a same-origin link that redirects off-site (an affiliate `/go/partner` hop, say): the final host is checked against `ignore`, and a failure is reported here with the same-origin link as the subject.
 
 **Status:** implemented · **Kind:** deterministic
 
@@ -82,7 +82,7 @@ Links to other origins are requested with a HEAD (falling back to GET) request. 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `timeout` | integer | `10000` | Per-request timeout in milliseconds. |
-| `ignore` | string[] | `["linkedin.com"]` | Hostnames (or globs) that are never checked, e.g. sites that block bots. |
+| `ignore` | string[] | `["linkedin.com"]` | Hostnames (or globs) that are never checked, directly or as the target of a same-origin redirect, e.g. sites that block bots. |
 
 **Fix:** Update or remove the link. If the host blocks automated requests, add it to `ignore`.
 
