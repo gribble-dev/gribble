@@ -272,7 +272,7 @@ Prints the Gribble version. Also available as `--version`.
 | Code | Meaning |
 | --- | --- |
 | `0` | Everything passed. No new blocking findings. |
-| `1` | The gate failed — at least one new `error` or `critical` finding from a deterministic rule or `flows/replay`. |
+| `1` | The gate failed — at least one new `error` or `critical` finding from a deterministic rule or `flows/replay`, or coverage required by [`coverage.required`](/docs/configuration/gribble-yaml#coverage) did not execute. |
 | `2` | Config or auth error. Invalid YAML, a missing environment variable, no credentials for the configured provider, a browser that will not start, a prompt that would be needed without a terminal. |
 | `3` | Gribble itself crashed. Re-run with `--verbose` for the stack trace and please report it. |
 | `4` | The site stopped answering mid-audit: the `target.start` process exited, or `target.maxConnectionFailures` routes in a row were refused. The dev server's last output is printed; no report or baseline is written. |

@@ -3,6 +3,7 @@
  * flows/replay finding; a slow flow produces flows/max-duration.
  */
 import type { AuditEvent } from "../audit/types.js";
+import { AuthError } from "../browser/auth.js";
 import type { AuditPage, BrowserSession } from "../browser/types.js";
 import { urlMatcher } from "../browser/url-match.js";
 import { makeFinding, ruleOptions, truncate } from "../checks/finding.js";
@@ -25,7 +26,11 @@ export interface ReplayFlowOptions {
 	stepTimeoutMs?: number;
 }
 
-export type ReplayFlowResult = FlowResult & { findings: Finding[] };
+export type ReplayFlowResult = FlowResult & {
+	findings: Finding[];
+	/** Set when the flow failed before its first step: it never executed, so it counts as not run. */
+	notReached?: { code: "auth-failed" | "unreachable" | "aborted"; reason: string };
+};
 
 const ENV_REF = /^\$\{([A-Z0-9_]+)\}$|^\$([A-Z0-9_]+)$/i;
 
@@ -152,6 +157,7 @@ export async function replayFlow(opts: ReplayFlowOptions): Promise<ReplayFlowRes
 	let page: AuditPage | undefined;
 	let error: string | undefined;
 	let steps = 0;
+	let notReached: ReplayFlowResult["notReached"];
 	try {
 		page = await opts.browser.newPage({ authProfile });
 		const start = resolveUrl(opts.browser.baseUrl, replay.startUrl);
@@ -182,6 +188,12 @@ export async function replayFlow(opts: ReplayFlowOptions): Promise<ReplayFlowRes
 		error = (err as Error).message;
 		const failedIndex =
 			typeof (err as Error).cause === "number" ? ((err as Error).cause as number) : undefined;
+		if (failedIndex === undefined) {
+			notReached = {
+				code: opts.signal?.aborted ? "aborted" : err instanceof AuthError ? "auth-failed" : "unreachable",
+				reason: error,
+			};
+		}
 		const finding = makeFinding(ctx, "flows/replay", {
 			title: `Flow "${flow.name}" fails at ${failedIndex !== undefined ? `step ${failedIndex + 1}` : "the start"}`,
 			message: `${error}${page ? ` (page: ${page.url()})` : ""}`,
@@ -227,5 +239,6 @@ export async function replayFlow(opts: ReplayFlowOptions): Promise<ReplayFlowRes
 		findings,
 	};
 	if (error) result.error = error;
+	if (notReached) result.notReached = notReached;
 	return result;
 }

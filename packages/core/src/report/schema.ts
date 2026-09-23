@@ -119,7 +119,8 @@ export const reportSummarySchema = Type.Object(
 		existingCount: Type.Integer(),
 		fixedCount: Type.Integer(),
 		gate: Type.Enum(["pass", "fail"], {
-			description: "fail when any new deterministic finding has severity error or critical.",
+			description:
+				"fail when any new deterministic finding has severity error or critical, or when coverage required by `coverage.required` did not execute.",
 		}),
 		headline: Type.String({ description: "One-line human summary." }),
 	},
@@ -136,17 +137,156 @@ export const fixedFindingSchema = Type.Object(
 	{ additionalProperties: false, description: "A baseline finding that is no longer present." },
 );
 
+/**
+ * Machine-readable reasons for work that did not execute. Codes in {@link INTENTIONAL_NOT_RUN_CODES}
+ * are expected omissions (configuration, a check that does not apply); every other code is an
+ * unexpected gap in coverage. New codes may be added in minor releases; treat unknown codes as unexpected.
+ */
+export const NOT_RUN_REASON_CODES = [
+	"unreachable",
+	"unresolved",
+	"auth-failed",
+	"replay-missing",
+	"not-reached",
+	"budget-exhausted",
+	"no-model",
+	"aborted",
+	"error",
+	"unsupported",
+	"excluded",
+	"skipped",
+] as const;
+
+/** Reason codes that mark an intentional exclusion rather than missing coverage. */
+export const INTENTIONAL_NOT_RUN_CODES: readonly NotRunReasonCode[] = ["unsupported", "excluded", "skipped"];
+
+export const notRunReasonCodeSchema = Type.Enum(NOT_RUN_REASON_CODES, {
+	description: [
+		"Why something did not execute.",
+		"`unreachable`: the page or flow start did not load.",
+		"`unresolved`: a dynamic route had no concrete URL.",
+		"`auth-failed`: the auth profile could not produce a session.",
+		"`replay-missing`: a flow has no recorded replay and no reviewer walked it.",
+		"`not-reached`: the reviewer did not get to it.",
+		"`budget-exhausted`: the review budget ran out first.",
+		"`no-model`: it needs the reviewer model and none was resolved.",
+		"`aborted`: the run stopped early.",
+		"`error`: the check itself failed.",
+		"`unsupported` (intentional): the check does not apply, e.g. a non-HTML response.",
+		"`excluded` (intentional): configuration left it out, e.g. a flow limited to another environment.",
+		"`skipped` (intentional): the run skipped it on purpose, e.g. `security/headers` on a loopback target.",
+	].join(" "),
+});
+
 export const notRunCheckSchema = Type.Object(
 	{
 		rule: Type.String({ description: "Rule id or family that did not run, e.g. perf/* or html/*." }),
 		route: Type.Optional(Type.String({ description: "Normalized route path. Absent for site-wide checks." })),
 		reason: Type.String({ description: "Why the check could not run, dry." }),
+		code: Type.Optional(notRunReasonCodeSchema),
+		intentional: Type.Optional(
+			Type.Boolean({
+				description:
+					"True for an expected omission (`unsupported`, `excluded`, `skipped`); absent otherwise.",
+			}),
+		),
 	},
 	{
 		additionalProperties: false,
 		description: "A check that did not execute, so its absence from `findings` says nothing about the page.",
 	},
 );
+
+const notExecutedFields = {
+	code: notRunReasonCodeSchema,
+	reason: Type.String({ description: "Why it did not execute, dry." }),
+	intentional: Type.Boolean({ description: "True for an expected omission rather than missing coverage." }),
+};
+
+export const completenessSchema = Type.Object(
+	{
+		status: Type.Enum(["complete", "incomplete"], {
+			description:
+				"`incomplete` when any requested route, flow, check or the review did not execute for an unexpected reason. Intentional exclusions do not make a run incomplete.",
+		}),
+		routes: Type.Object(
+			{
+				requested: Type.Integer({ description: "Routes the run set out to check." }),
+				checked: Type.Integer({ description: "Routes that loaded and had their checks run." }),
+				notChecked: Type.Array(
+					Type.Object(
+						{ route: Type.String({ description: "Normalized route path." }), ...notExecutedFields },
+						{ additionalProperties: false },
+					),
+				),
+			},
+			{ additionalProperties: false },
+		),
+		flows: Type.Object(
+			{
+				requested: Type.Integer({ description: "Flows in scope for this mode and environment." }),
+				ran: Type.Integer({ description: "Flows that executed, whether they passed or not." }),
+				notRun: Type.Array(
+					Type.Object(
+						{ flow: Type.String({ description: "Flow name." }), ...notExecutedFields },
+						{ additionalProperties: false },
+					),
+				),
+			},
+			{ additionalProperties: false },
+		),
+		checks: Type.Object(
+			{
+				notRun: Type.Integer({ description: "Entries in the top-level `notRun` list." }),
+				unexpected: Type.Integer({ description: "Of those, entries that are not intentional." }),
+			},
+			{ additionalProperties: false, description: "Per-check detail lives in the top-level `notRun` list." },
+		),
+		review: Type.Object(
+			{
+				status: Type.Enum(["complete", "incomplete", "skipped", "not-requested"], {
+					description:
+						"AI review outcome. Advisory: `incomplete` is labeled but never fails the coverage policy.",
+				}),
+				code: Type.Optional(notRunReasonCodeSchema),
+				reason: Type.Optional(Type.String()),
+			},
+			{ additionalProperties: false },
+		),
+		required: Type.Optional(
+			Type.Object(
+				{
+					ok: Type.Boolean({ description: "False when required coverage is missing; the gate then fails." }),
+					missing: Type.Array(
+						Type.Object(
+							{
+								kind: Type.Enum(["route", "flow", "check", "baseline"]),
+								name: Type.String({ description: "Route, flow, rule id, or `baseline`." }),
+								code: Type.Optional(notRunReasonCodeSchema),
+								reason: Type.String(),
+							},
+							{ additionalProperties: false },
+						),
+					),
+				},
+				{
+					additionalProperties: false,
+					description: "Outcome of the `coverage.required` policy. Absent when no coverage is required.",
+				},
+			),
+		),
+	},
+	{
+		additionalProperties: false,
+		description:
+			"What executed, independent of what was found. Answers whether a clean run covered the ground.",
+	},
+);
+
+export const baselineStatusSchema = Type.Enum(["available", "bootstrap", "not-comparable"], {
+	description:
+		"`available`: findings were compared with a baseline. `bootstrap`: this run created the baseline, nothing was compared. `not-comparable`: no baseline could be compared with this run.",
+});
 
 export const reportSchema = Type.Object(
 	{
@@ -202,6 +342,19 @@ export const reportSchema = Type.Object(
 				bootstrap: Type.Boolean({
 					description: "True when this run created the baseline instead of comparing.",
 				}),
+				status: Type.Optional(baselineStatusSchema),
+				routes: Type.Optional(
+					Type.Object(
+						{
+							compared: Type.Integer({ description: "Checked routes the baseline has data for." }),
+							notComparable: Type.Array(
+								Type.Object({ route: Type.String(), reason: Type.String() }, { additionalProperties: false }),
+								{ description: "Checked routes with nothing in the baseline to compare against." },
+							),
+						},
+						{ additionalProperties: false, description: "Per-route comparability. Absent on bootstrap." },
+					),
+				),
 			},
 			{ additionalProperties: false },
 		),
@@ -218,6 +371,7 @@ export const reportSchema = Type.Object(
 					"Checks that could not run (Lighthouse failed, non-HTML response, security/headers on a loopback target). Omitted when every check ran.",
 			}),
 		),
+		completeness: Type.Optional(completenessSchema),
 		durationMs: Type.Number(),
 	},
 	{ additionalProperties: false, title: "Gribble report", description: "Output of one `gribble audit` run." },
@@ -232,4 +386,7 @@ export type FlowResult = Static<typeof flowResultSchema>;
 export type ReportSummary = Static<typeof reportSummarySchema>;
 export type FixedFinding = Static<typeof fixedFindingSchema>;
 export type NotRunCheck = Static<typeof notRunCheckSchema>;
+export type NotRunReasonCode = (typeof NOT_RUN_REASON_CODES)[number];
+export type Completeness = Static<typeof completenessSchema>;
+export type BaselineStatus = Static<typeof baselineStatusSchema>;
 export type Report = Static<typeof reportSchema>;

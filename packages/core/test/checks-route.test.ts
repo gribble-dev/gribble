@@ -249,6 +249,7 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		for (const entry of notRun) {
 			expect(entry.route).toBe("/sitemap.xml");
 			expect(entry.reason).toBe("response is application/xml, not an HTML document; page rules skipped");
+			expect(entry).toMatchObject({ code: "unsupported", intentional: true });
 		}
 		const ended = events.filter((e): e is CheckEnd => e.type === "check:end" && e.route === "/sitemap.xml");
 		expect(ended.filter((e) => e.ok === false).map((e) => e.rule)).toEqual(notRun.map((n) => n.rule));
@@ -266,7 +267,13 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		const result = await run("/about.html");
 		expect(result.findings.map((f) => f.rule)).not.toContain("security/headers");
 		expect(result.notRun).toEqual([
-			{ rule: "security/headers", route: "/about.html", reason: HEADERS_LOOPBACK_REASON },
+			{
+				rule: "security/headers",
+				route: "/about.html",
+				reason: HEADERS_LOOPBACK_REASON,
+				code: "skipped",
+				intentional: true,
+			},
 		]);
 		const security = events.find((e) => e.type === "check:end" && e.rule === "security/*");
 		expect(security).toMatchObject({ ok: true, route: "/about.html" });
@@ -277,11 +284,18 @@ describe.skipIf(!hasChromium())(`route checks (${SKIP_BROWSER_REASON})`, () => {
 		const result = await run("/about.html", "desktop", { lighthouse: true, cdpPort: undefined });
 		expect(result.findings.map((f) => f.rule).filter((r) => r.startsWith("perf/"))).toEqual([]);
 		expect(result.notRun).toEqual([
-			{ rule: "security/headers", route: "/about.html", reason: HEADERS_LOOPBACK_REASON },
+			{
+				rule: "security/headers",
+				route: "/about.html",
+				reason: HEADERS_LOOPBACK_REASON,
+				code: "skipped",
+				intentional: true,
+			},
 			{
 				rule: "perf/*",
 				route: "/about.html",
 				reason: "Lighthouse could not run: no CDP port for the browser session",
+				code: "error",
 			},
 		]);
 		const perf = events.find((e) => e.type === "check:end" && e.rule === "perf/*");

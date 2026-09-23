@@ -60,7 +60,12 @@ Every audit produces one JSON document. It is the single source of truth: the te
   "baseline": {
     "present": true,
     "commit": "3f9a21c0d8e4b6a1",
-    "bootstrap": false
+    "bootstrap": false,
+    "status": "available",
+    "routes": {
+      "compared": 7,
+      "notComparable": [{ "route": "/changelog", "reason": "not in the baseline yet" }]
+    }
   },
 
   "summary": {
@@ -143,8 +148,33 @@ Every audit produces one JSON document. It is the single source of truth: the te
 
   "notRun": [
     { "rule": "perf/*", "route": "/pricing",
-      "reason": "Lighthouse could not run: Cannot find module 'tslib'" }
+      "reason": "Lighthouse could not run: Cannot find module 'tslib'", "code": "error" },
+    { "rule": "html/*", "route": "/sitemap.xml",
+      "reason": "response is application/xml, not an HTML document; page rules skipped",
+      "code": "unsupported", "intentional": true }
   ],
+
+  "completeness": {
+    "status": "incomplete",
+    "routes": {
+      "requested": 10, "checked": 8,
+      "notChecked": [
+        { "route": "/account/settings", "code": "auth-failed", "intentional": false,
+          "reason": "auth profile \"user\": the login flow did not complete." },
+        { "route": "/blog/[slug]", "code": "unresolved", "intentional": false,
+          "reason": "no link on the crawled pages matches this dynamic route" }
+      ]
+    },
+    "flows": {
+      "requested": 3, "ran": 2,
+      "notRun": [
+        { "flow": "admin-export", "code": "excluded", "intentional": true,
+          "reason": "limited to production; this run is preview" }
+      ]
+    },
+    "checks": { "notRun": 2, "unexpected": 1 },
+    "review": { "status": "incomplete", "code": "budget-exhausted", "reason": "max_steps (200) reached" }
+  },
 
   "durationMs": 94210
 }
@@ -164,15 +194,25 @@ Every audit produces one JSON document. It is the single source of truth: the te
 | `repo` | object? | `remote`, `branch`, `commit`, `baseCommit`. Absent outside a git repository. |
 | `model` | object? | `provider`, `id`, optional `thinking`. Absent in `--mode gate`. |
 | `budget` | object | Actual and maximum `steps`, `tokens`, plus `costUsd`. |
-| `baseline` | object | `present`, the baseline's `commit`, and `bootstrap`. |
+| `baseline` | object | `present`, the baseline's `commit`, `bootstrap`, the comparison `status` and per-route comparability. See [Baseline status](#baseline-status). |
 | `summary` | object | See below. |
 | `findings` | Finding[] | All findings, deduped and sorted. |
 | `routes` | RouteResult[] | One entry per audited route. |
 | `flows` | FlowResult[] | One entry per flow that ran. |
 | `notRun` | NotRunCheck[]? | Checks that could not run. Absent when every check ran. |
+| `completeness` | object? | What executed, separate from what was found. See [`completeness`](#completeness). |
 | `durationMs` | number | Wall-clock duration of the audit. |
 
 `baseline.bootstrap` is `true` when there was no baseline and this run created one. Consumers should suppress comments and pass the gate in that case.
+
+### Baseline status
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `baseline.status` | `available` \| `bootstrap` \| `not-comparable` | `available`: findings were compared with a baseline. `bootstrap`: this run created the baseline and compared nothing. `not-comparable`: no baseline, or one that shares no route with this run. |
+| `baseline.routes` | object? | `compared` (checked routes the baseline knows) and `notComparable[]` (`route`, `reason`) for checked routes it has never seen. Only on gate runs that compared. |
+
+A route missing from the baseline is not an error: every finding on it is simply `new`. The list tells a reviewer that "no new findings" on that route was never measured against anything.
 
 ### `summary`
 
@@ -182,7 +222,7 @@ Every audit produces one JSON document. It is the single source of truth: the te
 | `newCount` | number | Findings not in the baseline. |
 | `existingCount` | number | Findings already in the baseline. Counted, never commented. |
 | `fixedCount` | number | Baseline findings that have disappeared. |
-| `gate` | `pass` \| `fail` | `fail` when a **new** finding has severity `error` or `critical` **and** comes from a deterministic rule or `flows/replay`. |
+| `gate` | `pass` \| `fail` | `fail` when a **new** finding has severity `error` or `critical` **and** comes from a deterministic rule or `flows/replay`, or when [required coverage](#completeness) did not execute. |
 | `headline` | string | One human sentence for the top of a comment or terminal summary. |
 
 `counts` covering only new findings is deliberate: a repository with 400 known accessibility findings should show `error: 0` on a PR that introduced none.
@@ -224,8 +264,53 @@ A failed flow also produces a `flows/replay` finding. `flows[]` is the execution
 | `rule` | string | The rule family or rule that did not run, e.g. `perf/*`, `html/*` or `security/headers`. |
 | `route` | string? | The route it was skipped on. Absent for site-wide checks such as `site/*`. |
 | `reason` | string | Why: Lighthouse failed to start, the response was not HTML, the target is loopback, a check threw. |
+| `code` | [reason code](#reason-codes)? | The same reason, machine-readable. Absent in reports from older versions: treat that as unexpected. |
+| `intentional` | `true`? | Present for an expected omission (`unsupported`, `excluded`, `skipped`). |
 
-A check that never ran contributes no findings, so a clean `findings[]` alone cannot tell "perf passed" from "perf never executed". `notRun[]` records the difference: Lighthouse that could not start on a route, the page rules skipped on a non-HTML response such as a sitemap, `security/headers` skipped because the target is a loopback address (dev servers do not carry production headers), or a check that threw. The list is omitted when everything ran. It does not affect `summary.gate`; whether an unexecuted check should fail the gate is a policy decision tracked separately.
+A check that never ran contributes no findings, so a clean `findings[]` alone cannot tell "perf passed" from "perf never executed". `notRun[]` records the difference: Lighthouse that could not start on a route, the page rules skipped on a non-HTML response such as a sitemap, `security/headers` skipped because the target is a loopback address (dev servers do not carry production headers), or a check that threw. The list is omitted when everything ran. It does not affect `summary.gate` unless the project opts in with [`coverage.required.checks`](/docs/configuration/gribble-yaml#coverage).
+
+### `completeness`
+
+`findings[]` says what was wrong with the parts that ran. `completeness` says which parts ran, so "no new findings" can be told apart from "nothing reached the pages that matter". It is present on every report written by this version.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `status` | `complete` \| `incomplete` | `incomplete` when a requested route, flow or check did not execute for an unexpected reason, or the review stopped early. Intentional omissions do not count. |
+| `routes` | object | `requested`, `checked`, and `notChecked[]` (`route`, `code`, `reason`, `intentional`). A route that answered with an error status is `unreachable`: its page checks never ran. |
+| `flows` | object | `requested` (every flow, excluded ones included), `ran`, and `notRun[]` (`flow`, `code`, `reason`, `intentional`). A flow that ran and failed is a finding, not a gap; one that never got past its start is `notRun`. |
+| `checks` | object | `notRun` (entries in the top-level `notRun[]`) and `unexpected` (those not intentional). Details stay in `notRun[]`. |
+| `review` | object | `status` (`complete`, `incomplete`, `skipped`, `not-requested`), plus `code` and `reason` when it did not complete. The review is advisory: an incomplete review is labeled, never a coverage failure. |
+| `required` | object? | Outcome of [`coverage.required`](/docs/configuration/gribble-yaml#coverage): `ok` and `missing[]` (`kind`: `route` \| `flow` \| `check` \| `baseline`, `name`, `code`, `reason`). Absent when nothing is required. When `ok` is `false`, `summary.gate` is `fail`. |
+
+#### Reason codes
+
+| Code | Intentional | Meaning |
+| --- | --- | --- |
+| `unreachable` | no | The page or the flow's start URL did not load (network error, HTTP 4xx/5xx). |
+| `unresolved` | no | A dynamic route had no concrete URL: no crawled link matched it. |
+| `auth-failed` | no | The auth profile could not produce a logged-in session. |
+| `replay-missing` | no | A flow has no recorded replay, and gate mode only replays recorded flows. |
+| `not-reached` | no | The reviewer did not get to it. |
+| `budget-exhausted` | no | The review budget ran out first. |
+| `no-model` | no | It needs the reviewer model and none was resolved. |
+| `aborted` | no | The run stopped early, e.g. interrupted with Ctrl+C. |
+| `error` | no | The check itself failed. |
+| `unsupported` | yes | The check does not apply, e.g. page rules on a sitemap. |
+| `excluded` | yes | Configuration left it out, e.g. a flow whose `env` does not include this environment. |
+| `skipped` | yes | The run skipped it on purpose by design e.g. `security/headers` on a loopback target. |
+
+Codes may be added in later releases. Treat an unknown code as unexpected.
+
+The terminal and the PR comment print the same dimensions side by side:
+
+```text
+Execution: incomplete — 8 of 10 routes checked, 2 of 3 flows ran, review incomplete (budget-exhausted)
+Findings:  no new blocking findings in completed checks
+Baseline:  available for 7 routes; 1 has no comparable baseline
+Unreached: /account/settings — auth-failed
+Unreached: /blog/[slug] — unresolved
+Excluded:  flow admin-export — excluded
+```
 
 ## Versioning
 

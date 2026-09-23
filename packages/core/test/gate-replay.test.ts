@@ -107,6 +107,42 @@ describe.skipIf(!hasChromium())(`replayFlow (${SKIP_BROWSER_REASON})`, () => {
 		expect(result.ok).toBe(false);
 		expect(result.findings[0]?.subject).toBe("start");
 		expect(result.findings[0]?.message).toContain("HTTP 404");
+		expect(result.notReached).toEqual({ code: "unreachable", reason: expect.stringContaining("HTTP 404") });
+	}, 60_000);
+
+	it("marks a flow as not reached when its auth profile cannot log in", async () => {
+		const result = await replayFlow({
+			flow: { ...flow("members"), requiresAuth: "ghost" },
+			replay: { ...goodReplay, name: "members" },
+			browser,
+			project,
+			targetName: "",
+			env: {},
+		});
+		expect(result.ok).toBe(false);
+		expect(result.steps).toBe(0);
+		expect(result.notReached).toEqual({
+			code: "auth-failed",
+			reason: expect.stringContaining('auth profile "ghost"'),
+		});
+	}, 60_000);
+
+	it("does not mark a flow that failed at a step as not reached", async () => {
+		const result = await replayFlow({
+			flow: flow("typo"),
+			replay: {
+				...goodReplay,
+				name: "typo",
+				steps: [{ action: "click", selector: "#does-not-exist" }],
+			},
+			browser,
+			project,
+			targetName: "",
+			env: {},
+			stepTimeoutMs: 500,
+		});
+		expect(result.ok).toBe(false);
+		expect(result.notReached).toBeUndefined();
 	}, 60_000);
 
 	it("warns and continues when the start url is broken but step 1 navigates (#34)", async () => {

@@ -174,7 +174,15 @@ describe("security/headers", () => {
 	it("records the rule as not run on a loopback target instead of passing it silently", async () => {
 		const { findings, notRun } = await run({ url: "http://127.0.0.1:8791", headers: {}, html: page("") });
 		expect(findings).toEqual([]);
-		expect(notRun).toEqual([{ rule: "security/headers", route: "/", reason: HEADERS_LOOPBACK_REASON }]);
+		expect(notRun).toEqual([
+			{
+				rule: "security/headers",
+				route: "/",
+				reason: HEADERS_LOOPBACK_REASON,
+				code: "skipped",
+				intentional: true,
+			},
+		]);
 	});
 
 	it("records nothing when the rule is off", async () => {

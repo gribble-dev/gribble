@@ -91,7 +91,12 @@ describe.skipIf(!hasChromium())(`runAudit gate mode (${SKIP_BROWSER_REASON})`, (
 
 		expect(Value.Check(reportSchema, report)).toBe(true);
 		expect(report.mode).toBe("gate");
-		expect(report.baseline).toEqual({ present: false, bootstrap: true });
+		expect(report.baseline).toEqual({ present: false, bootstrap: true, status: "bootstrap" });
+		expect(report.completeness).toMatchObject({
+			routes: { requested: 3, checked: 3, notChecked: [] },
+			flows: { requested: 1, ran: 1, notRun: [] },
+			review: { status: "not-requested" },
+		});
 		expect(report.repo).toEqual({ commit: "abc123", branch: "main" });
 		expect(report.routes.map((r) => r.route)).toEqual(["/", "/holes.html", "/wide.html"]);
 		expect(report.routes[0]?.status).toBe(200);
@@ -152,7 +157,16 @@ describe.skipIf(!hasChromium())(`runAudit gate mode (${SKIP_BROWSER_REASON})`, (
 		});
 		const report = await runAudit({ project, mode: "gate", ci: true, agentDir: join(dir, "agent") });
 		expect(Value.Check(reportSchema, report)).toBe(true);
-		expect(report.baseline).toEqual({ present: true, commit: "abc123", bootstrap: false });
+		expect(report.baseline).toEqual({
+			present: true,
+			commit: "abc123",
+			bootstrap: false,
+			status: "available",
+			routes: {
+				compared: 3,
+				notComparable: [{ route: "/headings.html", reason: "not in the baseline yet" }],
+			},
+		});
 		const holes = report.findings.filter((f) => f.route === "/holes.html");
 		expect(holes.length).toBeGreaterThan(0);
 		expect(holes.every((f) => f.status === "existing")).toBe(true);
@@ -169,6 +183,70 @@ describe.skipIf(!hasChromium())(`runAudit gate mode (${SKIP_BROWSER_REASON})`, (
 		expect(latest.generatedAt).toBe(report.generatedAt);
 	}, 180_000);
 
+	it("reports what did not execute and fails the gate only when coverage is required", async () => {
+		const own = await mkdtemp(join(tmpdir(), "gribble-coverage-"));
+		try {
+			const flows: Flow[] = [
+				{ name: "checkout", file: join(own, ".gribble/flows/checkout.md"), description: "Buy a thing." },
+			];
+			const options = {
+				url: site.url,
+				targetDir: own,
+				rulesYaml: RULES,
+				routes: ["/", "/missing.html"],
+				flows,
+			};
+			const lenient = await runAudit({
+				project: await makeProject(options),
+				mode: "gate",
+				ci: true,
+				agentDir: join(own, "agent"),
+				updateBaseline: false,
+				bootstrap: true,
+			});
+			expect(Value.Check(reportSchema, lenient)).toBe(true);
+			expect(lenient.completeness).toMatchObject({
+				status: "incomplete",
+				routes: {
+					requested: 2,
+					checked: 1,
+					notChecked: [
+						{ route: "/missing.html", code: "unreachable", reason: "HTTP 404", intentional: false },
+					],
+				},
+				flows: {
+					requested: 1,
+					ran: 0,
+					notRun: [{ flow: "checkout", code: "replay-missing", intentional: false }],
+				},
+			});
+			expect(lenient.completeness?.required).toBeUndefined();
+			expect(lenient.summary.gate).toBe("pass"); // bootstrap, and no coverage required
+
+			const strict = await runAudit({
+				project: await makeProject({
+					...options,
+					gribbleYamlExtra: "coverage:\n  required:\n    routes: true\n    flows: true\n    baseline: true\n",
+				}),
+				mode: "gate",
+				ci: true,
+				agentDir: join(own, "agent"),
+				bootstrap: true,
+			});
+			expect(Value.Check(reportSchema, strict)).toBe(true);
+			expect(strict.completeness?.required?.ok).toBe(false);
+			expect(strict.completeness?.required?.missing.map((m) => `${m.kind}:${m.name}`)).toEqual([
+				"route:/missing.html",
+				"flow:checkout",
+				"baseline:baseline",
+			]);
+			expect(strict.summary.gate).toBe("fail");
+			expect(strict.summary.headline).toContain("Required coverage did not execute: 3 missing.");
+		} finally {
+			await rm(own, { recursive: true, force: true });
+		}
+	}, 180_000);
+
 	it("skips review with a log when no model is available", async () => {
 		const project = await makeProject({ url: site.url, targetDir: dir, rulesYaml: RULES, routes: ["/"] });
 		const events: AuditEvent[] = [];
@@ -180,6 +258,11 @@ describe.skipIf(!hasChromium())(`runAudit gate mode (${SKIP_BROWSER_REASON})`, (
 			onEvent: (e) => events.push(e),
 		});
 		expect(report.mode).toBe("all");
+		expect(report.completeness?.review).toEqual({
+			status: "skipped",
+			code: "no-model",
+			reason: "no reviewer model was resolved",
+		});
 		expect(
 			events.some((e) => e.type === "log" && e.level === "warn" && e.message.includes("Review skipped")),
 		).toBe(true);
@@ -208,5 +291,13 @@ describe.skipIf(!hasChromium())(`runAudit gate mode (${SKIP_BROWSER_REASON})`, (
 		expect(events.filter((e) => e.type === "route:end").length).toBeLessThan(6);
 		expect(events.some((e) => e.type === "log" && e.message.includes("aborted"))).toBe(true);
 		expect(Value.Check(reportSchema, report)).toBe(true);
+		expect(report.completeness?.status).toBe("incomplete");
+		expect(report.completeness?.routes.notChecked).toContainEqual({
+			route: "/holes.html",
+			code: "aborted",
+			reason: "the run stopped before this route",
+			intentional: false,
+		});
+		expect(report.notRun).toContainEqual(expect.objectContaining({ rule: "site/*", code: "aborted" }));
 	}, 120_000);
 });

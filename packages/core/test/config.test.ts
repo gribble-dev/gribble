@@ -22,6 +22,34 @@ describe("parseGribbleConfig", () => {
 		expect(cfg.output).toEqual({ dir: ".gribble/runs", keep: 10 });
 		expect(cfg.reusePiAuth).toBe(false);
 		expect(cfg.allowed_origins).toEqual([]);
+		expect(cfg.coverage).toEqual({
+			required: { routes: false, flows: false, checks: false, baseline: false },
+		});
+	});
+
+	it("accepts coverage.required and rejects bad values", () => {
+		const cfg = parseGribbleConfig(
+			`${minimal}coverage:\n  required:\n    routes: true\n    flows: [login, checkout]\n    baseline: true\n`,
+			{ env: {} },
+		);
+		expect(cfg.coverage?.required).toEqual({
+			routes: true,
+			flows: ["login", "checkout"],
+			checks: false,
+			baseline: true,
+		});
+		expect(() =>
+			parseGribbleConfig(`${minimal}coverage:\n  required:\n    flows: []\n`, { env: {} }),
+		).toThrow(ConfigError);
+		expect(() =>
+			parseGribbleConfig(`${minimal}coverage:\n  required:\n    review: true\n`, { env: {} }),
+		).toThrow(ConfigError);
+		const preview = parseGribbleConfig(
+			`${minimal}environments:\n  ci:\n    coverage:\n      required:\n        checks: true\n`,
+			{ env: {}, environment: "ci" },
+		);
+		expect(preview.coverage?.required.checks).toBe(true);
+		expect(preview.coverage?.required.routes).toBe(false);
 	});
 
 	it("interpolates placeholders from env", () => {

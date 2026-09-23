@@ -236,6 +236,26 @@ A flow claims a profile with `requires_auth: user` in its frontmatter.
 
 See [Baseline](/docs/concepts/baseline).
 
+### `coverage`
+
+By default a run that could not reach part of the site still passes when it found nothing new; the report and the terminal label it `incomplete` (see [`completeness`](/docs/report-format#completeness)). `coverage.required` turns missing coverage into a gate failure, for projects that want CI to insist on it. Everything is off by default.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `coverage.required.routes` | boolean | `false` | Fail when a requested route was not checked: unreachable, unresolved dynamic route, aborted run. |
+| `coverage.required.flows` | boolean \| string[] | `false` | Fail when a flow in scope did not execute. `true` means every flow; a list names the flows that must run. A flow limited to another environment is excluded, not missing. A flow that ran and failed is already a `flows/replay` finding. |
+| `coverage.required.checks` | boolean | `false` | Fail when a check did not run for an unexpected reason (Lighthouse did not start, a check threw). Intentional omissions such as page rules on a sitemap never count. |
+| `coverage.required.baseline` | boolean | `false` | Fail unless findings were compared with an established baseline. A bootstrap run, which passes by default, then fails. |
+
+```yaml
+coverage:
+  required:
+    routes: true
+    flows: [login, checkout]   # replayed in gate mode, so they need a replay sidecar
+```
+
+The AI review is never required: a review that runs out of budget is labeled `incomplete` and stays advisory. `coverage` can be set per environment, e.g. only under `environments.ci`.
+
 ### `viewports`
 
 | Field | Type | Default | Description |

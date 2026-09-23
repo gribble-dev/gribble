@@ -2,6 +2,7 @@
  * security/* — transport, mixed content, leaked credentials, response headers, exposed source maps,
  * POST forms without CSRF protection.
  */
+import { notRunEntry } from "../report/completeness.js";
 import type { Finding } from "../report/schema.js";
 import { report, ruleEnabled, ruleOptions, truncate } from "./finding.js";
 import { getHtml, isLoopbackHost, sameOrigin, targetOrigin } from "./page-data.js";
@@ -214,7 +215,7 @@ export async function checkSecurity(ctx: CheckContext): Promise<Finding[]> {
 	if (ruleEnabled(ctx, "security/headers")) {
 		if (loopback) {
 			// Dev and preview servers on loopback never carry production headers; checking them there is noise.
-			ctx.notRun?.push({ rule: "security/headers", route: ctx.route, reason: HEADERS_LOOPBACK_REASON });
+			ctx.notRun?.push(notRunEntry("security/headers", "skipped", HEADERS_LOOPBACK_REASON, ctx.route));
 		} else {
 			const required = (ruleOptions<{ require: string[] }>(ctx, "security/headers").require ?? []).map((h) =>
 				h.toLowerCase(),
