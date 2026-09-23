@@ -8,6 +8,12 @@ A flow is a user journey written in plain language, in a Markdown file, in your 
 
 Flows live in `.gribble/flows/` and are committed.
 
+The quickest way to write one is to describe the journey to your coding agent the way you would to a new tester. The [Gribble skill](/docs/skills) knows the format below and what makes a flow executable:
+
+```prompt
+Add a Gribble flow for the password reset journey: a user requests a reset link from /forgot-password, opens it, sets a new password and lands signed in on the dashboard.
+```
+
 ```
 .gribble/flows/
   README.md
@@ -139,6 +145,12 @@ Delete the sidecar and gate stops replaying that flow; review will re-record it 
 
 This is the flywheel, and it is the main reason flows exist in two forms.
 
+```prompt
+The latest Gribble review raised a flow-coverage finding for signup. Write that journey down as a flow, with the outcomes that prove it worked.
+```
+
+Step by step:
+
 1. **Review explores.** With `review.explore: true` (the default) the agent visits routes that no flow describes. It finds the signup journey nobody wrote down, and either walks it successfully or raises a `review/flow-coverage` finding saying an important journey is undocumented.
 
 2. **You write it down.** Turn the journey into a flow file:
@@ -161,6 +173,10 @@ This is the flywheel, and it is the main reason flows exist in two forms.
 What used to be an expensive, fuzzy check is now a cheap, certain one. Repeat until the interesting part of review is only the genuinely new stuff.
 
 Going the other way is just as valid: when a journey changes so much that the recorded steps are meaningless, delete the sidecar, update the prose, and let review re-record.
+
+```prompt
+Checkout now has a separate shipping step, so the checkout flow's replay fails. Update checkout.md to describe the new journey and delete its replay sidecar so review records a new one.
+```
 
 ## Auth flows
 

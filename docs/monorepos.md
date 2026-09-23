@@ -8,6 +8,12 @@ A repository with several web apps needs several audits: each app has its own UR
 
 Gribble's answer is the one ESLint and TypeScript already taught everybody: **one config unit per app, cascading upward for the shared parts.**
 
+```prompt
+Set up Gribble for apps/web and apps/admin in this monorepo by following https://gribble.dev/setup.md, installing it once at the workspace root.
+```
+
+The [Agent setup guide](/docs/agent-setup) tells your agent to find the web apps, ask you which ones to audit if there are several, and run `init` inside each. The layout it produces is the one below.
+
 ## One `.gribble/` per app
 
 ```
@@ -41,6 +47,10 @@ Run `gribble init` inside each app directory. There is no separate setup step fo
 ## Cascading
 
 Walking from an app's `.gribble/` up to the repository root, Gribble collects config files and combines them.
+
+```prompt
+The contrast and design-token rules are the same in every app's Gribble rules.yaml. Move them into a shared .gribble/rules.yaml at the repository root and keep only the app-specific exceptions in each app.
+```
 
 ### `rules.yaml` merges, child wins
 
@@ -185,7 +195,13 @@ pnpm exec gribble init --update-skills
 
 ## Adding a new app
 
-1. `cd apps/newthing && pnpm exec gribble init` — answer the URL and start command; the model question inherits what your other apps use.
+```prompt
+Add Gribble to the new apps/docs site, the same way apps/web is set up, and record its first baseline.
+```
+
+Or by hand:
+
+1. `cd apps/newthing && pnpm exec gribble init` — answer the URL and start command, and pick the same model your other apps use (or pass it with `--model`).
 2. Delete anything from the generated `rules.yaml` that the root already says. The generated file starts from `gribble:recommended`; if your root already extends it, the app file can often be trimmed to nothing.
 3. Run `gribble audit` once. No baseline exists, so it [bootstraps](/docs/concepts/baseline#bootstrap-mode).
 4. Commit `.gribble/` including `baseline/`.

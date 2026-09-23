@@ -10,11 +10,17 @@ The skill itself is a single file, `skills/gribble/SKILL.md`, in the [Agent Skil
 
 ## Install
 
+Most people never install this directly. Tell your coding agent:
+
+```prompt
+Set up Gribble in this project by following https://gribble.dev/setup.md
+```
+
+The [agent setup guide](https://gribble.dev/docs/agent-setup) has it run `gribble init --yes`, which detects the agents in the repository and writes the skill for each; `gribble init --update-skills` refreshes it after an upgrade. To use the installer yourself:
+
 ```bash
 pnpm add -D @gribble/skills
 ```
-
-Most people never install this directly: `gribble init` detects the agents in the repository and offers to write the skill, and `gribble init --update-skills` refreshes it.
 
 ## Usage
 

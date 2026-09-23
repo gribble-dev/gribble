@@ -9,6 +9,16 @@ A gribble is a tiny marine isopod that bores holes into ship hulls from places n
 
 ## Install
 
+Tell your coding agent (Claude Code, Cursor, pi, Codex, …):
+
+```prompt
+Set up Gribble in this project by following https://gribble.dev/setup.md
+```
+
+It installs Gribble, runs `init`, records the first baseline, and asks you which model to use. Afterwards, ask it to fix findings, add flows or wire up CI: see [Working with your agent](https://gribble.dev/docs/skills).
+
+Or by hand:
+
 ```bash
 pnpm add -D gribble
 pnpm exec gribble install   # downloads the Playwright browser

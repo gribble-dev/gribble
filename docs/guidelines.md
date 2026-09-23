@@ -8,6 +8,16 @@ order: 41
 
 `gribble init` creates it with a short template and a few prompts. Most teams end up with somewhere between 30 and 150 lines.
 
+You rarely need to open it yourself. Tell your coding agent the house rule, and let it decide whether the rule is a judgement call for this file or a mechanical check for `rules.yaml`:
+
+```prompt
+Add a Gribble house rule: every empty state explains what will appear there and offers the action that creates the first item.
+```
+
+```prompt
+No page should ship with "Coming soon" text on it. Make Gribble enforce that, in rules.yaml if a rule can check it or in guidelines.md if not.
+```
+
 ## What belongs here, and what does not
 
 The dividing line is simple: **can a program decide this without arguing?**
@@ -196,3 +206,7 @@ Keep the root file to things that are genuinely true everywhere — voice, termi
 - **Review them when a finding is wrong.** A false positive from `review/guidelines` usually means a guideline is ambiguous. Sharpen the sentence rather than ignoring the finding.
 - **Let your coding agent maintain them.** The [Gribble skill](/docs/skills) teaches Claude Code, pi and Cursor what belongs in this file versus `rules.yaml`, so "add a guideline about empty states" lands in the right place.
 - **Treat them as documentation for people too.** A good `guidelines.md` is the design review checklist your team already had in its head. Writing it down for the model is how it finally gets written down at all.
+
+```prompt
+Gribble keeps flagging our marketing pages for exclamation marks, which are fine there. Find the guideline behind those findings and rewrite it so it only applies to the application UI.
+```

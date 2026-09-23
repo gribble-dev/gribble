@@ -1,18 +1,70 @@
 ---
-title: Skills for coding agents
-description: Teach Claude Code, pi or Cursor to read Gribble's report, fix what it found, and keep your rules and flows current.
-order: 53
+title: Working with your agent
+description: What to ask Claude Code, Cursor, pi or Codex once Gribble is in your repository, and the skill that teaches them how.
+order: 12
 ---
 
 Gribble finds problems. Something has to fix them. In most repositories that something is already a coding agent, and the fastest closed loop looks like this:
 
 **Gribble audits → your agent reads the report → your agent fixes the findings → `gribble audit --mode gate` verifies → your agent updates the flows and rules it learned about.**
 
-The `@gribble/skills` package ships a skill file that teaches your agent every step of that loop, so "fix the Gribble findings" becomes a request that works without you explaining the tooling each time.
+You steer that loop in plain sentences. The `@gribble/skills` package ships a skill file that teaches your agent every step of it, so none of the requests below need you to explain the tooling first. Not set up yet? Start with the [Agent setup guide](/docs/agent-setup).
 
-## What the skill contains
+## What you can ask
 
-One skill file, three sections. Deliberately one file rather than three: an agent that knows how to fix a finding also needs to know when the right answer is to change a rule instead.
+### Fix findings
+
+```prompt
+Fix the new Gribble findings from the latest audit, most severe first, and verify each fix with a gate audit.
+```
+
+```prompt
+Gribble says the checkout flow replay is failing. Look at the latest report, find out why and fix it.
+```
+
+The agent reads `.gribble/runs/latest.json`, touches only findings with status `new`, follows each finding to its source file, and re-runs `gribble audit --mode gate` rather than declaring victory after the edit. For a finding it believes is wrong, it tells you and suggests a fingerprint to ignore; it does not ignore it.
+
+### Add a flow
+
+```prompt
+Add a Gribble flow for the password reset journey: a user requests a reset link from /forgot-password, opens it, sets a new password and lands signed in on the dashboard.
+```
+
+You get a `.gribble/flows/password-reset.md` with a start URL, steps named by what a user sees, the outcomes that prove the journey worked, and `requires_auth` when it needs a login. The replay sidecar is recorded later by review, not written by the agent. See [Flows](/docs/flows).
+
+### Turn a house rule into config
+
+```prompt
+No page should ship with "Coming soon" on it, and every error message must say what to do next. Add both to Gribble in whichever file each belongs.
+```
+
+The first is a pattern match, so it becomes an extra pattern for `ui/placeholder-text` in `rules.yaml`; the second needs a model to read the message, so it goes in `guidelines.md`. The agent knows the difference; the table [below](#how-the-skill-makes-that-work) is how it decides.
+
+### Understand a finding
+
+```prompt
+Why is the missing alt text on /blog/[slug] listed as existing in the latest Gribble report, and when did it first show up?
+```
+
+`existing` means the finding is already in the committed [baseline](/docs/concepts/baseline), and `firstSeen` in `.gribble/baseline/findings.json` records the commit it arrived in. The agent explains; it does not fix `existing` findings unless you ask, because paying down old debt is a separate piece of work.
+
+```prompt
+Gribble keeps flagging our admin tables for contrast. Look at whether that rule should be scoped differently and propose a change, without applying it.
+```
+
+### Wire up CI
+
+```prompt
+Add the Gribble GitHub Action to this repository: audit every pull request and comment on new findings, refresh the baseline on pushes to main, and read the model provider API key from a repository secret.
+```
+
+The agent reads [CI and the GitHub Action](/docs/ci-github-action) (or [GitLab CI](/docs/ci-gitlab)) from the installed package, writes the workflow, and tells you which secret to create. It never writes a key into a file; creating the secret is yours to do.
+
+A pattern worth adopting: run `gribble audit --mode gate` yourself, then hand the agent the report. Gate is fast, free and deterministic, so the fix-verify loop is tight. Save `--mode all` for when you want the AI review's judgement too.
+
+## How the skill makes that work
+
+One skill file, three sections, plus pointers for setup and CI requests. Deliberately one file rather than three: an agent that knows how to fix a finding also needs to know when the right answer is to change a rule instead.
 
 ### 1. Fix findings
 
@@ -25,7 +77,8 @@ The skill tells the agent to:
 - use `location.file` and `location.symbol` to find the code, rather than guessing from the route;
 - read `suggestion` and follow `docsUrl` when it needs to understand a rule;
 - **verify with `gribble audit --mode gate`**, which is fast, deterministic and costs no tokens, rather than declaring victory after editing;
-- treat a finding it believes is wrong as a conversation, not a `gribble ignore` — suppressing a finding is a decision for a human.
+- treat a finding it believes is wrong as a conversation, not a `gribble ignore` — suppressing a finding is a decision for a human;
+- never hand-edit `.gribble/baseline/`, and only update the baseline when you ask for it.
 
 That last point is the one that matters most. An agent with the power to silence its own critic is not a useful critic.
 
@@ -71,13 +124,19 @@ Install paths follow each ecosystem's convention:
 
 pi reads the Agent Skills standard location directly, which is why `pi` and `agents` share a path.
 
-`gribble init --yes` installs to every agent it detects, without asking.
+`gribble init --yes` installs to every agent it detects, without asking. That is what the [Agent setup guide](/docs/agent-setup) runs, so if your agent set Gribble up, the skill is already there.
 
 Commit the installed skill. It is a project file, like a lint config: everyone on the team — and every agent session — should have it.
 
 ## Updating
 
-The skill file ships with `@gribble/skills` and carries a version. After upgrading Gribble, refresh it:
+The skill file ships with `@gribble/skills` and carries a version. After upgrading Gribble, refresh it. Your agent can do both in one go:
+
+```prompt
+Upgrade Gribble to the latest version, refresh the installed Gribble skill, and run a gate audit to check nothing changed.
+```
+
+By hand:
 
 ```bash
 pnpm exec gribble init --update-skills
@@ -102,22 +161,6 @@ The skill points agents there first. That means:
 - there is no fetch latency in the loop.
 
 The same content is at [gribble.dev/docs](https://gribble.dev/docs). Every page is also served as raw Markdown by appending `.md` to its URL, and `llms.txt` and `llms-full.txt` are published at the site root following the llmstxt.org convention, for agents that do have network access.
-
-## Using it
-
-Once installed, ordinary requests work:
-
-> Fix the Gribble findings on the pricing page.
-
-> Gribble says the checkout flow is broken. Look at the latest report and fix it.
-
-> Add a flow for the password reset journey.
-
-> Gribble keeps flagging our admin tables for contrast. Look at whether that rule should be scoped differently.
-
-The agent knows where the report is, what the fields mean, how to verify, and what not to touch.
-
-A pattern worth adopting: run `gribble audit --mode gate` yourself, then hand the agent the report. Gate is fast, free and deterministic, so the fix-verify loop is tight. Save `--mode all` for when you want the AI review's judgement too.
 
 ## Using it without the skill installer
 

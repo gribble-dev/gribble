@@ -8,6 +8,8 @@ order: 60
 gribble <command> [options]
 ```
 
+Most people drive Gribble through their coding agent, which runs these commands for them (see [Working with your agent](/docs/skills)). This page is the reference you both read.
+
 Gribble installs as a devDependency, so run it through your package manager:
 
 ```bash

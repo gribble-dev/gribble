@@ -107,13 +107,14 @@
 
 <style>
 	.pr {
-		margin: var(--space-6) 0;
-		border: 1px solid var(--border-strong);
+		margin: 0;
+		border: 2px solid var(--outline);
 		border-radius: var(--radius-lg);
 		background: var(--bg-raised);
 		overflow: hidden;
-		box-shadow: var(--shadow);
+		box-shadow: var(--sticker-shadow);
 		max-width: 760px;
+		min-width: 0;
 	}
 
 	.pr-head {
@@ -121,8 +122,8 @@
 		align-items: center;
 		gap: var(--space-3);
 		padding: var(--space-3) var(--space-4);
-		background: var(--bg-sunken);
-		border-bottom: 1px solid var(--border);
+		background: var(--bg-water);
+		border-bottom: 2px solid var(--outline);
 		font-size: 0.9rem;
 		color: var(--text-muted);
 	}
@@ -133,7 +134,8 @@
 		width: 2rem;
 		height: 2rem;
 		border-radius: 999px;
-		background: var(--accent-soft);
+		background: var(--bg-raised);
+		border: 1.5px solid var(--outline);
 	}
 
 	.who strong {
@@ -154,7 +156,7 @@
 	}
 
 	.pr-title {
-		font-size: 1.05rem;
+		font-size: 1.12rem;
 		margin-bottom: var(--space-3);
 	}
 
@@ -203,8 +205,9 @@
 	}
 
 	.findings li {
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
+		border: 1.5px solid var(--border);
+		border-left: 4px solid var(--coral);
+		border-radius: var(--radius-sm);
 		padding: var(--space-3) var(--space-4);
 		background: var(--bg);
 	}
@@ -229,8 +232,8 @@
 		letter-spacing: 0.06em;
 		font-weight: 700;
 		font-size: 0.75rem;
-		border-radius: var(--radius-sm);
-		padding: 0.1rem 0.45rem;
+		border-radius: var(--radius-pill);
+		padding: 0.1rem 0.55rem;
 	}
 
 	.sev.critical,

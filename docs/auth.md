@@ -11,6 +11,8 @@ There are two unrelated authentication questions in Gribble, and mixing them up 
 
 The first is configured per project in `gribble.yaml`. The second is a machine-level credential in `~/.gribble/`. They share nothing.
 
+Your coding agent can do most of Part 1 for you. Part 2 is yours: `gribble login` is an interactive prompt that stores a personal credential, so you run it in your own terminal, and the agent is told not to.
+
 Part 2 also needs code that a gate-only install does not have: the provider catalog lives in `@earendil-works/pi-ai` and `@earendil-works/pi-coding-agent`, which Gribble declares as [optional peer dependencies](/docs/getting-started#the-review-runtime-is-optional). `gribble login`, `gribble logout` and `gribble models` all stop with the install command until they are present.
 
 ---
@@ -18,6 +20,14 @@ Part 2 also needs code that a gate-only install does not have: the provider cata
 ## Part 1: target-site auth
 
 Most interesting pages are behind a login. Gribble handles this with **auth profiles** declared in `gribble.yaml`, referenced by name from flows.
+
+```prompt
+Add a Gribble auth profile called user that signs in through our /login form, with a login flow and the email and password read from GRIBBLE_USER_EMAIL and GRIBBLE_USER_PASSWORD, then mark the account and billing flows as requiring it.
+```
+
+The agent writes the profile, the flow and the `requires_auth` lines, and tells you which variables to set. Setting them to real values is up to you, in your shell or your CI secret store.
+
+Or by hand:
 
 **Secrets are never written in YAML.** A profile's `env` block maps a logical field name to an **environment variable name**; the value is read at the moment it is used and never passes through the config object.
 
@@ -112,6 +122,10 @@ The escape hatch, and the right answer for SSO, for signed dev-only login endpoi
 
 The command runs in your repository root with the audit's environment. Anything it writes to stderr is logged; only stdout is parsed.
 
+```prompt
+Our staging login goes through SSO. Write a script that calls our dev-only session endpoint and prints a Playwright storage state, and add it to gribble.yaml as a command auth profile called admin.
+```
+
 ### Using a profile
 
 A flow claims a profile in its frontmatter:
@@ -191,6 +205,12 @@ Review mode needs a model. Gate mode does not — if you have no credentials at 
 Gribble is **bring your own key**. There is no Gribble account, no Gribble server and no proxy. You authenticate directly with a provider and the tokens are billed to you.
 
 ### `gribble login`
+
+Run this yourself. It is interactive, it may open a browser, and the credential it stores is yours; ask your agent to run it and a well-behaved one will hand the job back to you. Once you are logged in, the agent can pick up from there:
+
+```prompt
+I've logged in to my model provider. List the models Gribble can reach now and set the one I choose in gribble.yaml.
+```
 
 ```bash
 gribble login                        # pick from available providers

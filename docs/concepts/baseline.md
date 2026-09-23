@@ -187,7 +187,13 @@ git commit -m "chore: update gribble baseline"
 
 ## Updating by hand
 
-Two equivalent ways:
+Updating the baseline tells Gribble to stop mentioning everything it currently sees, so it is always a deliberate request. The [Gribble skill](/docs/skills) tells your coding agent never to hand-edit `.gribble/baseline/` and never to re-baseline unless you ask, because re-baselining to make a failing gate pass hides the regression instead of fixing it. Ask for it with a reason you can name:
+
+```prompt
+We redesigned the pricing page on purpose and the structure regression findings are expected. Update the Gribble baseline from a fresh audit and show me what changed in .gribble/baseline/ before I commit it.
+```
+
+Or yourself, two equivalent ways:
 
 ```bash
 gribble audit --update-baseline   # run an audit, then write the baseline from it
@@ -217,3 +223,7 @@ Full audits belong in nightly runs and before releases.
 - **Expect churn on dynamic content.** A route that renders live data will produce screenshot noise. Raise `visual/regression`'s `threshold`, exclude the viewport, or set `baseline.screenshots: off` for that project.
 - **One baseline per app.** In a [monorepo](/docs/monorepos) each `.gribble/` has its own `baseline/`; the root `.gribble/` holds only shared rules and guidelines and has no baseline.
 - **Rebase conflicts happen.** Two PRs both updating the baseline will conflict in `findings.json`. Take main's version and re-run `gribble baseline update`; do not hand-merge the JSON.
+
+```prompt
+The rebase conflicts in .gribble/baseline/findings.json. Take main's version of the baseline and regenerate it with Gribble instead of merging the JSON by hand.
+```

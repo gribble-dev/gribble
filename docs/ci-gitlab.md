@@ -8,6 +8,14 @@ There is no GitLab-specific integration and none is needed for the first mile. `
 
 The [Docker image](#the-docker-image) has Gribble and its browser preinstalled, which keeps the job to two lines.
 
+```prompt
+Add Gribble to our GitLab pipeline: a gate audit on every merge request that feeds the Code Quality widget and the Tests tab, and a job on the default branch that refreshes the baseline.
+```
+
+Your agent can write `.gitlab-ci.yml`; it cannot create the project access token the baseline job pushes with, or any CI/CD variable. Create those yourself in the project settings, masked and protected, as described [below](#a-complete-pipeline). Nothing secret belongs in the pipeline file.
+
+Or by hand:
+
 ## A complete pipeline
 
 Two jobs. Merge request pipelines audit the branch; pushes to the default branch refresh the baseline and produce the report GitLab compares merge requests against.
@@ -89,6 +97,10 @@ The Code Quality format was designed for linters, so a couple of translations ar
 ## Review mode in CI
 
 Gate needs no model. Review does, and it costs tokens, so it earns a separate job that is allowed to fail.
+
+```prompt
+Add an allowed-to-fail Gribble review job to our GitLab pipeline for merge requests, running against the preview environment, and add the review runtime packages to devDependencies.
+```
 
 It also needs the runtime on disk. Add `@earendil-works/pi-ai` and `@earendil-works/pi-coding-agent` to the audited repository's devDependencies before enabling this job; no package manager installs an optional peer for you, and the job would otherwise fail with the install command instead of a report.
 

@@ -9,9 +9,17 @@ This folder is the source of truth for Gribble's user documentation. It is used 
 ## Conventions
 
 - Every page starts with frontmatter: `title`, `description`, `order`.
-- `order` controls sidebar position: index `0`, getting started `10`, concepts `20–29`, configuration `30–39`, flows `40`, guidelines `41`, auth `42`, GitHub CI `50`, GitLab CI `51`, monorepos `52`, skills `53`, CLI `60`, report format `61`, FAQ `90`.
+- `order` controls sidebar position: index `0`, getting started `10`, agent setup guide `11`, working with your agent (`skills.md`) `12`, concepts `20–29`, configuration `30–39`, flows `40`, guidelines `41`, auth `42`, GitHub CI `50`, GitLab CI `51`, monorepos `52`, CLI `60`, report format `61`, FAQ `90`.
 - Headings start at `##`. The site renders `title` as the `h1`.
-- Standard GitHub-flavored Markdown. Code fences are always tagged (`bash`, `yaml`, `md`, `json`, `ts`).
+- Standard GitHub-flavored Markdown. Code fences are always tagged (`bash`, `yaml`, `md`, `json`, `ts`, `prompt`).
+- **Agent first.** Wherever a page shows how to install, configure or use Gribble, lead with what the reader can ask their coding agent, then give the manual commands or YAML. Reference tables and field definitions stay as they are.
+- A `prompt` fence holds text the reader pastes to their coding agent. The website renders it as an "Ask your agent" card with a copy button; GitHub shows a plain code block. Write it in English, imperative and concrete, one request per block, usually one to three sentences, naming real routes and journeys the way a user would. No Markdown and no shell commands inside, and never have it ask for something Gribble cannot do, or for a step the docs reserve for a person, such as running `gribble login` or setting a secret. The card is labelled, so no "Ask your agent:" lead-in is needed.
+
+  ````md
+  ```prompt
+  Add a Gribble flow for the password reset journey: a user requests a reset link, opens it, sets a new password and lands signed in.
+  ```
+  ````
 - Internal links are site-absolute paths without a file extension: `/docs/flows`, `/docs/concepts/baseline`.
 - English only, like everything else in this repository. Tone follows `CONTRIBUTING.md`: light in the prose, dry and precise wherever a finding, an error or a field definition is being described.
 - No hardcoded model names. Use `<provider>/<model>` placeholders; the recommendation table lives in `packages/core/src/models/recommended.ts`.

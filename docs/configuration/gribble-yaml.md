@@ -10,6 +10,10 @@ Rules live in a separate file. [`rules.yaml`](/docs/configuration/rules-yaml) is
 
 **Secrets never go in this file.** Only environment variable names.
 
+```prompt
+Add a preview environment to gribble.yaml that audits the URL in PREVIEW_URL without starting the dev server, and allow our *.vercel.app preview hosts.
+```
+
 ## What `gribble init` writes
 
 Init generates the minimum. Every other field exists and is validated, but is not written until you need it.

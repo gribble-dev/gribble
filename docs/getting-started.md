@@ -4,7 +4,34 @@ description: Install Gribble, run init, and get your first audit and baseline.
 order: 10
 ---
 
-This page takes you from an empty project to a first audit and a committed baseline. Budget about ten minutes, most of which is the browser download.
+This page takes you from an empty project to a first audit and a committed baseline. Budget about ten minutes, most of which is the browser download. The quickest way aboard is to let your coding agent do the rigging; everything it does is also written out [by hand](#by-hand) below.
+
+## With your agent
+
+Open your coding agent (Claude Code, Cursor, pi, Codex, …) in the project and give it one sentence:
+
+```prompt
+Set up Gribble in this project by following https://gribble.dev/setup.md
+```
+
+It follows the [Agent setup guide](/docs/agent-setup), which tells it to:
+
+1. Work out the package manager, which app is the website, its dev command and its local URL.
+2. Install `gribble` as a devDependency, download the browser, and add the review runtime unless you only want `gate`.
+3. Run `gribble init --yes` with the URL and start command it found, which also installs the [Gribble skill](/docs/skills) for the agents in your repository.
+4. Run a first `gate` audit, which records the [baseline](#the-bootstrap-run).
+5. Report every command it ran, every file it changed, and the most severe findings.
+
+Two things it stops and asks you about, because only a person should decide them:
+
+- **Which model.** It runs `gribble models`, shows you the recommended ones your credentials can reach, and writes your pick to `model:` in `gribble.yaml`. It never makes up a model name.
+- **Credentials.** If no model is reachable, it asks you to run `gribble login` in your own terminal, or to export your provider's API key. It does not run `login` for you and never writes a key into the repository. Until then it carries on with `gate` only.
+
+It does not fix findings, add CI or commit anything until you ask. When it is done, skip ahead to [Next steps](#next-steps).
+
+## By hand
+
+The rest of this page is the same setup, one command at a time.
 
 ## Prerequisites
 
@@ -192,7 +219,24 @@ That also ignores rules.yaml, flows/ and baseline/, which should be committed.
 
 ## Next steps
 
+Once the baseline is committed, most of the day-to-day work is a sentence to your coding agent. Some good first ones:
+
+```prompt
+Fix the new Gribble findings from the latest audit, most severe first, and verify each fix with a gate audit.
+```
+
+```prompt
+Add a Gribble flow for our checkout: a signed-in user adds a product to the cart, goes to checkout and sees a total that matches the cart, stopping before payment.
+```
+
+```prompt
+Add the Gribble GitHub Action so every pull request is audited and gets a comment on new findings, reading the model API key from a repository secret.
+```
+
+Or read up first:
+
 - Loosen or tighten the checks in [rules.yaml](/docs/configuration/rules-yaml).
 - Write your first [flow](/docs/flows) so review mode knows what "checkout" means in your app.
 - Put your house style into [guidelines.md](/docs/guidelines).
 - Add the [GitHub Action](/docs/ci-github-action) so every PR gets a comment.
+- See [Working with your agent](/docs/skills) for more of what you can ask.

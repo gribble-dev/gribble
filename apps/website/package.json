@@ -2,7 +2,7 @@
 	"name": "@gribble/website",
 	"version": "0.1.0",
 	"private": true,
-	"description": "gribble.dev \u2014 the Gribble marketing site and documentation.",
+	"description": "gribble.dev — the Gribble marketing site and documentation.",
 	"license": "MIT",
 	"type": "module",
 	"engines": {
@@ -20,6 +20,9 @@
 		"test": "vitest run"
 	},
 	"devDependencies": {
+		"@fontsource-variable/figtree": "5.3.0",
+		"@fontsource-variable/fredoka": "5.3.0",
+		"@fontsource-variable/jetbrains-mono": "5.3.0",
 		"@gribble/core": "workspace:*",
 		"@sveltejs/adapter-cloudflare": "7.2.9",
 		"@sveltejs/kit": "2.70.3",

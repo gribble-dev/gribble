@@ -9,8 +9,8 @@
 
 .markdown h2 {
 	margin-top: var(--space-12);
-	padding-top: var(--space-2);
-	border-top: 1px solid var(--border);
+	padding-top: var(--space-4);
+	border-top: 2px dashed var(--border-strong);
 }
 
 .markdown h3 {
@@ -46,6 +46,18 @@
 
 .markdown pre {
 	margin: 0 0 var(--space-4);
+}
+
+.markdown .prompt-card {
+	margin: var(--space-2) 0 var(--space-6);
+}
+
+.markdown li::marker {
+	color: var(--coral);
+}
+
+.markdown table {
+	border-radius: var(--radius-sm);
 }
 
 .markdown img {

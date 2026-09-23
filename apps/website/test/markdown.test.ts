@@ -76,3 +76,14 @@ describe("renderMarkdown", () => {
 		expect(html).toContain('href="/docs/flows"');
 	});
 });
+
+describe("prompt fences", () => {
+	it("renders a prompt card instead of a code block", () => {
+		const { html } = renderMarkdown("```prompt\nAdd a flow for <checkout>.\n```\n", { slug: "flows" });
+		expect(html).toContain('<figure class="prompt-card">');
+		expect(html).toContain("Ask your agent");
+		expect(html).toContain('<p class="prompt-text">Add a flow for &lt;checkout&gt;.</p>');
+		expect(html).toContain("data-copy-prompt");
+		expect(html).not.toContain("<pre");
+	});
+});

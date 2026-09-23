@@ -6,6 +6,14 @@ order: 0
 
 Gribble is a website quality audit agent that runs **during development** — before you open a pull request, inside CI, and before a release. It walks your site the way a picky reviewer would: it follows the links, walks the flows you described, checks SEO, accessibility, performance, security and your own house rules, and points every finding at the source file that caused it.
 
+```prompt
+Set up Gribble in this project by following https://gribble.dev/setup.md
+```
+
+Your coding agent installs it, runs `init`, records the first baseline and then asks you which model to use and how to sign in. The [Agent setup guide](/docs/agent-setup) is the page it follows.
+
+Prefer to do it by hand?
+
 ```bash
 pnpm add -D gribble
 pnpm exec gribble install   # downloads the Playwright browser
@@ -32,7 +40,7 @@ Gribble points at `localhost:3000`, at your Vercel preview URL, at the container
 | Target | The deployed site | A dev server, preview URL or container |
 | Cadence | Scheduled crawls | Every PR, every push, before release |
 | Output | Dashboards and scores | PR comments, check annotations, a JSON report |
-| Fix loop | File a ticket | Points at the source file; your coding agent fixes it |
+| Fix loop | File a ticket | Points at the source file; you ask your coding agent to fix it and verify with `gate` |
 
 ## Two modes
 
@@ -80,6 +88,8 @@ Licensed MIT. The report JSON is designed to be self-contained and uploadable, s
 ## Where to go next
 
 - **[Getting started](/docs/getting-started)** — install, init, first audit, what to commit.
+- **[Agent setup guide](/docs/agent-setup)** — the page your coding agent follows to set Gribble up for you.
+- **[Working with your agent](/docs/skills)** — what to ask Claude Code, Cursor, pi or Codex once Gribble is in, and the skill that makes it work.
 - **Concepts** — [gate and review](/docs/concepts/gate-and-review), [the baseline](/docs/concepts/baseline), [findings and fingerprints](/docs/concepts/findings).
 - **Configuration** — [gribble.yaml](/docs/configuration/gribble-yaml), [rules.yaml](/docs/configuration/rules-yaml), [the rules reference](/docs/configuration/rules-reference).
 - **[Flows](/docs/flows)** — describe user journeys in Markdown and replay them deterministically.
@@ -87,7 +97,6 @@ Licensed MIT. The report JSON is designed to be self-contained and uploadable, s
 - **[Auth](/docs/auth)** — logging in to the site under test, and to your model provider.
 - **[CI and the GitHub Action](/docs/ci-github-action)** — the workflow, inputs, outputs and permissions.
 - **[Monorepos](/docs/monorepos)** — one `.gribble/` per app, cascading rules.
-- **[Skills for coding agents](/docs/skills)** — teach Claude Code, pi or Cursor to fix what Gribble finds.
 - **[CLI reference](/docs/cli)** — every command, flag and exit code.
 - **[Report format](/docs/report-format)** — the JSON, SARIF and JUnit outputs.
 - **[FAQ](/docs/faq)** — cost, false positives, privacy, Windows, and why not Lighthouse CI.
