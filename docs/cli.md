@@ -275,6 +275,7 @@ Prints the Gribble version. Also available as `--version`.
 | `1` | The gate failed — at least one new `error` or `critical` finding from a deterministic rule or `flows/replay`. |
 | `2` | Config or auth error. Invalid YAML, a missing environment variable, no credentials for the configured provider, a browser that will not start, a prompt that would be needed without a terminal. |
 | `3` | Gribble itself crashed. Re-run with `--verbose` for the stack trace and please report it. |
+| `4` | The site stopped answering mid-audit: the `target.start` process exited, or `target.maxConnectionFailures` routes in a row were refused. The dev server's last output is printed; no report or baseline is written. |
 | `130` | Interrupted: Ctrl+C during a prompt or an audit. |
 
 The distinction between `1` and `2` is the useful part: `1` means your site has a problem, `2` means your setup does. A CI job that treats them identically will send people hunting for a bug that does not exist.
@@ -285,6 +286,7 @@ case $? in
   0) echo "clean" ;;
   1) echo "gate failed" ;;
   2) echo "gribble is misconfigured" ;;
+  4) echo "the dev server died mid-audit" ;;
 esac
 ```
 

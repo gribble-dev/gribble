@@ -159,7 +159,9 @@ export async function runAudit(
 		const hint =
 			exitCode === 2
 				? "gribble reported a configuration or authentication error (exit 2). Check .gribble/gribble.yaml and the model API key secret."
-				: `gribble crashed with exit code ${exitCode}.`;
+				: exitCode === 4
+					? "The site under audit stopped answering mid-run (exit 4); the dev server's last output is in the log above."
+					: `gribble crashed with exit code ${exitCode}.`;
 		throw new AuditError(hint, exitCode);
 	}
 	core.info(exitCode === 0 ? "gribble exited with 0 (gate passed)." : "gribble exited with 1 (gate failed).");

@@ -1,4 +1,4 @@
-import { ConfigError } from "@gribble/core";
+import { ConfigError, DevServerError, TargetGoneError } from "@gribble/core";
 import { describe, expect, it } from "vitest";
 import { run } from "../src/index.js";
 import { finding, project, report, testIo } from "./helpers.js";
@@ -118,6 +118,34 @@ describe("exit codes", () => {
 		expect(await run(["--verbose", "audit", "--mode", "gate"], { ...base(loud), runAudit: boom })).toBe(3);
 		expect(loud.stderr.text).toContain("kaboom");
 		expect(loud.stderr.text).toMatch(/\n\s+at /);
+	});
+
+	it("4 when the target goes away mid-audit, with the dev server's last output", async () => {
+		const io = testIo();
+		const gone = async () => {
+			throw new TargetGoneError(
+				"the dev server is gone: `pnpm dev` exited with code 1 after 6 of 17 route(s), and http://localhost:8790 no longer answers.",
+				["[stdout] ready on :8790", "[stderr] workerd crashed: SIGSEGV"],
+			);
+		};
+		expect(await run(["audit", "--mode", "gate"], { ...base(io), runAudit: gone })).toBe(4);
+		expect(io.stderr.text).toContain("error: the dev server is gone: `pnpm dev` exited with code 1");
+		expect(io.stderr.text).toContain("Last 2 line(s) from the dev server:");
+		expect(io.stderr.text).toContain("  | [stderr] workerd crashed: SIGSEGV");
+		expect(io.stderr.text).toContain("No report was written");
+	});
+
+	it("2 when the dev server never comes up, with its output", async () => {
+		const io = testIo();
+		const failed = async () => {
+			throw new DevServerError(
+				"dev server command exited with code 1 before http://localhost:3000 responded: pnpm dev",
+				["[stderr] Error: Cannot find module 'vite'"],
+			);
+		};
+		expect(await run(["audit", "--mode", "gate"], { ...base(io), runAudit: failed })).toBe(2);
+		expect(io.stderr.text).toContain("  | [stderr] Error: Cannot find module 'vite'");
+		expect(io.stderr.text).toContain("target.readyTimeoutMs");
 	});
 
 	it("--ci keeps stdout for the report only, even when the gate fails", async () => {
